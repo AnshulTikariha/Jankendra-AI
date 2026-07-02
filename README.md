@@ -1,1 +1,1 @@
-# JanMitra-AI
+# Jankendra-AI
