@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jankendra-AI — Software Requirements Specification</title>
+  <style>
+    :root {
+      --primary: #1e40af;
+      --primary-light: #3b82f6;
+      --accent: #059669;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --sidebar-w: 280px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      font-size: 1rem;
+    }
+
+    .layout {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      width: var(--sidebar-w);
+      background: var(--card);
+      border-right: 1px solid var(--border);
+      padding: 1.5rem 1rem;
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100vh;
+      overflow-y: auto;
+      z-index: 100;
+    }
+
+    .sidebar h2 {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-bottom: 1rem;
+      padding: 0 0.5rem;
+    }
+
+    .sidebar a {
+      display: block;
+      padding: 0.5rem 0.75rem;
+      color: var(--text);
+      text-decoration: none;
+      border-radius: 0.375rem;
+      font-size: 0.875rem;
+      margin-bottom: 0.125rem;
+      transition: background 0.2s;
+    }
+
+    .sidebar a:hover,
+    .sidebar a.active {
+      background: #eff6ff;
+      color: var(--primary);
+    }
+
+    .main {
+      margin-left: var(--sidebar-w);
+      flex: 1;
+      padding: 2rem clamp(1rem, 4vw, 3rem);
+      max-width: 960px;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, var(--primary) 0%, #1e3a8a 100%);
+      color: white;
+      padding: 2.5rem clamp(1.5rem, 4vw, 3rem);
+      border-radius: 0.75rem;
+      margin-bottom: 2rem;
+    }
+
+    .hero h1 {
+      font-size: clamp(1.75rem, 4vw, 2.25rem);
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .hero .subtitle {
+      font-size: 1.125rem;
+      opacity: 0.9;
+      margin-bottom: 1.25rem;
+    }
+
+    .badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .badge {
+      background: rgba(255,255,255,0.15);
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.8125rem;
+      font-weight: 500;
+    }
+
+    section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      padding: clamp(1.25rem, 3vw, 2rem);
+      margin-bottom: 1.5rem;
+    }
+
+    section h2 {
+      font-size: 1.375rem;
+      color: var(--primary);
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid #eff6ff;
+    }
+
+    section h3 {
+      font-size: 1.0625rem;
+      margin: 1.25rem 0 0.75rem;
+      color: var(--text);
+    }
+
+    p { margin-bottom: 0.75rem; }
+
+    ul, ol {
+      margin: 0.5rem 0 1rem 1.25rem;
+    }
+
+    li { margin-bottom: 0.375rem; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+      font-size: 0.9375rem;
+    }
+
+    th, td {
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      background: #f1f5f9;
+      font-weight: 600;
+      font-size: 0.8125rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      color: var(--muted);
+    }
+
+    tr:hover td { background: #f8fafc; }
+
+    .req-id {
+      font-family: monospace;
+      font-size: 0.8125rem;
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    .priority-high { color: #dc2626; font-weight: 600; }
+    .priority-med { color: #d97706; font-weight: 600; }
+    .priority-low { color: var(--muted); }
+
+    .arch-diagram {
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 1.5rem;
+      border-radius: 0.5rem;
+      font-family: monospace;
+      font-size: 0.8125rem;
+      line-height: 1.5;
+      overflow-x: auto;
+      white-space: pre;
+      margin: 1rem 0;
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 1rem;
+      margin: 0 0 2rem;
+      align-items: stretch;
+    }
+
+    .meta-card {
+      display: flex;
+      flex-direction: column;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      padding: 1rem;
+      min-height: 5.5rem;
+    }
+
+    .meta-card .label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+      letter-spacing: 0.03em;
+    }
+
+    .meta-card .value {
+      font-weight: 600;
+      font-size: 0.9375rem;
+      line-height: 1.4;
+      margin-top: auto;
+      overflow-wrap: anywhere;
+    }
+
+    .meta-card .value.is-link {
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: var(--primary);
+      text-decoration: none;
+    }
+
+    .meta-card .value.is-link:hover {
+      text-decoration: underline;
+    }
+
+    .callout {
+      background: #eff6ff;
+      border-left: 4px solid var(--primary);
+      padding: 1rem 1.25rem;
+      border-radius: 0 0.5rem 0.5rem 0;
+      margin: 1rem 0;
+      font-size: 0.9375rem;
+    }
+
+    .callout.green {
+      background: #ecfdf5;
+      border-color: var(--accent);
+    }
+
+    footer {
+      text-align: center;
+      padding: 2rem 1rem;
+      color: var(--muted);
+      font-size: 0.875rem;
+    }
+
+    @media (max-width: 768px) {
+      .sidebar {
+        display: none;
+      }
+      .main {
+        margin-left: 0;
+        padding: 1rem;
+      }
+      .meta-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 480px) {
+      .meta-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * { transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <nav class="sidebar">
+      <h2>Contents</h2>
+      <a href="#intro">1. Introduction</a>
+      <a href="#scope">2. Scope</a>
+      <a href="#users">3. User Roles</a>
+      <a href="#functional">4. Functional Requirements</a>
+      <a href="#nonfunctional">5. Non-Functional Requirements</a>
+      <a href="#architecture">6. System Architecture</a>
+      <a href="#data">7. Data Requirements</a>
+      <a href="#interfaces">8. Interface Requirements</a>
+      <a href="#security">9. Security & Privacy</a>
+      <a href="#phases">10. Implementation Phases</a>
+      <a href="#appendix">11. Appendix</a>
+    </nav>
+
+    <main class="main">
+      <div class="hero">
+        <h1>Jankendra-AI</h1>
+        <p class="subtitle">Software Requirements Specification (SRS)</p>
+        <div class="badges">
+          <span class="badge">Version 1.0</span>
+          <span class="badge">Digital Democracy</span>
+          <span class="badge">India Innovates 2026</span>
+          <span class="badge">Draft — Jul 2026</span>
+        </div>
+      </div>
+
+      <div class="meta-grid">
+        <div class="meta-card">
+          <div class="label">Project</div>
+          <div class="value">Jankendra-AI</div>
+        </div>
+        <div class="meta-card">
+          <div class="label">Repository</div>
+          <a href="https://github.com/AnshulTikariha/Jankendra-AI" class="value is-link" target="_blank" rel="noopener">AnshulTikariha/Jankendra-AI</a>
+        </div>
+        <div class="meta-card">
+          <div class="label">Domain</div>
+          <div class="value">Civic Tech / Governance AI</div>
+        </div>
+        <div class="meta-card">
+          <div class="label">Status</div>
+          <div class="value">Planning / Pre&#8209;Development</div>
+        </div>
+      </div>
+
+      <section id="intro">
+        <h2>1. Introduction</h2>
+        <h3>1.1 Purpose</h3>
+        <p>This document specifies the software requirements for <strong>Jankendra-AI</strong>, an AI-powered constituency intelligence platform designed to help elected representatives and their staff make informed, data-driven governance decisions.</p>
+
+        <h3>1.2 Background</h3>
+        <p>India's elected representatives — MLAs, MPs, and municipal councillors — govern millions of citizens using fragmented tools: WhatsApp groups, personal assistants with diaries, and spreadsheets that are perpetually outdated. Jankendra-AI addresses this infrastructure gap by providing institutional memory, intelligent issue clustering, development prioritization, and commitment accountability.</p>
+
+        <div class="callout">
+          <strong>Problem Statement (India Innovates 2026 — Digital Democracy):</strong><br>
+          <em>"Developing a secure hardware-software intelligence assistant that summarizes documents and meetings, drafts speeches and official responses, tracks constituency or community data, manages schedules, and provides real-time insights to support faster and more informed decision-making."</em>
+        </div>
+
+        <h3>1.3 Definitions</h3>
+        <table>
+          <thead><tr><th>Term</th><th>Definition</th></tr></thead>
+          <tbody>
+            <tr><td>Constituency</td><td>Geographic area represented by an elected official</td></tr>
+            <tr><td>Ward</td><td>Smallest administrative subdivision within a constituency</td></tr>
+            <tr><td>Cluster</td><td>Group of semantically similar complaints within the same ward</td></tr>
+            <tr><td>Commitment</td><td>A promise or action item extracted from a meeting with a deadline</td></tr>
+            <tr><td>Weight</td><td>Priority score — citizen count for complaints, days overdue for commitments</td></tr>
+            <tr><td>RAG</td><td>Retrieval-Augmented Generation — AI answers grounded in stored facts</td></tr>
+          </tbody>
+        </table>
+
+        <h3>1.4 References</h3>
+        <ul>
+          <li><a href="plan.md">docs/plan.md</a> — Consolidated project plan</li>
+          <li><a href="imported-chat-history.md">docs/imported-chat-history.md</a> — Cursor chat history import</li>
+          <li><a href="https://chatgpt.com/s/t_6a460866b0708191a3129ddf0c7a5dc3">ChatGPT — AI for Constituency Development</a></li>
+          <li><a href="https://chatgpt.com/s/t_6a4608504fbc8191864f6e34adbd7320">ChatGPT — AI for Development Prioritization</a></li>
+          <li><a href="https://chatgpt.com/s/t_6a460a28baa08191a2813b1b8d95659f">ChatGPT — Hackathon Project Analysis</a></li>
+        </ul>
+      </section>
+
+      <section id="scope">
+        <h2>2. Scope</h2>
+        <h3>2.1 In Scope</h3>
+        <ul>
+          <li>Constituency data management (wards, demographics, infrastructure, schemes)</li>
+          <li>Citizen complaint intake and semantic clustering</li>
+          <li>Meeting transcript ingestion and commitment extraction</li>
+          <li>Weighted, prioritized to-do list for leaders and staff</li>
+          <li>Development project prioritization with multi-factor scoring</li>
+          <li>RAG-powered natural language assistant</li>
+          <li>Weekly governance digest (data-only, no editorializing)</li>
+          <li>Privacy-first local deployment architecture</li>
+        </ul>
+
+        <h3>2.2 Out of Scope (v1.0)</h3>
+        <ul>
+          <li>Physical hardware recording device (proposed for future)</li>
+          <li>Direct citizen-facing mobile app</li>
+          <li>Real-time WhatsApp integration</li>
+          <li>Electoral campaign / vote prediction features</li>
+          <li>Multi-constituency SaaS platform</li>
+        </ul>
+      </section>
+
+      <section id="users">
+        <h2>3. User Roles</h2>
+        <table>
+          <thead>
+            <tr><th>Role</th><th>Description</th><th>Key Actions</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Leader</strong></td>
+              <td>MLA, MP, or Councillor</td>
+              <td>View dashboard, query assistant, review priorities, approve actions</td>
+            </tr>
+            <tr>
+              <td><strong>Staff</strong></td>
+              <td>PA, office assistant</td>
+              <td>Log complaints, upload transcripts, update constituency data, manage schedule</td>
+            </tr>
+            <tr>
+              <td><strong>System</strong></td>
+              <td>Background engines</td>
+              <td>Cluster complaints, escalate weights, generate digest, assemble RAG context</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="functional">
+        <h2>4. Functional Requirements</h2>
+
+        <h3>4.1 Constituency Intelligence</h3>
+        <table>
+          <thead><tr><th>ID</th><th>Requirement</th><th>Priority</th></tr></thead>
+          <tbody>
+            <tr><td class="req-id">FR-CI-01</td><td>System shall store ward-wise demographic profiles (population, voters, key indicators)</td><td class="priority-high">High</td></tr>
+            <tr><td class="req-id">FR-CI-02</td><td>System shall track infrastructure status per ward (roads, drainage, water, electricity)</td><td class="priority-high">High</td></tr>
+            <tr><td class="req-id">FR-CI-03</td><td>System shall map government scheme penetration rates by ward</td><td class="priority-med">Medium</td></tr>
+            <tr><td class="req-id">FR-CI-04</td><td>System shall display constituency health dashboard with ward comparison</td><td class="priority-high">High</td></tr>
+            <tr><td class="req-id">FR-CI-05</td><td>Only staff shall be able to update static constituency data (not AI)</td><td class="priority-high">High</td></tr>
+          </tbody>
+        </table>
+
+        <h3>4.2 Development Prioritization</h3>
+        <table>
+          <thead><tr><th>ID</th><th>Requirement</th><th>Priority</th></tr></thead>
+          <tbody>
+            <tr><td class="req-id">FR-DP-01</td><td>System shall score development proposals using multi-factor criteria: citizen impact, urgency, budget feasibility, seasonal relevance</td><td class="priority-high">High</td></tr>
+            <tr><td class="req-id">FR-DP-02</td><td>System shall generate ranked top-N action plan per ward or constituency</td><td class="priority-high">High</td></tr>
+            <tr><td class="req-id">FR-DP-03</td><td>System shall support ward-to-ward comparison for resource allocation decisions</td><td class="priority-med">Medium</td></tr>
+            <tr><td class="req-id">FR-DP-04</td><td>System shall factor open complaint clusters into prioritization scores</td><td class="priority-high">High</td></tr>
+            <tr><td class="req-id">FR-DP-05</td><td>System shall provide reasoning trace for each prioritization recommendation</td><td class="priority-med">Medium</td></tr>
+          </tbody>
+        </table>
+
+        <h3>4.3 Complaint Management</h3>
+        <table>
+          <thead><tr><th>ID</th><th>Requirement</th><th>Priority</th></tr></thead>
+          <tbody>
+            <tr><td class="req-id">FR-CM-01</td><td>System shall accept complaints via staff form with ward, description, category, citizen contact</td><td class="priority-high">High</td></tr>
+            <tr><td class="req-id">FR-CM-02</td><td>System shall embed complaint text and cluster by cosine similarity within the same ward</td><td class="priority-high">High</td></tr>
+            <tr><td class="req-id">FR-CM-03</td><td>Cluster weight shall equal number of citizens who raised the same issue</td><td class="priority-high">High</td></tr>
+            <tr><td class="req-id">FR-CM-04</td><td>Complaints in different wards shall never match, regardless of text similarity</td><td class="priority-high">High</td></tr>
+            <tr><td class="req-id">FR-CM-05</td><td>Raw complaints shall be permanently stored and never deleted</td><td class="priority-high">High</td></tr>
+            <tr><td class="req-id">FR-CM-06</td><td>System shall suggest department routing (PWD, WMD, Health, etc.)</td><td class="priority-med">Medium</td></tr>
+          </tbody>
+        </table>
+
+        <h3>4.4 Commitment Tracking</h3>
+        <table>
+          <thead><tr><th>ID</th><th>Requirement</th><th>Priority</th></tr></thead>
+          <tbody>
+            <tr><td class="req-id">FR-CT-01</td><td>System shall ingest meeting transcripts (.txt) and extract commitments with deadline, ward, and assignee</td><td class="priority-high">High</td></tr>
+            <tr><td class="req-id">FR-CT-02</td><td>System shall escalate commitment weight automatically as items go overdue</td><td class="priority-high">High</td></tr>
+            <tr><td class="req-id">FR-CT-03</td><td>Weight escalation ladder: W1 (on time) → W2 (1-3 days) → W3 (4-7 days) → W5 (8-14 days) → W8 (15+ days)</td><td class="priority-high">High</td></tr>
+            <tr><td class="req-id">FR-CT-04</td><td>On completion, full commitment history shall be archived to institutional memory</td><td class="priority-high">High</td></tr>
+            <tr><td class="req-id">FR-CT-05</td><td>Staff shall be able to mark complete or extend deadline on any commitment</td><td class="priority-high">High</td></tr>
+          </tbody>
+        </table>
+
+        <h3>4.5 RAG Assistant</h3>
+        <table>
+          <thead><tr><th>ID</th><th>Requirement</th><th>Priority</th></tr></thead>
+          <tbody>
+            <tr><td class="req-id">FR-RA-01</td><td>System shall provide natural language chat grounded in constituency data</td><td class="priority-high">High</td></tr>
+            <tr><td class="req-id">FR-RA-02</td><td>Context assembly shall use 4 layers: profile+digest, vector facts, live SQL, chat history</td><td class="priority-high">High</td></tr>
+            <tr><td class="req-id">FR-RA-03</td><td>System shall answer meeting-prep queries with both historical and live data</td><td class="priority-high">High</td></tr>
+            <tr><td class="req-id">FR-RA-04</td><td>System shall provide on-demand strategic suggestions with thinking trace</td><td class="priority-med">Medium</td></tr>
+          </tbody>
+        </table>
+
+        <h3>4.6 Digest & Dashboard</h3>
+        <table>
+          <thead><tr><th>ID</th><th>Requirement</th><th>Priority</th></tr></thead>
+          <tbody>
+            <tr><td class="req-id">FR-DD-01</td><td>Home dashboard shall show live data from all engines (not hardcoded)</td><td class="priority-high">High</td></tr>
+            <tr><td class="req-id">FR-DD-02</td><td>To-do list shall be weighted, ranked, and support complete/extend actions</td><td class="priority-high">High</td></tr>
+            <tr><td class="req-id">FR-DD-03</td><td>Weekly digest shall be pure SQL — numbers only, no LLM editorializing</td><td class="priority-med">Medium</td></tr>
+            <tr><td class="req-id">FR-DD-04</td><td>Digest shall report: new items, resolved, overdue, on-time rate, most critical item</td><td class="priority-med">Medium</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="nonfunctional">
+        <h2>5. Non-Functional Requirements</h2>
+        <table>
+          <thead><tr><th>ID</th><th>Category</th><th>Requirement</th><th>Priority</th></tr></thead>
+          <tbody>
+            <tr><td class="req-id">NFR-01</td><td>Privacy</td><td>All constituency data must remain on local device in production — no external API calls</td><td class="priority-high">High</td></tr>
+            <tr><td class="req-id">NFR-02</td><td>Performance</td><td>Embedding model shall load in under 3 seconds on CPU</td><td class="priority-med">Medium</td></tr>
+            <tr><td class="req-id">NFR-03</td><td>Performance</td><td>Dashboard page load under 2 seconds with seeded data</td><td class="priority-med">Medium</td></tr>
+            <tr><td class="req-id">NFR-04</td><td>Reliability</td><td>Auto-escalation background task runs every hour without failure</td><td class="priority-high">High</td></tr>
+            <tr><td class="req-id">NFR-05</td><td>Usability</td><td>Mobile-responsive UI (320px to 1440px)</td><td class="priority-high">High</td></tr>
+            <tr><td class="req-id">NFR-06</td><td>Language</td><td>Hindi + English support (v2.0 — Sarvam AI for regional languages)</td><td class="priority-med">Medium</td></tr>
+            <tr><td class="req-id">NFR-07</td><td>Portability</td><td>SQLite for dev; PostgreSQL + pgvector migration path with one config change</td><td class="priority-med">Medium</td></tr>
+            <tr><td class="req-id">NFR-08</td><td>Maintainability</td><td>No LangChain — explicit orchestration for readability</td><td class="priority-low">Low</td></tr>
+            <tr><td class="req-id">NFR-09</td><td>Testing</td><td>Playwright E2E suite covering all dashboard pages and core actions</td><td class="priority-med">Medium</td></tr>
+            <tr><td class="req-id">NFR-10</td><td>Accessibility</td><td>Respect prefers-reduced-motion; minimum 1.5 line-height for body text</td><td class="priority-med">Medium</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="architecture">
+        <h2>6. System Architecture</h2>
+        <div class="arch-diagram">┌─────────────────────────────────────────────────┐
+│                    DATA IN                      │
+│  Meeting transcripts / Parliament docs            │
+│  Complaints — email (auto) or staff form        │
+│  Constituency data via plain text injection     │
+└──────────────────────┬──────────────────────────┘
+                       ▼
+┌─────────────────────────────────────────────────┐
+│               INTELLIGENCE CORE                 │
+│  Ingestion Engine  — segments + classifies      │
+│  Issue Engine      — clusters by meaning        │
+│  Commitment Engine — tracks promises + weight   │
+│  Prioritization    — scores development actions │
+│  Digest Engine     — surfaces patterns (SQL)    │
+│  RAG Engine        — answers from memory        │
+└──────────────────────┬──────────────────────────┘
+                       ▼
+┌─────────────────────────────────────────────────┐
+│                   DATA OUT                      │
+│  To-Do List        — weighted, live, prioritised│
+│  Commitment Tracker — accountability mirror     │
+│  Development Plan  — ranked action recommendations│
+│  Chat Interface    — natural language to data   │
+│  Digest            — weekly reflection, patterns  │
+└─────────────────────────────────────────────────┘</div>
+
+        <h3>6.1 Tech Stack</h3>
+        <table>
+          <thead><tr><th>Layer</th><th>Development</th><th>Production</th></tr></thead>
+          <tbody>
+            <tr><td>Language</td><td colspan="2">Python 3.11</td></tr>
+            <tr><td>Backend</td><td colspan="2">FastAPI + uvicorn</td></tr>
+            <tr><td>Database</td><td>SQLite</td><td>PostgreSQL + pgvector</td></tr>
+            <tr><td>Embeddings</td><td colspan="2">sentence-transformers (all-MiniLM-L6-v2)</td></tr>
+            <tr><td>Vector Search</td><td>sqlite-vec</td><td>pgvector</td></tr>
+            <tr><td>LLM</td><td>Gemini API</td><td>Ollama + Sarvam (Hindi)</td></tr>
+            <tr><td>Frontend</td><td>HTML / CSS / JS</td><td>React + Tailwind</td></tr>
+            <tr><td>Testing</td><td colspan="2">Playwright E2E</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="data">
+        <h2>7. Data Requirements</h2>
+        <table>
+          <thead><tr><th>Store</th><th>Purpose</th><th>Write Access</th><th>Growth</th></tr></thead>
+          <tbody>
+            <tr><td><strong>DB1 — Static Constituency</strong></td><td>Ward demographics, infrastructure, schemes, historical record</td><td>Staff only</td><td>Manual updates</td></tr>
+            <tr><td><strong>DB2 — RAG Historical Facts</strong></td><td>Meeting summaries, clusters, resolved commitments</td><td>Auto + staff</td><td>Compounds over time</td></tr>
+            <tr><td><strong>DB3 — Timely Commitments</strong></td><td>Deadlines with escalating weights</td><td>Auto from ingestion</td><td>Items move to DB2 on completion</td></tr>
+            <tr><td><strong>DB4 — Static Complaints</strong></td><td>Raw complaint audit trail</td><td>Auto from intake</td><td>Permanent, never deleted</td></tr>
+          </tbody>
+        </table>
+
+        <div class="callout green">
+          <strong>Design principle:</strong> No single database can answer a complex governance question. All four stores together provide complete constituency intelligence.
+        </div>
+      </section>
+
+      <section id="interfaces">
+        <h2>8. Interface Requirements</h2>
+        <h3>8.1 Pages</h3>
+        <table>
+          <thead><tr><th>Page</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td>Home Dashboard</td><td>Live summary from all engines — open items, recent complaints, overdue commitments</td></tr>
+            <tr><td>To-Do List</td><td>Weighted, ranked action items with complete/extend controls</td></tr>
+            <tr><td>Commitment Tracker</td><td>Active commitments + resolved history with accountability metrics</td></tr>
+            <tr><td>Development Plan</td><td>AI-ranked development actions per ward with reasoning</td></tr>
+            <tr><td>Log Issue</td><td>Complaint intake form → clustering → to-do</td></tr>
+            <tr><td>Upload Meeting</td><td>Transcript upload → extraction → to-do</td></tr>
+            <tr><td>Digest</td><td>Weekly breakdown with drilldown overlays</td></tr>
+            <tr><td>Chat</td><td>RAG-powered natural language assistant</td></tr>
+            <tr><td>Profile</td><td>Leader profile, persists to DB</td></tr>
+            <tr><td>Context Injection</td><td>Upload .txt files for RAG knowledge base</td></tr>
+          </tbody>
+        </table>
+
+        <h3>8.2 API Endpoints (Planned)</h3>
+        <table>
+          <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td>GET</td><td>/api/dashboard</td><td>Aggregated dashboard data</td></tr>
+            <tr><td>GET/POST</td><td>/api/complaints</td><td>List / create complaints</td></tr>
+            <tr><td>POST</td><td>/api/meetings/upload</td><td>Upload transcript for processing</td></tr>
+            <tr><td>GET</td><td>/api/todo</td><td>Weighted to-do list</td></tr>
+            <tr><td>PATCH</td><td>/api/todo/{id}</td><td>Complete or extend item</td></tr>
+            <tr><td>GET</td><td>/api/priorities</td><td>Development prioritization rankings</td></tr>
+            <tr><td>POST</td><td>/api/chat</td><td>RAG assistant query</td></tr>
+            <tr><td>GET</td><td>/api/digest</td><td>Weekly digest data</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="security">
+        <h2>9. Security & Privacy</h2>
+        <div class="arch-diagram">Audio recordings      →  never leave the device
+Meeting transcripts   →  never leave the laptop
+Constituency data     →  never leave the laptop
+Complaint details     →  never leave the laptop
+Commitments           →  never leave the laptop
+AI responses          →  generated locally in production</div>
+
+        <ul>
+          <li>Privacy enforced by architecture, not policy — no network connection during local operation</li>
+          <li>Static constituency data (DB1) never written to by AI — staff-only updates</li>
+          <li>Complaint audit trail (DB4) is immutable — no deletion</li>
+          <li>External Gemini API is development-only; production uses local LLM</li>
+          <li>Proposed hardware recorder: records only, no WiFi transmission during use</li>
+        </ul>
+      </section>
+
+      <section id="phases">
+        <h2>10. Implementation Phases</h2>
+        <table>
+          <thead><tr><th>Phase</th><th>Duration</th><th>Deliverables</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>Phase 1 — Foundation</strong></td>
+              <td>Week 1-2</td>
+              <td>FastAPI scaffold, SQLite schema, seed data, basic dashboard, complaint intake + clustering</td>
+            </tr>
+            <tr>
+              <td><strong>Phase 2 — Intelligence</strong></td>
+              <td>Week 3-4</td>
+              <td>Transcript ingestion, commitment extraction, weight escalation, to-do list, weekly digest</td>
+            </tr>
+            <tr>
+              <td><strong>Phase 3 — Assistant</strong></td>
+              <td>Week 5-6</td>
+              <td>RAG engine, chat interface, development prioritization, strategic suggestions</td>
+            </tr>
+            <tr>
+              <td><strong>Phase 4 — Polish</strong></td>
+              <td>Week 7-8</td>
+              <td>React + Tailwind frontend, Hindi support, Playwright tests, demo data, pitch deck</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="appendix">
+        <h2>11. Appendix</h2>
+        <h3>11.1 Demo Constituency (Seed Data)</h3>
+        <p>Fictional demo data for hackathon presentation:</p>
+        <ul>
+          <li>MLA: Shri Rajendra Kumar Verma, Ward 42 South Delhi</li>
+          <li>6 wards, 2,70,000 population, 1,82,400 registered voters</li>
+          <li>Anchor issue: recurring drainage canal overflow in Ward 42 — 3 years of monsoon flooding</li>
+        </ul>
+
+        <h3>11.2 Weight Escalation Ladder</h3>
+        <table>
+          <thead><tr><th>Status</th><th>Weight</th><th>Urgency</th></tr></thead>
+          <tbody>
+            <tr><td>Before deadline</td><td>W1</td><td>Normal</td></tr>
+            <tr><td>1–3 days overdue</td><td>W2</td><td>Normal</td></tr>
+            <tr><td>4–7 days overdue</td><td>W3</td><td>Urgent</td></tr>
+            <tr><td>8–14 days overdue</td><td>W5</td><td>Critical</td></tr>
+            <tr><td>15+ days overdue</td><td>W8</td><td>Critical</td></tr>
+          </tbody>
+        </table>
+
+        <h3>11.3 Import Source</h3>
+        <p>This SRS was synthesized from:</p>
+        <ul>
+          <li>Janmitra-ai Cursor chat session (imported Jul 2026)</li>
+          <li>Three ChatGPT planning conversations (titles only — login required for full text)</li>
+          <li>India Innovates 2026 Digital Democracy problem statement</li>
+        </ul>
+        <p>To enrich this SRS with your full ChatGPT plan content, paste the conversations into <code>docs/plan.md</code> while logged in.</p>
+      </section>
+
+      <footer>
+        Jankendra-AI SRS v1.0 &mdash; Imported from Janmitra-ai project &mdash; Jul 2026
+      </footer>
+    </main>
+  </div>
+
+  <script>
+    const links = document.querySelectorAll('.sidebar a');
+    const sections = document.querySelectorAll('section[id]');
+
+    function setActive() {
+      let current = '';
+      sections.forEach(s => {
+        if (window.scrollY >= s.offsetTop - 120) current = s.id;
+      });
+      links.forEach(a => {
+        a.classList.toggle('active', a.getAttribute('href') === '#' + current);
+      });
+    }
+
+    window.addEventListener('scroll', setActive, { passive: true });
+    setActive();
+  </script>
+</body>
+</html>
