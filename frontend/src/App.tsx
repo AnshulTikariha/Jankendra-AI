@@ -117,29 +117,29 @@ function App() {
   }
 
   return (
-    <main className="min-h-svh overflow-hidden px-3 py-4 text-ink sm:px-6 sm:py-6 lg:px-8">
+    <main className="min-h-svh overflow-hidden px-2 py-3 text-ink sm:px-6 sm:py-6 lg:px-8">
       <section className="mx-auto grid w-full max-w-7xl items-start gap-5 lg:min-h-[calc(100svh-3rem)] lg:grid-cols-[1.08fr_0.92fr] lg:items-center lg:gap-8">
-        <div className="relative order-2 overflow-hidden rounded-[1.5rem] border border-white/40 bg-primary px-4 py-5 text-white shadow-2xl shadow-primary/20 sm:px-8 sm:py-10 lg:order-1 lg:min-h-[44rem] lg:rounded-[2rem] lg:p-10">
+        <div className="relative order-2 min-w-0 overflow-hidden rounded-[1.5rem] border border-white/40 bg-primary px-4 py-5 text-white shadow-2xl shadow-primary/20 sm:px-8 sm:py-10 lg:order-1 lg:min-h-[44rem] lg:rounded-[2rem] lg:p-10">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_15%,rgba(255,255,255,0.25),transparent_24rem),linear-gradient(135deg,rgba(30,64,175,0.98),rgba(30,58,138,0.95)_54%,rgba(5,150,105,0.92))]" />
           <div className="absolute -right-24 top-12 h-72 w-72 rounded-full bg-accent/30 blur-3xl" />
           <div className="absolute -bottom-32 left-16 h-80 w-80 rounded-full bg-primary-light/30 blur-3xl" />
 
           <div className="relative z-10 flex min-h-full flex-col justify-between gap-6 lg:gap-10">
-            <header className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="grid size-10 place-items-center rounded-2xl bg-white/95 text-sm font-extrabold tracking-[-0.06em] text-primary shadow-xl shadow-slate-950/20 sm:size-12 sm:text-base">
+            <header className="flex min-w-0 items-center justify-between gap-2 sm:gap-4">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="grid size-10 shrink-0 place-items-center rounded-2xl bg-white/95 text-sm font-extrabold tracking-[-0.06em] text-primary shadow-xl shadow-slate-950/20 sm:size-12 sm:text-base">
                   JA
                 </div>
-                <div>
+                <div className="min-w-0">
                   <p className="text-base font-extrabold leading-tight tracking-tight sm:text-lg">
                     Jankendra-AI
                   </p>
-                  <p className="text-xs leading-tight text-white/72 sm:text-sm">
+                  <p className="truncate text-xs leading-tight text-white/72 sm:text-sm">
                     Constituency intelligence platform
                   </p>
                 </div>
               </div>
-              <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-white/80">
+              <span className="shrink-0 rounded-full border border-white/20 bg-white/10 px-2 py-1 text-[0.65rem] font-bold uppercase tracking-[0.14em] text-white/80 sm:px-3 sm:text-xs sm:tracking-[0.18em]">
                 POC
               </span>
             </header>
@@ -149,7 +149,7 @@ function App() {
                 <span className="size-2 rounded-full bg-accent" />
                 Secure staff and leader access
               </div>
-              <h1 className="max-w-4xl text-3xl font-extrabold leading-[1.02] tracking-[-0.055em] sm:text-5xl lg:text-7xl">
+              <h1 className="max-w-4xl text-[1.7rem] font-extrabold leading-[1.02] tracking-[-0.055em] sm:text-5xl lg:text-7xl">
                 AI for better constituency decisions.
               </h1>
               <p className="mt-3 max-w-2xl text-sm text-white/78 sm:mt-5 sm:text-lg">
@@ -174,11 +174,11 @@ function App() {
           </div>
         </div>
 
-        <div className="order-1 mx-auto w-full max-w-xl lg:order-2">
-          <div className="rounded-[1.5rem] border border-line/80 bg-white/85 p-2 shadow-2xl shadow-primary/10 backdrop-blur-xl sm:rounded-[2rem] sm:p-4">
-            <div className="rounded-[1.25rem] border border-line bg-card p-4 shadow-sm sm:rounded-[1.5rem] sm:p-7">
-              <div className="mb-5 flex items-start justify-between gap-4 sm:mb-6">
-                <div>
+        <div className="order-1 mx-auto min-w-0 w-full max-w-xl lg:order-2">
+          <div className="min-w-0 rounded-[1.5rem] border border-line/80 bg-white/85 p-2 shadow-2xl shadow-primary/10 backdrop-blur-xl sm:rounded-[2rem] sm:p-4">
+            <div className="min-w-0 rounded-[1.25rem] border border-line bg-card p-4 shadow-sm sm:rounded-[1.5rem] sm:p-7">
+              <div className="mb-5 flex min-w-0 items-start justify-between gap-3 sm:mb-6 sm:gap-4">
+                <div className="min-w-0">
                   <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent sm:text-sm">
                     Mobile login
                   </p>
@@ -189,16 +189,16 @@ function App() {
                     Built for quick, verified access by constituency teams.
                   </p>
                 </div>
-                <div className="grid size-11 shrink-0 place-items-center rounded-2xl bg-soft-blue text-lg font-extrabold text-primary sm:size-12 sm:text-xl">
+                <div className="grid size-10 shrink-0 place-items-center rounded-2xl bg-soft-blue text-lg font-extrabold text-primary sm:size-12 sm:text-xl">
                   #
                 </div>
               </div>
 
               {!hasRequestedOtp && (
-                <form className="space-y-5" onSubmit={handlePhoneSubmit}>
-                  <label className="block" htmlFor="mobile-number">
+                <form className="min-w-0 space-y-5" onSubmit={handlePhoneSubmit}>
+                  <label className="block min-w-0" htmlFor="mobile-number">
                     <span className="text-sm font-bold text-ink">Mobile number</span>
-                    <div className="mt-2 flex overflow-hidden rounded-2xl border border-line bg-white shadow-sm transition focus-within:border-primary-light focus-within:ring-4 focus-within:ring-primary-light/15">
+                    <div className="mt-2 flex min-w-0 overflow-hidden rounded-2xl border border-line bg-white shadow-sm transition focus-within:border-primary-light focus-within:ring-4 focus-within:ring-primary-light/15">
                       <span className="grid place-items-center border-r border-line bg-slate-50 px-3 text-sm font-extrabold text-primary sm:px-4">
                         +91
                       </span>
@@ -228,8 +228,8 @@ function App() {
               {hasRequestedOtp && !isVerified && (
                 <div className="space-y-5">
                   <div className="rounded-2xl border border-soft-blue bg-soft-blue/70 p-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
+                    <div className="flex min-w-0 items-center justify-between gap-3">
+                      <div className="min-w-0">
                         <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary">
                           OTP sent to
                         </p>
@@ -249,11 +249,11 @@ function App() {
                     <label className="text-sm font-bold text-ink" htmlFor="otp-0">
                       Enter 6 digit OTP
                     </label>
-                    <div className="mt-3 grid grid-cols-6 gap-1.5 sm:gap-3">
+                    <div className="mt-3 grid min-w-0 grid-cols-6 gap-1 sm:gap-3">
                       {otp.map((digit, index) => (
                         <input
                           aria-label={`OTP digit ${index + 1}`}
-                          className="aspect-square min-w-0 rounded-xl border border-line bg-white text-center text-lg font-extrabold text-ink shadow-sm outline-none transition focus:border-primary-light focus:ring-4 focus:ring-primary-light/15 sm:rounded-2xl sm:text-xl"
+                          className="aspect-square min-w-0 rounded-lg border border-line bg-white text-center text-lg font-extrabold text-ink shadow-sm outline-none transition focus:border-primary-light focus:ring-4 focus:ring-primary-light/15 sm:rounded-2xl sm:text-xl"
                           id={`otp-${index}`}
                           inputMode="numeric"
                           key={`otp-${index}`}
@@ -318,7 +318,7 @@ function App() {
               )}
 
               <p
-                className="mt-5 rounded-2xl border border-line bg-slate-50 px-4 py-3 text-sm font-semibold text-muted"
+                className="mt-5 break-words rounded-2xl border border-line bg-slate-50 px-4 py-3 text-sm font-semibold text-muted"
                 role="status"
               >
                 {statusMessage}
