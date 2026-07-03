@@ -1,5 +1,6 @@
 import { getCitizenGreeting } from '../../data/demoCitizenDashboard'
 import type { CitizenStats } from '../../hooks/useCitizenDashboard'
+import { getRoleTheme } from '../../theme/roleThemes'
 
 type Props = {
   constituencyName: string
@@ -9,8 +10,10 @@ type Props = {
 }
 
 export function CitizenDashboardHero({ constituencyName, phone, stats, onReportIssue }: Props) {
+  const theme = getRoleTheme('citizen')
+
   return (
-    <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-teal-600 via-emerald-600 to-accent p-6 text-white shadow-xl shadow-teal-600/25 sm:p-8">
+    <section className={`relative overflow-hidden rounded-3xl bg-gradient-to-br ${theme.heroGradient} p-6 text-white shadow-xl ${theme.heroShadow} sm:p-8`}>
       <div className="absolute -right-16 -top-16 size-48 rounded-full bg-white/10 blur-2xl" />
       <div className="absolute -bottom-20 left-1/3 size-56 rounded-full bg-emerald-300/20 blur-3xl" />
       <div className="absolute right-8 top-8 opacity-20">
@@ -19,7 +22,7 @@ export function CitizenDashboardHero({ constituencyName, phone, stats, onReportI
 
       <div className="relative z-10">
         <p className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[0.68rem] font-bold uppercase tracking-[0.18em] text-white/90 sm:text-xs">
-          <span className="size-2 animate-pulse rounded-full bg-emerald-300" />
+          <span className={`size-2 animate-pulse rounded-full ${theme.heroPulse}`} />
           Your citizen portal
         </p>
         <p className="mt-4 text-xs font-bold uppercase tracking-[0.22em] text-white/70">
@@ -38,7 +41,7 @@ export function CitizenDashboardHero({ constituencyName, phone, stats, onReportI
         </div>
 
         <button
-          className="mt-6 rounded-full bg-white px-6 py-3 text-sm font-extrabold text-teal-700 shadow-lg transition hover:bg-teal-50"
+          className={`mt-6 rounded-full bg-white px-6 py-3 text-sm font-extrabold shadow-lg transition ${theme.heroCtaText} ${theme.heroCtaHover}`}
           onClick={onReportIssue}
           type="button"
         >

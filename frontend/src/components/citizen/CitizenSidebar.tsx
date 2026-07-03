@@ -1,4 +1,5 @@
 import type { CitizenPage } from '../../types/citizenNavigation'
+import { getRoleTheme } from '../../theme/roleThemes'
 
 type NavPage = CitizenPage & { statusLabel: string }
 
@@ -20,18 +21,19 @@ const navVisuals: Record<string, { gradient: string; icon: React.ReactNode }> = 
 
 export function CitizenSidebar({ pages, activePageId, constituencyName, onSelect }: Props) {
   const availableCount = pages.filter((p) => p.available).length
+  const theme = getRoleTheme('citizen')
 
   return (
     <aside className="relative flex flex-col overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-lg shadow-slate-200/60">
-      <div className="absolute -left-10 top-20 size-32 rounded-full bg-teal-400/15 blur-3xl" />
-      <div className="absolute -right-8 bottom-24 size-28 rounded-full bg-emerald-400/15 blur-3xl" />
+      <div className={`absolute -left-10 top-20 size-32 rounded-full ${theme.sidebarBlurOrb} blur-3xl`} />
+      <div className={`absolute -right-8 bottom-24 size-28 rounded-full ${theme.sidebarBlurOrb2} blur-3xl`} />
 
-      <div className="relative border-b border-slate-100 bg-gradient-to-br from-teal-600 via-emerald-600 to-accent px-4 py-5 text-white">
+      <div className={`relative border-b border-slate-100 bg-gradient-to-br ${theme.sidebarHeaderGradient} px-4 py-5 text-white`}>
         <div className="absolute right-3 top-3 opacity-20">
           <CommunityGraphic />
         </div>
         <div className="relative flex items-center gap-3">
-          <div className="grid size-11 place-items-center rounded-2xl bg-white/95 text-sm font-extrabold tracking-tight text-teal-700 shadow-lg">
+          <div className={`grid size-11 place-items-center rounded-2xl bg-white/95 text-sm font-extrabold tracking-tight ${theme.sidebarLogoText} shadow-lg`}>
             JA
           </div>
           <div className="min-w-0">
@@ -44,14 +46,14 @@ export function CitizenSidebar({ pages, activePageId, constituencyName, onSelect
 
       <div className="relative mx-4 -mt-4 rounded-2xl border border-white/80 bg-white p-3 shadow-md">
         <div className="flex items-center gap-3">
-          <div className="grid size-10 place-items-center rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 text-xs font-extrabold text-white shadow-md">
+          <div className={`grid size-10 place-items-center rounded-xl bg-gradient-to-br ${theme.sidebarRoleAvatar} text-xs font-extrabold text-white shadow-md`}>
             GP
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-xs font-bold text-muted">Signed in as</p>
             <p className="truncate font-extrabold text-ink">General Public</p>
           </div>
-          <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[0.6rem] font-bold uppercase tracking-wide text-emerald-700">
+          <span className={`rounded-full px-2 py-0.5 text-[0.6rem] font-bold uppercase tracking-wide ${theme.sidebarLiveBadge}`}>
             {availableCount} live
           </span>
         </div>
@@ -69,7 +71,7 @@ export function CitizenSidebar({ pages, activePageId, constituencyName, onSelect
               aria-current={isActive ? 'page' : undefined}
               className={`group relative flex w-full items-center gap-3 rounded-2xl px-2.5 py-2.5 text-left transition ${
                 isActive
-                  ? 'bg-gradient-to-r from-teal-800 to-emerald-900 text-white shadow-lg shadow-teal-900/20'
+                  ? `bg-gradient-to-r ${theme.sidebarActiveNav} text-white shadow-lg`
                   : isDisabled
                     ? 'opacity-60 hover:bg-slate-50'
                     : 'hover:bg-slate-50'
@@ -79,7 +81,7 @@ export function CitizenSidebar({ pages, activePageId, constituencyName, onSelect
               type="button"
             >
               {isActive && (
-                <span className="absolute left-0 top-1/2 h-8 w-1 -translate-y-1/2 rounded-r-full bg-gradient-to-b from-emerald-300 to-teal-200" />
+                <span className={`absolute left-0 top-1/2 h-8 w-1 -translate-y-1/2 rounded-r-full bg-gradient-to-b ${theme.sidebarActiveAccent}`} />
               )}
               <div
                 className={`grid size-9 shrink-0 place-items-center rounded-xl shadow-sm transition group-hover:scale-105 ${
@@ -93,7 +95,7 @@ export function CitizenSidebar({ pages, activePageId, constituencyName, onSelect
               <div className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-bold">{page.label}</span>
                 <span className={`mt-0.5 block truncate text-[0.65rem] font-semibold ${
-                  isActive ? 'text-teal-100' : 'text-muted'
+                  isActive ? theme.sidebarActiveSubtext : 'text-muted'
                 }`}>
                   {page.statusLabel}
                 </span>
@@ -105,16 +107,16 @@ export function CitizenSidebar({ pages, activePageId, constituencyName, onSelect
                   Soon
                 </span>
               ) : (
-                <span className={`size-2 shrink-0 rounded-full ${isActive ? 'bg-emerald-300' : 'bg-emerald-500'}`} />
+                <span className={`size-2 shrink-0 rounded-full ${theme.sidebarActiveDot}`} />
               )}
             </button>
           )
         })}
       </nav>
 
-      <div className="relative border-t border-slate-100 bg-gradient-to-r from-teal-50/50 to-emerald-50/50 p-4">
+      <div className={`relative border-t border-slate-100 bg-gradient-to-r ${theme.sidebarFooterBg} p-4`}>
         <div className="flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-white/80 p-3">
-          <div className="grid size-9 place-items-center rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 text-white shadow-md">
+          <div className={`grid size-9 place-items-center rounded-xl bg-gradient-to-br ${theme.sidebarFooterIcon} text-white shadow-md`}>
             <ShieldIcon />
           </div>
           <div className="min-w-0">

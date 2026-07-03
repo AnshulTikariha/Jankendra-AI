@@ -40,6 +40,7 @@ export function DashboardPage() {
           <PriorityList
             actionable={isStaff}
             items={demoPriorityItems}
+            role={role}
             title={isStaff ? 'Your queue today' : "Today's focus"}
           />
         </div>
@@ -51,7 +52,7 @@ export function DashboardPage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         {isLeader && <WardComparisonTable rows={demoWardComparison} />}
-        <RecentActivityList items={demoRecentActivity} />
+        <RecentActivityList items={demoRecentActivity} role={role} />
       </div>
     </section>
   )

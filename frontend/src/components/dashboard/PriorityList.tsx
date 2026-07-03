@@ -1,9 +1,12 @@
 import type { PriorityItem } from '../../data/demoDashboard'
+import type { UserRole } from '../../types/auth'
+import { getRoleTheme } from '../../theme/roleThemes'
 
 type Props = {
   items: PriorityItem[]
   title: string
   actionable?: boolean
+  role: UserRole
 }
 
 const typeStyles = {
@@ -12,18 +15,19 @@ const typeStyles = {
   development: { label: 'Development', bg: 'bg-amber-100 text-amber-800', bar: 'bg-amber-500' },
 } as const
 
-export function PriorityList({ items, title, actionable }: Props) {
+export function PriorityList({ items, title, actionable, role }: Props) {
   const maxWeight = Math.max(...items.map((i) => i.weight))
+  const theme = getRoleTheme(role)
 
   return (
     <section className="overflow-hidden rounded-3xl border border-line/80 bg-white shadow-md shadow-slate-200/50">
-      <div className="border-b border-line/80 bg-gradient-to-r from-slate-50 to-white px-5 py-4 sm:px-6">
+      <div className={`border-b border-line/80 bg-gradient-to-r ${theme.sectionHeaderBg} px-5 py-4 sm:px-6`}>
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">Priority queue</p>
+            <p className={`text-xs font-bold uppercase tracking-[0.18em] ${theme.sectionEyebrow}`}>Priority queue</p>
             <h2 className="mt-1 text-xl font-extrabold text-ink">{title}</h2>
           </div>
-          <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
+          <span className={`rounded-full px-3 py-1 text-xs font-bold ${theme.badgeSoft}`}>
             {items.length} items
           </span>
         </div>
@@ -37,7 +41,7 @@ export function PriorityList({ items, title, actionable }: Props) {
           return (
             <li className="rounded-2xl p-3 transition hover:bg-slate-50/80 sm:p-4" key={item.id}>
               <div className="flex items-start gap-4">
-                <div className="grid size-10 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-slate-800 to-slate-950 text-sm font-extrabold text-white shadow-md">
+                <div className={`grid size-10 shrink-0 place-items-center rounded-2xl bg-gradient-to-br ${theme.cardIndexBg} text-sm font-extrabold text-white shadow-md`}>
                   {index + 1}
                 </div>
                 <div className="min-w-0 flex-1">
@@ -65,7 +69,7 @@ export function PriorityList({ items, title, actionable }: Props) {
 
                   {actionable && (
                     <div className="mt-3 flex flex-wrap gap-2">
-                      <button className="rounded-full bg-gradient-to-r from-primary to-primary-light px-4 py-1.5 text-xs font-bold text-white shadow-md shadow-primary/20" type="button">
+                      <button className={`rounded-full bg-gradient-to-r ${theme.primaryBtn} px-4 py-1.5 text-xs font-bold text-white shadow-md`} type="button">
                         Complete
                       </button>
                       <button className="rounded-full border border-line bg-white px-4 py-1.5 text-xs font-bold text-muted transition hover:border-primary-light hover:text-primary" type="button">

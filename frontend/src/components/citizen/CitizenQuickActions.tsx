@@ -1,3 +1,5 @@
+import { getRoleTheme } from '../../theme/roleThemes'
+
 type Props = {
   lastComplaintRef: string | null
   onNavigate: (view: 'raise' | 'my-complaints' | 'ward-updates') => void
@@ -8,27 +10,28 @@ const actions = [
     id: 'raise' as const,
     label: 'Report new issue',
     desc: 'Submit a ward complaint',
-    gradient: 'from-rose-500 to-pink-600',
+    gradient: 'from-teal-500 to-emerald-600',
     icon: '＋',
   },
   {
     id: 'my-complaints' as const,
     label: 'Track complaints',
     desc: 'View all your submissions',
-    gradient: 'from-blue-500 to-indigo-600',
+    gradient: 'from-teal-600 to-emerald-700',
     icon: '☰',
   },
   {
     id: 'ward-updates' as const,
     label: 'Ward updates',
     desc: 'Public resolution feed',
-    gradient: 'from-amber-500 to-orange-500',
+    gradient: 'from-emerald-500 to-teal-500',
     icon: '▤',
     soon: true,
   },
 ]
 
 export function CitizenQuickActions({ lastComplaintRef, onNavigate }: Props) {
+  const theme = getRoleTheme('citizen')
   const handleCopyRef = async () => {
     if (!lastComplaintRef) return
     try {
@@ -40,8 +43,8 @@ export function CitizenQuickActions({ lastComplaintRef, onNavigate }: Props) {
 
   return (
     <section className="overflow-hidden rounded-3xl border border-line/80 bg-white shadow-md shadow-slate-200/50">
-      <div className="border-b border-line/80 bg-gradient-to-r from-teal-50/50 to-white px-5 py-4">
-        <p className="text-xs font-bold uppercase tracking-[0.16em] text-accent">Shortcuts</p>
+      <div className={`border-b border-line/80 bg-gradient-to-r ${theme.sectionHeaderBg} px-5 py-4`}>
+        <p className={`text-xs font-bold uppercase tracking-[0.16em] ${theme.sectionEyebrow}`}>Shortcuts</p>
         <h2 className="mt-1 text-lg font-extrabold">Quick actions</h2>
       </div>
       <div className="grid gap-2 p-4">
@@ -64,25 +67,25 @@ export function CitizenQuickActions({ lastComplaintRef, onNavigate }: Props) {
                 Soon
               </span>
             ) : (
-              <span className="ml-auto text-lg text-slate-300 transition group-hover:text-teal-600">→</span>
+              <span className={`ml-auto text-lg text-slate-300 transition ${theme.accentLink}`}>→</span>
             )}
           </button>
         ))}
 
         {lastComplaintRef && (
           <button
-            className="flex items-center gap-3 rounded-2xl border border-dashed border-teal-200 bg-teal-50/50 p-3 text-left transition hover:bg-teal-50"
+            className={`flex items-center gap-3 rounded-2xl border border-dashed border-teal-200 ${theme.highlightBg} p-3 text-left transition hover:opacity-90`}
             onClick={handleCopyRef}
             type="button"
           >
-            <div className="grid size-9 place-items-center rounded-xl bg-white text-xs font-bold text-teal-700 shadow-sm">
+            <div className={`grid size-9 place-items-center rounded-xl bg-white text-xs font-bold ${theme.referenceText} shadow-sm`}>
               #
             </div>
             <div className="min-w-0">
               <p className="text-xs font-bold text-muted">Last reference</p>
-              <p className="font-mono text-sm font-extrabold text-teal-800">{lastComplaintRef}</p>
+              <p className={`font-mono text-sm font-extrabold ${theme.highlightText}`}>{lastComplaintRef}</p>
             </div>
-            <span className="ml-auto text-xs font-bold text-teal-600">Copy</span>
+            <span className={`ml-auto text-xs font-bold ${theme.accentLink}`}>Copy</span>
           </button>
         )}
       </div>

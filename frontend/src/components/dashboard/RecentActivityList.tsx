@@ -1,7 +1,10 @@
 import type { RecentActivity } from '../../data/demoDashboard'
+import type { UserRole } from '../../types/auth'
+import { getRoleTheme } from '../../theme/roleThemes'
 
 type Props = {
   items: RecentActivity[]
+  role: UserRole
 }
 
 const typeConfig: Record<RecentActivity['type'], { label: string; color: string; dot: string }> = {
@@ -11,16 +14,18 @@ const typeConfig: Record<RecentActivity['type'], { label: string; color: string;
   commitment: { label: 'Commitment', color: 'bg-amber-100 text-amber-800', dot: 'bg-amber-500' },
 }
 
-export function RecentActivityList({ items }: Props) {
+export function RecentActivityList({ items, role }: Props) {
+  const theme = getRoleTheme(role)
+
   return (
     <section className="overflow-hidden rounded-3xl border border-line/80 bg-white shadow-md shadow-slate-200/50">
-      <div className="border-b border-line/80 bg-gradient-to-r from-slate-50 to-white px-5 py-4 sm:px-6">
-        <p className="text-xs font-bold uppercase tracking-[0.16em] text-accent">Activity feed</p>
+      <div className={`border-b border-line/80 bg-gradient-to-r ${theme.sectionHeaderBg} px-5 py-4 sm:px-6`}>
+        <p className={`text-xs font-bold uppercase tracking-[0.16em] ${theme.sectionEyebrow}`}>Activity feed</p>
         <h2 className="mt-1 text-xl font-extrabold">Recent activity</h2>
       </div>
 
       <ul className="relative p-4 sm:p-5">
-        <div aria-hidden="true" className="absolute bottom-5 left-[1.65rem] top-5 w-0.5 bg-gradient-to-b from-primary/30 via-accent/30 to-transparent sm:left-[1.9rem]" />
+        <div aria-hidden="true" className={`absolute bottom-5 left-[1.65rem] top-5 w-0.5 bg-gradient-to-b ${theme.timelineGradient} sm:left-[1.9rem]`} />
 
         {items.map((item) => {
           const config = typeConfig[item.type]

@@ -1,29 +1,32 @@
 import { demoCitizenTransparency } from '../../data/demoCitizenDashboard'
+import { getRoleTheme } from '../../theme/roleThemes'
 
 type Props = {
   maxClusterCount: number
 }
 
 export function CommunityImpactCard({ maxClusterCount }: Props) {
+  const theme = getRoleTheme('citizen')
+
   return (
     <section className="overflow-hidden rounded-3xl border border-line/80 bg-white shadow-md shadow-slate-200/50">
-      <div className="border-b border-line/80 bg-gradient-to-r from-violet-50/50 to-white px-5 py-4">
-        <p className="text-xs font-bold uppercase tracking-[0.16em] text-accent">Community impact</p>
+      <div className={`border-b border-line/80 bg-gradient-to-r ${theme.sectionHeaderBg} px-5 py-4`}>
+        <p className={`text-xs font-bold uppercase tracking-[0.16em] ${theme.sectionEyebrow}`}>Community impact</p>
         <h2 className="mt-1 text-lg font-extrabold">Your voice adds weight</h2>
       </div>
       <div className="space-y-4 p-5">
-        <div className="rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 p-4 text-white shadow-lg">
+        <div className={`rounded-2xl bg-gradient-to-br ${theme.primaryBtn} p-4 text-white shadow-lg`}>
           <p className="text-xs font-bold uppercase tracking-wide text-white/70">This week in your constituency</p>
           <p className="mt-2 text-3xl font-extrabold">{demoCitizenTransparency.citizenReportsWeek}</p>
           <p className="mt-1 text-sm text-white/80">citizen reports filed</p>
         </div>
 
         {maxClusterCount > 1 ? (
-          <div className="rounded-2xl border border-teal-200 bg-teal-50 p-4">
-            <p className="text-sm font-bold text-teal-900">
+          <div className={`rounded-2xl border border-teal-200 ${theme.highlightBg} p-4`}>
+            <p className={`text-sm font-bold ${theme.highlightText}`}>
               Up to {maxClusterCount} residents have reported similar issues in your ward.
             </p>
-            <p className="mt-2 text-xs text-teal-800">
+            <p className={`mt-2 text-xs ${theme.highlightText} opacity-80`}>
               Clustered complaints are prioritised for faster review by your representative&apos;s office.
             </p>
           </div>
