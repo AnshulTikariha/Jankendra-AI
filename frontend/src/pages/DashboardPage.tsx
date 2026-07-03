@@ -12,6 +12,7 @@ import { KpiStrip } from '../components/dashboard/KpiStrip'
 import { PriorityList } from '../components/dashboard/PriorityList'
 import { QuickActions } from '../components/dashboard/QuickActions'
 import { RecentActivityList } from '../components/dashboard/RecentActivityList'
+import { IssueHeatMap } from '../components/dashboard/IssueHeatMap'
 import { WardComparisonTable } from '../components/dashboard/WardComparisonTable'
 
 export function DashboardPage() {
@@ -31,6 +32,8 @@ export function DashboardPage() {
       />
 
       <KpiStrip kpis={demoKpis} showCitizenMetric />
+
+      <IssueHeatMap />
 
       <div className="grid gap-6 xl:grid-cols-3">
         <div className="xl:col-span-2">
