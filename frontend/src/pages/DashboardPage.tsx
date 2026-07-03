@@ -5,10 +5,9 @@ import {
   demoPriorityItems,
   demoRecentActivity,
   demoWardComparison,
-  getDashboardGreeting,
 } from '../data/demoDashboard'
-import { roleLabels } from '../types/auth'
 import { CommitmentsAtRisk } from '../components/dashboard/CommitmentsAtRisk'
+import { DashboardHero } from '../components/dashboard/DashboardHero'
 import { KpiStrip } from '../components/dashboard/KpiStrip'
 import { PriorityList } from '../components/dashboard/PriorityList'
 import { QuickActions } from '../components/dashboard/QuickActions'
@@ -25,23 +24,16 @@ export function DashboardPage() {
 
   return (
     <section className="space-y-6">
-      <div className="rounded-3xl border border-line bg-white p-6 shadow-sm">
-        <p className="text-xs font-bold uppercase tracking-[0.2em] text-accent">
-          {getDashboardGreeting(role)}
-        </p>
-        <h1 className="mt-2 text-3xl font-extrabold tracking-tight">
-          {session?.constituencyName ?? 'Constituency'}
-        </h1>
-        <p className="mt-2 text-sm text-muted">
-          Signed in as <span className="font-bold text-ink">{roleLabels[role]}</span>
-          {session?.phone ? ` · +91 ${session.phone}` : ''}
-        </p>
-      </div>
+      <DashboardHero
+        constituencyName={session?.constituencyName ?? 'Constituency'}
+        phone={session?.phone}
+        role={role}
+      />
 
       <KpiStrip kpis={demoKpis} showCitizenMetric />
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
+      <div className="grid gap-6 xl:grid-cols-3">
+        <div className="xl:col-span-2">
           <PriorityList
             actionable={isStaff}
             items={demoPriorityItems}
@@ -54,9 +46,10 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {isLeader && <WardComparisonTable rows={demoWardComparison} />}
-      {isStaff && <RecentActivityList items={demoRecentActivity} />}
-      {isLeader && <RecentActivityList items={demoRecentActivity} />}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {isLeader && <WardComparisonTable rows={demoWardComparison} />}
+        <RecentActivityList items={demoRecentActivity} />
+      </div>
     </section>
   )
 }
