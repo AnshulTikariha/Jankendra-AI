@@ -1,7 +1,14 @@
 import { create } from 'zustand'
 import { readStoredLocale, type SupportedLocale } from '../i18n/config'
 
-export type CitizenView = 'home' | 'raise' | 'my-complaints' | 'confirmation'
+export type CitizenView =
+  | 'home'
+  | 'raise'
+  | 'my-complaints'
+  | 'confirmation'
+  | 'ward-updates'
+  | 'help'
+  | 'profile'
 
 type UiState = {
   activePageId: string
