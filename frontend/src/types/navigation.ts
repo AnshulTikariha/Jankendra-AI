@@ -1,78 +1,21 @@
-export type AppPhase =
-  | 'Phase 0'
-  | 'Phase 1'
-  | 'Phase 2'
-  | 'Phase 3'
-  | 'Phase 4'
-  | 'Phase 5'
-  | 'Phase 6'
-
 export type NavigationPage = {
   id: string
   label: string
-  phase: AppPhase
   description: string
+  available: boolean
+  staffOnly?: boolean
+  leaderOnly?: boolean
 }
 
 export const navigationPages: NavigationPage[] = [
-  {
-    id: 'dashboard',
-    label: 'Home Dashboard',
-    phase: 'Phase 1',
-    description: 'Live constituency overview and priority signals.',
-  },
-  {
-    id: 'todo',
-    label: 'To-Do List',
-    phase: 'Phase 2',
-    description: 'Weighted action list with complete and extend actions.',
-  },
-  {
-    id: 'commitments',
-    label: 'Commitment Tracker',
-    phase: 'Phase 3',
-    description: 'Active and resolved commitments from meeting transcripts.',
-  },
-  {
-    id: 'development-plan',
-    label: 'Development Plan',
-    phase: 'Phase 4',
-    description: 'AI-ranked ward development actions and reasoning traces.',
-  },
-  {
-    id: 'log-issue',
-    label: 'Log Issue',
-    phase: 'Phase 2',
-    description: 'Complaint intake for immutable issue records.',
-  },
-  {
-    id: 'upload-meeting',
-    label: 'Upload Meeting',
-    phase: 'Phase 3',
-    description: 'Transcript upload and processing job progress.',
-  },
-  {
-    id: 'digest',
-    label: 'Digest',
-    phase: 'Phase 4',
-    description: 'Weekly numbers-only governance digest.',
-  },
-  {
-    id: 'chat',
-    label: 'Chat',
-    phase: 'Phase 5',
-    description: 'Grounded RAG assistant with streaming responses.',
-  },
-  {
-    id: 'profile',
-    label: 'Profile',
-    phase: 'Phase 1',
-    description: 'Leader, staff, and constituency details.',
-  },
-  {
-    id: 'context-injection',
-    label: 'Context Injection',
-    phase: 'Phase 5',
-    description: 'Upload trusted context for the RAG knowledge base.',
-  },
+  { id: 'dashboard', label: 'Home dashboard', description: 'Live constituency overview and priority signals.', available: true },
+  { id: 'todo', label: 'To-do list', description: 'Weighted action list with complete and extend actions.', available: false },
+  { id: 'commitments', label: 'Commitment tracker', description: 'Active and resolved commitments from meetings.', available: false },
+  { id: 'development-plan', label: 'Development plan', description: 'Ranked ward development actions with reasoning.', available: false, leaderOnly: true },
+  { id: 'log-issue', label: 'Log issue', description: 'Citizen complaint intake for accountable records.', available: false, staffOnly: true },
+  { id: 'upload-meeting', label: 'Upload meeting', description: 'Transcript upload and processing progress.', available: false, staffOnly: true },
+  { id: 'digest', label: 'Weekly digest', description: 'Concise governance digest for the week.', available: false },
+  { id: 'chat', label: 'Assistant', description: 'Grounded assistant with streaming responses.', available: false },
+  { id: 'profile', label: 'Profile', description: 'User and constituency details.', available: false },
+  { id: 'context-injection', label: 'Context library', description: 'Upload trusted context for the knowledge base.', available: false, staffOnly: true },
 ]

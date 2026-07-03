@@ -1,63 +1,62 @@
-import { apiBaseUrl } from '../api/httpClient'
-
-const scaffoldCards = [
-  {
-    title: 'Stack',
-    value: 'React + TypeScript + Tailwind',
-    detail: 'Vite development server with fast HMR.',
-  },
-  {
-    title: 'Server State',
-    value: 'TanStack Query',
-    detail: 'Provider is mounted at the React root.',
-  },
-  {
-    title: 'Client State',
-    value: 'Zustand',
-    detail: 'UI shell state is ready for route selection.',
-  },
-]
+import { useAuthStore } from '../stores/useAuthStore'
+import {
+  demoCommitmentsAtRisk,
+  demoKpis,
+  demoPriorityItems,
+  demoRecentActivity,
+  demoWardComparison,
+  getDashboardGreeting,
+} from '../data/demoDashboard'
+import { roleLabels } from '../types/auth'
+import { CommitmentsAtRisk } from '../components/dashboard/CommitmentsAtRisk'
+import { KpiStrip } from '../components/dashboard/KpiStrip'
+import { PriorityList } from '../components/dashboard/PriorityList'
+import { QuickActions } from '../components/dashboard/QuickActions'
+import { RecentActivityList } from '../components/dashboard/RecentActivityList'
+import { WardComparisonTable } from '../components/dashboard/WardComparisonTable'
 
 export function DashboardPage() {
+  const session = useAuthStore((s) => s.session)
+  const role = session?.role ?? 'staff'
+  const isLeader = role === 'leader'
+  const isStaff = role === 'staff'
+
+  if (role === 'citizen') return null
+
   return (
     <section className="space-y-6">
-      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p className="text-sm font-semibold uppercase tracking-[0.24em] text-emerald-700">
-          Blank app loads
+      <div className="rounded-3xl border border-line bg-white p-6 shadow-sm">
+        <p className="text-xs font-bold uppercase tracking-[0.2em] text-accent">
+          {getDashboardGreeting(role)}
         </p>
-        <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">
-          Frontend foundation is ready for Phase 1 workflows.
-        </h2>
-        <p className="mt-4 max-w-3xl text-base leading-7 text-slate-600">
-          This shell follows the architecture document by setting up the React
-          frontend layer, planned feature areas, API integration surface, and
-          state management foundations.
+        <h1 className="mt-2 text-3xl font-extrabold tracking-tight">
+          {session?.constituencyName ?? 'Constituency'}
+        </h1>
+        <p className="mt-2 text-sm text-muted">
+          Signed in as <span className="font-bold text-ink">{roleLabels[role]}</span>
+          {session?.phone ? ` · +91 ${session.phone}` : ''}
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        {scaffoldCards.map((card) => (
-          <article
-            className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
-            key={card.title}
-          >
-            <p className="text-sm font-medium text-slate-500">{card.title}</p>
-            <h3 className="mt-2 text-xl font-semibold text-slate-950">
-              {card.value}
-            </h3>
-            <p className="mt-3 text-sm leading-6 text-slate-600">
-              {card.detail}
-            </p>
-          </article>
-        ))}
+      <KpiStrip kpis={demoKpis} showCitizenMetric />
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <PriorityList
+            actionable={isStaff}
+            items={demoPriorityItems}
+            title={isStaff ? 'Your queue today' : "Today's focus"}
+          />
+        </div>
+        <div className="space-y-6">
+          {isLeader && <CommitmentsAtRisk items={demoCommitmentsAtRisk} />}
+          <QuickActions role={role} />
+        </div>
       </div>
 
-      <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5">
-        <p className="text-sm font-medium text-slate-700">API base URL</p>
-        <code className="mt-2 inline-flex rounded-lg bg-slate-900 px-3 py-2 text-sm text-white">
-          {apiBaseUrl}
-        </code>
-      </div>
+      {isLeader && <WardComparisonTable rows={demoWardComparison} />}
+      {isStaff && <RecentActivityList items={demoRecentActivity} />}
+      {isLeader && <RecentActivityList items={demoRecentActivity} />}
     </section>
   )
 }
