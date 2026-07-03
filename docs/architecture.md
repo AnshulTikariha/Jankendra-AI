@@ -6,6 +6,14 @@
 
 This document defines the long-term, scalable architecture for Jankendra-AI, divided into three independent layers: **Frontend**, **Backend**, and **AI Modules**.
 
+## Project Roles
+
+| Person | Ownership |
+|--------|-----------|
+| Anshul | Backend |
+| Bharath | AI Modules |
+| Saurabh | Front End and Architectures |
+
 Related documents:
 
 - [Software Requirements Specification](srs.html) — functional and non-functional requirements

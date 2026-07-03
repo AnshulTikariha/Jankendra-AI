@@ -11,6 +11,14 @@ AI-powered constituency intelligence platform for elected representatives — de
 | [docs/plan.md](docs/plan.md) | 8-week implementation plan (Phases 0–6) |
 | [docs/backend-database.md](docs/backend-database.md) | Backend framework, ORM, and database choices |
 
+## Team Roles
+
+| Person | Role |
+|--------|------|
+| Anshul | Backend |
+| Bharath | AI Modules |
+| Saurabh | Front End and Architectures |
+
 ## Tech Stack
 
 | Layer | Development | Production |
