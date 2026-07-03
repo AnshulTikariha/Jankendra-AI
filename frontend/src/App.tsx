@@ -179,8 +179,8 @@ function App() {
             <div className="min-w-0 rounded-[1.25rem] border border-line bg-card p-4 shadow-sm sm:rounded-[1.5rem] sm:p-7">
               <div className="mb-5 flex min-w-0 items-start justify-between gap-3 sm:mb-6 sm:gap-4">
                 <div className="min-w-0">
-                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent sm:text-sm">
-                    Mobile login
+                  <p className="text-xs font-bold tracking-[0.04em] text-accent sm:text-sm">
+                    Login to Jankendra AI
                   </p>
                   <h2 className="mt-2 text-2xl font-extrabold leading-tight tracking-[-0.04em] text-ink sm:text-3xl">
                     Continue with OTP
