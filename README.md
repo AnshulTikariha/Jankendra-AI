@@ -6,6 +6,7 @@ AI-powered constituency intelligence platform for elected representatives — de
 
 | Document | Description |
 |----------|-------------|
+| [README.html](README.html) | Modern HTML project overview |
 | [docs/srs.html](docs/srs.html) | Software Requirements Specification (open in browser) |
 | [docs/architecture.md](docs/architecture.md) | System architecture — Frontend, Backend, AI Modules |
 | [docs/plan.md](docs/plan.md) | 8-week implementation plan (Phases 0–6) |

@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jankendra-AI - Project Overview</title>
+  <style>
+    :root {
+      --primary: #1e40af;
+      --primary-light: #3b82f6;
+      --primary-dark: #1e3a8a;
+      --accent: #059669;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --soft-blue: #eff6ff;
+      --deep: #0f172a;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      min-height: 100svh;
+      overflow-x: hidden;
+      background:
+        radial-gradient(circle at top left, rgba(59, 130, 246, 0.16), transparent 34rem),
+        linear-gradient(180deg, #eff6ff 0%, #f8fafc 28rem);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 1rem;
+      line-height: 1.6;
+    }
+
+    a {
+      color: inherit;
+    }
+
+    .page-shell {
+      width: min(100%, 76rem);
+      margin: 0 auto;
+      padding: 1rem;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      margin: 0 -1rem 1.25rem;
+      border-bottom: 1px solid rgba(226, 232, 240, 0.86);
+      background: rgba(248, 250, 252, 0.92);
+      backdrop-filter: blur(1rem);
+    }
+
+    .topbar-inner {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      width: min(100%, 76rem);
+      margin: 0 auto;
+      padding: 1rem;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      text-decoration: none;
+    }
+
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      width: 2.75rem;
+      aspect-ratio: 1;
+      border-radius: 0.75rem;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      color: var(--card);
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      box-shadow: 0 1rem 2rem rgba(30, 64, 175, 0.18);
+    }
+
+    .brand-title {
+      display: block;
+      font-size: clamp(1.05rem, 2vw, 1.25rem);
+      font-weight: 800;
+      line-height: 1.2;
+    }
+
+    .brand-subtitle {
+      display: block;
+      color: var(--muted);
+      font-size: 0.875rem;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 0.5rem;
+      overflow-x: auto;
+      padding-bottom: 0.125rem;
+    }
+
+    .nav-links a {
+      flex: 0 0 auto;
+      border: 1px solid var(--border);
+      border-radius: 999rem;
+      background: var(--card);
+      color: var(--muted);
+      padding: 0.5rem 0.875rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: color 240ms ease, border-color 240ms ease, background 240ms ease;
+    }
+
+    .nav-links a:hover {
+      border-color: var(--primary-light);
+      background: var(--soft-blue);
+      color: var(--primary);
+    }
+
+    .hero {
+      display: grid;
+      gap: 2rem;
+      align-items: center;
+      padding: clamp(2rem, 6vw, 4rem) clamp(1rem, 5vw, 3rem);
+      border: 1px solid rgba(226, 232, 240, 0.8);
+      border-radius: 1.25rem;
+      background:
+        linear-gradient(135deg, rgba(30, 64, 175, 0.96), rgba(30, 58, 138, 0.94)),
+        var(--primary);
+      color: var(--card);
+      box-shadow: 0 1.5rem 4rem rgba(30, 64, 175, 0.22);
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      width: fit-content;
+      margin-bottom: 1rem;
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      border-radius: 999rem;
+      background: rgba(255, 255, 255, 0.12);
+      padding: 0.4rem 0.75rem;
+      font-size: 0.8125rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .eyebrow-dot {
+      width: 0.5rem;
+      aspect-ratio: 1;
+      border-radius: 999rem;
+      background: var(--accent);
+    }
+
+    .hero h1 {
+      max-width: 14ch;
+      margin-bottom: 1rem;
+      font-size: clamp(2.25rem, 7vw, 4.75rem);
+      font-weight: 800;
+      letter-spacing: -0.06em;
+      line-height: 0.95;
+    }
+
+    .hero-text {
+      max-width: 42rem;
+      color: rgba(255, 255, 255, 0.86);
+      font-size: clamp(1rem, 2vw, 1.2rem);
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-top: 1.5rem;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid transparent;
+      border-radius: 999rem;
+      padding: 0.75rem 1rem;
+      font-weight: 800;
+      text-decoration: none;
+      transition: transform 240ms ease, background 240ms ease, border-color 240ms ease;
+    }
+
+    .button:hover {
+      transform: translateY(-0.125rem);
+    }
+
+    .button-primary {
+      background: var(--card);
+      color: var(--primary);
+    }
+
+    .button-secondary {
+      border-color: rgba(255, 255, 255, 0.24);
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--card);
+    }
+
+    .hero-panel {
+      display: grid;
+      gap: 1rem;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 1rem;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 1rem;
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.75rem;
+    }
+
+    .metric-card {
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 0.875rem;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 1rem;
+    }
+
+    .metric-number {
+      display: block;
+      font-size: clamp(1.4rem, 4vw, 2rem);
+      font-weight: 800;
+      line-height: 1.1;
+    }
+
+    .metric-label {
+      display: block;
+      margin-top: 0.35rem;
+      color: rgba(255, 255, 255, 0.72);
+      font-size: 0.875rem;
+    }
+
+    main {
+      display: grid;
+      gap: 1.25rem;
+      padding: 1.25rem 0 3rem;
+    }
+
+    section {
+      scroll-margin-top: 7rem;
+    }
+
+    .section-card {
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      background: rgba(255, 255, 255, 0.92);
+      padding: clamp(1.25rem, 4vw, 2rem);
+      box-shadow: 0 1rem 3rem rgba(15, 23, 42, 0.06);
+    }
+
+    .section-heading {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .section-kicker {
+      color: var(--accent);
+      font-size: 0.8125rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    h2 {
+      color: var(--text);
+      font-size: clamp(1.5rem, 4vw, 2rem);
+      line-height: 1.15;
+      letter-spacing: -0.03em;
+    }
+
+    h3 {
+      color: var(--text);
+      font-size: clamp(1.05rem, 2vw, 1.25rem);
+      line-height: 1.3;
+    }
+
+    p {
+      color: var(--muted);
+    }
+
+    .lead {
+      max-width: 58rem;
+      color: var(--muted);
+      font-size: clamp(1rem, 2vw, 1.125rem);
+    }
+
+    .grid {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .grid-two,
+    .grid-three,
+    .grid-four {
+      grid-template-columns: 1fr;
+    }
+
+    .info-card,
+    .feature-card,
+    .stack-card,
+    .phase-card {
+      display: grid;
+      gap: 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 0.875rem;
+      background: var(--card);
+      padding: 1rem;
+    }
+
+    .info-card strong,
+    .feature-card strong,
+    .stack-card strong {
+      color: var(--text);
+      font-size: 1rem;
+    }
+
+    .tag-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.25rem;
+      list-style: none;
+    }
+
+    .tag-list li {
+      border: 1px solid var(--border);
+      border-radius: 999rem;
+      background: var(--soft-blue);
+      color: var(--primary);
+      padding: 0.35rem 0.7rem;
+      font-size: 0.8125rem;
+      font-weight: 700;
+    }
+
+    .architecture {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .layer-card {
+      position: relative;
+      display: grid;
+      gap: 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      background: linear-gradient(180deg, var(--card), var(--soft-blue));
+      padding: 1rem;
+    }
+
+    .layer-number {
+      display: inline-grid;
+      place-items: center;
+      width: 2rem;
+      aspect-ratio: 1;
+      border-radius: 999rem;
+      background: var(--primary);
+      color: var(--card);
+      font-weight: 800;
+    }
+
+    .flow {
+      display: grid;
+      gap: 0.75rem;
+      margin-top: 1rem;
+      border-radius: 1rem;
+      background: var(--deep);
+      padding: 1rem;
+      color: var(--card);
+    }
+
+    .flow-row {
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    .flow-box {
+      border: 1px solid rgba(226, 232, 240, 0.18);
+      border-radius: 0.75rem;
+      background: rgba(255, 255, 255, 0.08);
+      padding: 1rem;
+    }
+
+    .flow-box span {
+      display: block;
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 0.875rem;
+    }
+
+    .table-wrap {
+      width: 100%;
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: 0.875rem;
+      background: var(--card);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 42rem;
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid var(--border);
+      padding: 0.85rem 1rem;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: #f1f5f9;
+      color: var(--muted);
+      font-size: 0.8125rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    td {
+      color: var(--muted);
+    }
+
+    td strong {
+      color: var(--text);
+    }
+
+    .doc-list {
+      display: grid;
+      gap: 0.75rem;
+      list-style: none;
+    }
+
+    .doc-list a {
+      display: grid;
+      gap: 0.25rem;
+      border: 1px solid var(--border);
+      border-radius: 0.875rem;
+      background: var(--card);
+      padding: 1rem;
+      text-decoration: none;
+      transition: border-color 240ms ease, transform 240ms ease;
+    }
+
+    .doc-list a:hover {
+      border-color: var(--primary-light);
+      transform: translateY(-0.125rem);
+    }
+
+    .doc-list strong {
+      color: var(--primary);
+    }
+
+    .doc-list span {
+      color: var(--muted);
+      font-size: 0.9375rem;
+    }
+
+    .footer {
+      padding: 2rem 0;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    @media (min-width: 48rem) {
+      .page-shell {
+        padding: 1.5rem 2.5rem;
+      }
+
+      .topbar {
+        margin-right: -2.5rem;
+        margin-left: -2.5rem;
+      }
+
+      .topbar-inner {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1rem 2.5rem;
+      }
+
+      .nav-links {
+        justify-content: flex-end;
+      }
+
+      .grid-two {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .grid-three {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .grid-four {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .flow-row {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+
+    @media (min-width: 64rem) {
+      .hero {
+        grid-template-columns: minmax(0, 1.15fr) minmax(20rem, 0.85fr);
+      }
+
+      .architecture {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .grid-four {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="topbar">
+      <div class="topbar-inner">
+        <a class="brand" href="#top" aria-label="Jankendra-AI project overview">
+          <span class="brand-mark">JA</span>
+          <span>
+            <span class="brand-title">Jankendra-AI</span>
+            <span class="brand-subtitle">Constituency intelligence platform</span>
+          </span>
+        </a>
+        <nav class="nav-links" aria-label="Page navigation">
+          <a href="#overview">Overview</a>
+          <a href="#features">Features</a>
+          <a href="#architecture">Architecture</a>
+          <a href="#stack">Stack</a>
+          <a href="#roadmap">Roadmap</a>
+          <a href="#docs">Docs</a>
+        </nav>
+      </div>
+    </header>
+
+    <section class="hero" id="top">
+      <div>
+        <span class="eyebrow"><span class="eyebrow-dot"></span>Planning / Pre-Development</span>
+        <h1>AI for better constituency decisions.</h1>
+        <p class="hero-text">
+          Jankendra-AI helps elected representatives and staff convert complaints, commitments, meetings, and local data into prioritized action plans, reliable reminders, and grounded governance insights.
+        </p>
+        <div class="hero-actions">
+          <a class="button button-primary" href="docs/srs.html">Open SRS</a>
+          <a class="button button-secondary" href="docs/architecture.md">Read Architecture</a>
+        </div>
+      </div>
+
+      <aside class="hero-panel" aria-label="Project highlights">
+        <div class="metric-grid">
+          <div class="metric-card">
+            <span class="metric-number">3</span>
+            <span class="metric-label">Independent layers</span>
+          </div>
+          <div class="metric-card">
+            <span class="metric-number">4</span>
+            <span class="metric-label">Logical data stores</span>
+          </div>
+          <div class="metric-card">
+            <span class="metric-number">8+</span>
+            <span class="metric-label">Core API areas</span>
+          </div>
+          <div class="metric-card">
+            <span class="metric-number">10</span>
+            <span class="metric-label">Dashboard pages</span>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <main>
+      <section class="section-card" id="overview">
+        <div class="section-heading">
+          <span class="section-kicker">Project overview</span>
+          <h2>Local-first governance intelligence for leaders and staff</h2>
+        </div>
+        <p class="lead">
+          Jankendra-AI is designed as a local-first AI platform for constituency management. It brings together citizen complaints, meeting transcripts, ward data, commitments, development priorities, and historical facts so representatives can make faster and more transparent decisions.
+        </p>
+        <div class="grid grid-three">
+          <div class="info-card">
+            <strong>Primary users</strong>
+            <p>Leaders and staff members who need one place to monitor work, assign actions, and review ward-level insights.</p>
+          </div>
+          <div class="info-card">
+            <strong>Core goal</strong>
+            <p>Turn scattered governance inputs into ranked to-do items, commitment tracking, development priorities, and RAG-backed answers.</p>
+          </div>
+          <div class="info-card">
+            <strong>Deployment approach</strong>
+            <p>Start on one local machine with SQLite, in-process AI modules, and local production LLM support before scaling to SaaS.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section-card" id="features">
+        <div class="section-heading">
+          <span class="section-kicker">Product capabilities</span>
+          <h2>What the platform is planned to deliver</h2>
+        </div>
+        <div class="grid grid-three">
+          <div class="feature-card">
+            <h3>Complaint clustering</h3>
+            <p>Similar ward-level complaints are grouped with embeddings so repeated citizen issues become visible as high-priority clusters.</p>
+            <ul class="tag-list">
+              <li>Ward scoped</li>
+              <li>Append-only audit</li>
+              <li>Department routing</li>
+            </ul>
+          </div>
+          <div class="feature-card">
+            <h3>Commitment tracking</h3>
+            <p>Meeting transcripts can be processed into commitments with deadlines, escalation weights, and completion history.</p>
+            <ul class="tag-list">
+              <li>Transcript upload</li>
+              <li>Deadline weights</li>
+              <li>Resolved archive</li>
+            </ul>
+          </div>
+          <div class="feature-card">
+            <h3>Development prioritization</h3>
+            <p>Ward data, open complaint clusters, infrastructure needs, and scheme penetration inform a ranked development plan.</p>
+            <ul class="tag-list">
+              <li>Multi-factor score</li>
+              <li>Reasoning trace</li>
+              <li>Ward comparison</li>
+            </ul>
+          </div>
+          <div class="feature-card">
+            <h3>RAG assistant</h3>
+            <p>A grounded assistant answers constituency questions using profile data, digest metrics, historical facts, SQL results, and chat history.</p>
+            <ul class="tag-list">
+              <li>Hybrid retrieval</li>
+              <li>Cited answers</li>
+              <li>SSE streaming</li>
+            </ul>
+          </div>
+          <div class="feature-card">
+            <h3>Weekly digest</h3>
+            <p>SQL-first digest generation highlights open complaints, overdue work, resolved commitments, and measurable constituency changes.</p>
+            <ul class="tag-list">
+              <li>No LLM required</li>
+              <li>Scheduled job</li>
+              <li>Drilldown ready</li>
+            </ul>
+          </div>
+          <div class="feature-card">
+            <h3>Context injection</h3>
+            <p>Staff can add trusted text documents to the knowledge base so future answers reflect local priorities and latest facts.</p>
+            <ul class="tag-list">
+              <li>.txt upload</li>
+              <li>Knowledge base</li>
+              <li>Staff controlled</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="section-card" id="architecture">
+        <div class="section-heading">
+          <span class="section-kicker">Architecture</span>
+          <h2>Three layers with clear boundaries</h2>
+        </div>
+        <div class="architecture">
+          <div class="layer-card">
+            <span class="layer-number">1</span>
+            <h3>Frontend layer</h3>
+            <p>React, TypeScript, and Tailwind provide the dashboard, to-do list, commitments, chat, digest, issue logging, and staff workflows.</p>
+          </div>
+          <div class="layer-card">
+            <span class="layer-number">2</span>
+            <h3>Backend layer</h3>
+            <p>FastAPI acts as the security boundary, API gateway, orchestration layer, job runner, and system of record.</p>
+          </div>
+          <div class="layer-card">
+            <span class="layer-number">3</span>
+            <h3>AI modules layer</h3>
+            <p>Independent Python engines handle ingestion, clustering, commitment extraction, prioritization, RAG, and digest logic.</p>
+          </div>
+        </div>
+        <div class="flow" aria-label="System flow">
+          <div class="flow-row">
+            <div class="flow-box">
+              <strong>Frontend</strong>
+              <span>React dashboard, forms, chat, digest, and staff tools</span>
+            </div>
+            <div class="flow-box">
+              <strong>Backend</strong>
+              <span>FastAPI, JWT/RBAC, repositories, services, background jobs</span>
+            </div>
+            <div class="flow-box">
+              <strong>AI modules</strong>
+              <span>Embeddings, LLM providers, vector search, ranking engines</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section-card">
+        <div class="section-heading">
+          <span class="section-kicker">Data model</span>
+          <h2>Four logical stores inside one physical database</h2>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Store</th>
+                <th>Purpose</th>
+                <th>Write policy</th>
+                <th>Example tables</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>DB1 - Static Constituency</strong></td>
+                <td>Ward demographics, infrastructure, schemes, and constituency profile data.</td>
+                <td>Staff only.</td>
+                <td>wards, demographics, infrastructure, schemes</td>
+              </tr>
+              <tr>
+                <td><strong>DB2 - RAG Historical Facts</strong></td>
+                <td>Meeting summaries, resolved commitments, and historical cluster snapshots.</td>
+                <td>System jobs and staff actions.</td>
+                <td>meeting_summaries, resolved_commitments, cluster_snapshots</td>
+              </tr>
+              <tr>
+                <td><strong>DB3 - Timely Commitments</strong></td>
+                <td>Active commitments, deadlines, weights, escalation status, and history.</td>
+                <td>System ingestion and staff actions.</td>
+                <td>commitments, commitment_history</td>
+              </tr>
+              <tr>
+                <td><strong>DB4 - Immutable Complaints</strong></td>
+                <td>Raw complaint audit trail and complaint clusters for issue intelligence.</td>
+                <td>Append-only system writes.</td>
+                <td>complaints, complaint_clusters</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="section-card" id="stack">
+        <div class="section-heading">
+          <span class="section-kicker">Technology stack</span>
+          <h2>Modern, typed, and portable from development to production</h2>
+        </div>
+        <div class="grid grid-four">
+          <div class="stack-card">
+            <strong>Frontend</strong>
+            <p>React 18+, TypeScript, Tailwind CSS, Vite, TanStack Query, Zustand, OpenAPI-generated API client.</p>
+          </div>
+          <div class="stack-card">
+            <strong>Backend</strong>
+            <p>Python 3.11, FastAPI, Uvicorn, SQLAlchemy 2.0, Alembic, Pydantic v2, JWT with RBAC.</p>
+          </div>
+          <div class="stack-card">
+            <strong>AI and retrieval</strong>
+            <p>sentence-transformers, Gemini for development, Ollama and Sarvam for local production, explicit pipelines.</p>
+          </div>
+          <div class="stack-card">
+            <strong>Database</strong>
+            <p>SQLite with sqlite-vec in development and PostgreSQL 16+ with pgvector in production.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section-card">
+        <div class="section-heading">
+          <span class="section-kicker">API surface</span>
+          <h2>Contract-first endpoints under /api/v1</h2>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Endpoint</th>
+                <th>Purpose</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>GET /dashboard</strong></td>
+                <td>Aggregated dashboard data for leaders and staff.</td>
+              </tr>
+              <tr>
+                <td><strong>GET / POST /complaints</strong></td>
+                <td>List and create append-only complaint records.</td>
+              </tr>
+              <tr>
+                <td><strong>POST /meetings/upload</strong></td>
+                <td>Upload transcripts for asynchronous commitment extraction.</td>
+              </tr>
+              <tr>
+                <td><strong>GET / PATCH /todo</strong></td>
+                <td>Weighted actions with completion and extension workflows.</td>
+              </tr>
+              <tr>
+                <td><strong>GET /priorities</strong></td>
+                <td>Ranked development priorities with reasoning traces.</td>
+              </tr>
+              <tr>
+                <td><strong>POST /chat</strong></td>
+                <td>RAG assistant queries with streaming responses.</td>
+              </tr>
+              <tr>
+                <td><strong>GET /digest</strong></td>
+                <td>Weekly digest data generated from trusted SQL aggregation.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="section-card">
+        <div class="section-heading">
+          <span class="section-kicker">Security and privacy</span>
+          <h2>Privacy is enforced by the architecture</h2>
+        </div>
+        <div class="grid grid-two">
+          <div class="info-card">
+            <strong>Local-first production mode</strong>
+            <p>Audio recordings, transcripts, constituency data, complaints, commitments, and AI responses are designed to stay on the local machine in production.</p>
+          </div>
+          <div class="info-card">
+            <strong>Controlled data writes</strong>
+            <p>Static constituency data is staff-write-only, complaints are append-only, and AI modules return typed results without receiving raw database access.</p>
+          </div>
+          <div class="info-card">
+            <strong>Role-based access</strong>
+            <p>JWT claims separate leader and staff permissions across dashboard, data management, and action workflows.</p>
+          </div>
+          <div class="info-card">
+            <strong>Provider abstraction</strong>
+            <p>Development can use Gemini while production switches to local Ollama and Sarvam through configuration instead of application rewrites.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section-card" id="roadmap">
+        <div class="section-heading">
+          <span class="section-kicker">Roadmap</span>
+          <h2>Planned delivery phases</h2>
+        </div>
+        <div class="grid grid-three">
+          <div class="phase-card">
+            <h3>Phase 0 - Foundation</h3>
+            <p>Monorepo scaffold, configuration, OpenAPI, provider interfaces, migrations, and documentation.</p>
+          </div>
+          <div class="phase-card">
+            <h3>Phase 1 - Core backend</h3>
+            <p>Database schema, seed data, authentication, constituency APIs, dashboard API, and frontend layout.</p>
+          </div>
+          <div class="phase-card">
+            <h3>Phase 2 - Complaint intelligence</h3>
+            <p>Embeddings, sqlite-vec, complaint clustering, department routing, and weighted to-do list.</p>
+          </div>
+          <div class="phase-card">
+            <h3>Phase 3 - Commitments</h3>
+            <p>Transcript parsing, commitment extraction, upload jobs, escalation, and resolved archives.</p>
+          </div>
+          <div class="phase-card">
+            <h3>Phase 4 - Priorities and digest</h3>
+            <p>Development ranking, ward comparison, SQL digest aggregation, and digest dashboard views.</p>
+          </div>
+          <div class="phase-card">
+            <h3>Phase 5 and 6 - RAG and hardening</h3>
+            <p>Grounded assistant, context injection, local LLM support, tests, accessibility, performance, and Hindi foundation.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section-card" id="docs">
+        <div class="section-heading">
+          <span class="section-kicker">Documentation</span>
+          <h2>Explore the detailed project documents</h2>
+        </div>
+        <ul class="doc-list">
+          <li>
+            <a href="docs/srs.html">
+              <strong>Software Requirements Specification</strong>
+              <span>Functional requirements, non-functional requirements, UI pages, demo data, and scope.</span>
+            </a>
+          </li>
+          <li>
+            <a href="docs/architecture.md">
+              <strong>System Architecture</strong>
+              <span>Frontend, backend, AI module boundaries, data architecture, API surface, and deployment topology.</span>
+            </a>
+          </li>
+          <li>
+            <a href="docs/backend-database.md">
+              <strong>Backend and Database Guide</strong>
+              <span>FastAPI, SQLAlchemy, Alembic, database choices, repository pattern, and testing approach.</span>
+            </a>
+          </li>
+          <li>
+            <a href="docs/plan.md">
+              <strong>Implementation Plan</strong>
+              <span>Phased roadmap, exit criteria, workstreams, risks, mitigations, and success metrics.</span>
+            </a>
+          </li>
+        </ul>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>Jankendra-AI - AI-powered constituency intelligence for accountable public service.</p>
+    </footer>
+  </div>
+</body>
+</html>
