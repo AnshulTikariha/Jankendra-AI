@@ -1,4 +1,5 @@
 import { roleLabels, type UserRole } from '../types/auth'
+import { getRoleTheme } from '../theme/roleThemes'
 import type { NavigationPage } from '../types/navigation'
 
 type NavPage = NavigationPage & { statusLabel: string }
@@ -56,19 +57,20 @@ const navVisuals: Record<string, { gradient: string; icon: React.ReactNode }> = 
 
 export function AppSidebar({ pages, activePageId, role, constituencyName, onSelect }: Props) {
   const availableCount = pages.filter((p) => p.available).length
+  const theme = getRoleTheme(role)
 
   return (
     <aside className="relative flex flex-col overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-lg shadow-slate-200/60">
-      <div className="absolute -left-10 top-20 size-32 rounded-full bg-primary/10 blur-3xl" />
-      <div className="absolute -right-8 bottom-24 size-28 rounded-full bg-accent/10 blur-3xl" />
+      <div className={`absolute -left-10 top-20 size-32 rounded-full ${theme.sidebarBlurOrb} blur-3xl`} />
+      <div className={`absolute -right-8 bottom-24 size-28 rounded-full ${theme.sidebarBlurOrb2} blur-3xl`} />
 
       {/* Header */}
-      <div className="relative border-b border-slate-100 bg-gradient-to-br from-primary via-primary-dark to-accent px-4 py-5 text-white">
+      <div className={`relative border-b border-slate-100 bg-gradient-to-br ${theme.sidebarHeaderGradient} px-4 py-5 text-white`}>
         <div className="absolute right-3 top-3 opacity-20">
           <SidebarGraphic />
         </div>
         <div className="relative flex items-center gap-3">
-          <div className="grid size-11 place-items-center rounded-2xl bg-white/95 text-sm font-extrabold tracking-tight text-primary shadow-lg">
+          <div className={`grid size-11 place-items-center rounded-2xl bg-white/95 text-sm font-extrabold tracking-tight ${theme.sidebarLogoText} shadow-lg`}>
             JA
           </div>
           <div className="min-w-0">
@@ -82,16 +84,14 @@ export function AppSidebar({ pages, activePageId, role, constituencyName, onSele
       {/* Role card */}
       <div className="relative mx-4 -mt-4 rounded-2xl border border-white/80 bg-white p-3 shadow-md">
         <div className="flex items-center gap-3">
-          <div className={`grid size-10 place-items-center rounded-xl bg-gradient-to-br ${
-            role === 'leader' ? 'from-amber-500 to-orange-500' : 'from-blue-500 to-indigo-600'
-          } text-xs font-extrabold text-white shadow-md`}>
+          <div className={`grid size-10 place-items-center rounded-xl bg-gradient-to-br ${theme.sidebarRoleAvatar} text-xs font-extrabold text-white shadow-md`}>
             {role === 'leader' ? 'L' : 'S'}
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-xs font-bold text-muted">Signed in as</p>
             <p className="truncate font-extrabold text-ink">{roleLabels[role]}</p>
           </div>
-          <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[0.6rem] font-bold uppercase tracking-wide text-emerald-700">
+          <span className={`rounded-full px-2 py-0.5 text-[0.6rem] font-bold uppercase tracking-wide ${theme.sidebarLiveBadge}`}>
             {availableCount} live
           </span>
         </div>
@@ -110,7 +110,7 @@ export function AppSidebar({ pages, activePageId, role, constituencyName, onSele
               aria-current={isActive ? 'page' : undefined}
               className={`group relative flex w-full items-center gap-3 rounded-2xl px-2.5 py-2.5 text-left transition ${
                 isActive
-                  ? 'bg-gradient-to-r from-slate-900 to-slate-800 text-white shadow-lg shadow-slate-900/20'
+                  ? `bg-gradient-to-r ${theme.sidebarActiveNav} text-white shadow-lg`
                   : isDisabled
                     ? 'opacity-60 hover:bg-slate-50'
                     : 'hover:bg-slate-50'
@@ -120,7 +120,7 @@ export function AppSidebar({ pages, activePageId, role, constituencyName, onSele
               type="button"
             >
               {isActive && (
-                <span className="absolute left-0 top-1/2 h-8 w-1 -translate-y-1/2 rounded-r-full bg-gradient-to-b from-accent to-emerald-300" />
+                <span className={`absolute left-0 top-1/2 h-8 w-1 -translate-y-1/2 rounded-r-full bg-gradient-to-b ${theme.sidebarActiveAccent}`} />
               )}
 
               <div
@@ -136,7 +136,7 @@ export function AppSidebar({ pages, activePageId, role, constituencyName, onSele
               <div className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-bold">{page.label}</span>
                 <span className={`mt-0.5 block truncate text-[0.65rem] font-semibold ${
-                  isActive ? 'text-slate-300' : 'text-muted'
+                  isActive ? theme.sidebarActiveSubtext : 'text-muted'
                 }`}>
                   {page.statusLabel}
                 </span>
@@ -149,7 +149,7 @@ export function AppSidebar({ pages, activePageId, role, constituencyName, onSele
                   Soon
                 </span>
               ) : (
-                <span className={`size-2 shrink-0 rounded-full ${isActive ? 'bg-emerald-400' : 'bg-emerald-500'}`} />
+                <span className={`size-2 shrink-0 rounded-full ${isActive ? theme.sidebarActiveDot : theme.sidebarActiveDot}`} />
               )}
             </button>
           )
@@ -157,9 +157,9 @@ export function AppSidebar({ pages, activePageId, role, constituencyName, onSele
       </nav>
 
       {/* Footer */}
-      <div className="relative border-t border-slate-100 bg-gradient-to-r from-slate-50 to-blue-50/50 p-4">
+      <div className={`relative border-t border-slate-100 bg-gradient-to-r ${theme.sidebarFooterBg} p-4`}>
         <div className="flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-white/80 p-3">
-          <div className="grid size-9 place-items-center rounded-xl bg-gradient-to-br from-accent to-emerald-600 text-white shadow-md">
+          <div className={`grid size-9 place-items-center rounded-xl bg-gradient-to-br ${theme.sidebarFooterIcon} text-white shadow-md`}>
             <SignalIcon />
           </div>
           <div className="min-w-0">

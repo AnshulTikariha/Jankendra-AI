@@ -1,4 +1,5 @@
 import type { WardRow } from '../../data/demoDashboard'
+import { getRoleTheme } from '../../theme/roleThemes'
 
 type Props = {
   rows: WardRow[]
@@ -13,11 +14,12 @@ const alertColors: Record<string, string> = {
 
 export function WardComparisonTable({ rows }: Props) {
   const maxClusters = Math.max(...rows.map((r) => r.openClusters))
+  const theme = getRoleTheme('leader')
 
   return (
     <section className="overflow-hidden rounded-3xl border border-line/80 bg-white shadow-md shadow-slate-200/50">
-      <div className="border-b border-line/80 bg-gradient-to-r from-indigo-50/80 to-white px-5 py-4 sm:px-6">
-        <p className="text-xs font-bold uppercase tracking-[0.16em] text-indigo-600">Constituency map</p>
+      <div className={`border-b border-line/80 bg-gradient-to-r ${theme.sectionHeaderBg} px-5 py-4 sm:px-6`}>
+        <p className={`text-xs font-bold uppercase tracking-[0.16em] ${theme.sectionEyebrow}`}>Constituency map</p>
         <h2 className="mt-1 text-xl font-extrabold">Ward comparison</h2>
       </div>
 
@@ -29,21 +31,21 @@ export function WardComparisonTable({ rows }: Props) {
           return (
             <article
               className={`rounded-2xl border p-4 transition ${
-                isHot ? 'border-indigo-200 bg-gradient-to-r from-indigo-50/80 to-white shadow-sm' : 'border-line/80 bg-slate-50/40'
+                isHot ? `border-violet-200 bg-gradient-to-r ${theme.sectionHeaderBg} shadow-sm` : 'border-line/80 bg-slate-50/40'
               }`}
               key={row.wardId}
             >
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <div className={`grid size-10 place-items-center rounded-xl text-sm font-extrabold text-white shadow-md ${
-                    isHot ? 'bg-gradient-to-br from-indigo-500 to-violet-600' : 'bg-gradient-to-br from-slate-600 to-slate-800'
+                    isHot ? `bg-gradient-to-br ${theme.sidebarRoleAvatar}` : 'bg-gradient-to-br from-slate-600 to-slate-800'
                   }`}>
                     {row.wardId}
                   </div>
                   <div>
                     <p className="font-extrabold text-ink">{row.wardName}</p>
                     {isHot && (
-                      <span className="text-[0.65rem] font-bold uppercase tracking-wide text-indigo-600">Highest pressure</span>
+                      <span className={`text-[0.65rem] font-bold uppercase tracking-wide ${theme.sectionEyebrow}`}>Highest pressure</span>
                     )}
                   </div>
                 </div>
@@ -60,7 +62,7 @@ export function WardComparisonTable({ rows }: Props) {
                 </div>
                 <div className="h-2.5 overflow-hidden rounded-full bg-slate-200">
                   <div
-                    className={`h-full rounded-full ${isHot ? 'bg-gradient-to-r from-indigo-500 to-violet-500' : 'bg-gradient-to-r from-slate-400 to-slate-600'}`}
+                    className={`h-full rounded-full ${isHot ? `bg-gradient-to-r ${theme.primaryBtn}` : 'bg-gradient-to-r from-slate-400 to-slate-600'}`}
                     style={{ width: `${clusterPct}%` }}
                   />
                 </div>

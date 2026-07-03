@@ -1,6 +1,7 @@
 import type { UserRole } from '../../types/auth'
 import { getDashboardGreeting } from '../../data/demoDashboard'
 import { roleLabels } from '../../types/auth'
+import { getRoleTheme } from '../../theme/roleThemes'
 
 type Props = {
   constituencyName: string
@@ -9,17 +10,19 @@ type Props = {
 }
 
 export function DashboardHero({ constituencyName, role, phone }: Props) {
+  const theme = getRoleTheme(role)
+
   return (
-    <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary via-primary-dark to-accent p-6 text-white shadow-xl shadow-primary/25 sm:p-8">
+    <section className={`relative overflow-hidden rounded-3xl bg-gradient-to-br ${theme.heroGradient} p-6 text-white shadow-xl ${theme.heroShadow} sm:p-8`}>
       <div className="absolute -right-16 -top-16 size-48 rounded-full bg-white/10 blur-2xl" />
-      <div className="absolute -bottom-20 left-1/3 size-56 rounded-full bg-accent/30 blur-3xl" />
+      <div className="absolute -bottom-20 left-1/3 size-56 rounded-full bg-white/10 blur-3xl" />
       <div className="absolute right-8 top-8 opacity-20">
         <ConstituencyGraphic />
       </div>
 
       <div className="relative z-10">
         <p className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[0.68rem] font-bold uppercase tracking-[0.18em] text-white/90 sm:text-xs">
-          <span className="size-2 animate-pulse rounded-full bg-emerald-300" />
+          <span className={`size-2 animate-pulse rounded-full ${theme.heroPulse}`} />
           Live governance signals
         </p>
         <p className="mt-4 text-xs font-bold uppercase tracking-[0.22em] text-white/70">
