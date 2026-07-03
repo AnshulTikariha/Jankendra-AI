@@ -40,6 +40,19 @@ cat docs/architecture.md
 cat docs/plan.md
 ```
 
+### Backend
+
+```bash
+cd backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e ".[test]"
+cp .env.example .env
+uvicorn app.main:app --reload
+```
+
+Health checks are available at `/health` and `/api/v1/health`. OpenAPI is available at `/docs`.
+
 ## Repository
 
 https://github.com/AnshulTikariha/Jankendra-AI
