@@ -117,22 +117,26 @@ function App() {
   }
 
   return (
-    <main className="min-h-svh overflow-hidden px-4 py-6 text-ink sm:px-6 lg:px-8">
-      <section className="mx-auto grid min-h-[calc(100svh-3rem)] w-full max-w-7xl items-center gap-8 lg:grid-cols-[1.08fr_0.92fr]">
-        <div className="relative overflow-hidden rounded-[2rem] border border-white/40 bg-primary px-5 py-6 text-white shadow-2xl shadow-primary/20 sm:px-8 sm:py-10 lg:min-h-[44rem] lg:p-10">
+    <main className="min-h-svh overflow-hidden px-3 py-4 text-ink sm:px-6 sm:py-6 lg:px-8">
+      <section className="mx-auto grid w-full max-w-7xl items-start gap-5 lg:min-h-[calc(100svh-3rem)] lg:grid-cols-[1.08fr_0.92fr] lg:items-center lg:gap-8">
+        <div className="relative order-2 overflow-hidden rounded-[1.5rem] border border-white/40 bg-primary px-4 py-5 text-white shadow-2xl shadow-primary/20 sm:px-8 sm:py-10 lg:order-1 lg:min-h-[44rem] lg:rounded-[2rem] lg:p-10">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_15%,rgba(255,255,255,0.25),transparent_24rem),linear-gradient(135deg,rgba(30,64,175,0.98),rgba(30,58,138,0.95)_54%,rgba(5,150,105,0.92))]" />
           <div className="absolute -right-24 top-12 h-72 w-72 rounded-full bg-accent/30 blur-3xl" />
           <div className="absolute -bottom-32 left-16 h-80 w-80 rounded-full bg-primary-light/30 blur-3xl" />
 
-          <div className="relative z-10 flex min-h-full flex-col justify-between gap-10">
+          <div className="relative z-10 flex min-h-full flex-col justify-between gap-6 lg:gap-10">
             <header className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-3">
-                <div className="grid size-12 place-items-center rounded-2xl bg-white/95 font-extrabold tracking-[-0.06em] text-primary shadow-xl shadow-slate-950/20">
+                <div className="grid size-10 place-items-center rounded-2xl bg-white/95 text-sm font-extrabold tracking-[-0.06em] text-primary shadow-xl shadow-slate-950/20 sm:size-12 sm:text-base">
                   JA
                 </div>
                 <div>
-                  <p className="text-lg font-extrabold tracking-tight">Jankendra-AI</p>
-                  <p className="text-sm text-white/72">Constituency intelligence platform</p>
+                  <p className="text-base font-extrabold leading-tight tracking-tight sm:text-lg">
+                    Jankendra-AI
+                  </p>
+                  <p className="text-xs leading-tight text-white/72 sm:text-sm">
+                    Constituency intelligence platform
+                  </p>
                 </div>
               </div>
               <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-white/80">
@@ -141,49 +145,51 @@ function App() {
             </header>
 
             <div className="max-w-3xl">
-              <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-2 text-xs font-bold uppercase tracking-[0.16em] text-white/82">
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-2 text-[0.68rem] font-bold uppercase tracking-[0.14em] text-white/82 sm:text-xs">
                 <span className="size-2 rounded-full bg-accent" />
                 Secure staff and leader access
               </div>
-              <h1 className="max-w-4xl text-4xl font-extrabold leading-[0.98] tracking-[-0.055em] sm:text-5xl lg:text-7xl">
+              <h1 className="max-w-4xl text-3xl font-extrabold leading-[1.02] tracking-[-0.055em] sm:text-5xl lg:text-7xl">
                 AI for better constituency decisions.
               </h1>
-              <p className="mt-5 max-w-2xl text-base text-white/78 sm:text-lg">
+              <p className="mt-3 max-w-2xl text-sm text-white/78 sm:mt-5 sm:text-lg">
                 A mobile OTP entry point for a local-first governance workspace where every
                 complaint, commitment, and decision stays accountable.
               </p>
             </div>
 
-            <div className="grid gap-3 md:grid-cols-3">
+            <div className="grid gap-2 sm:gap-3 md:grid-cols-3">
               {philosophyCards.map((card) => (
                 <article
-                  className="rounded-3xl border border-white/16 bg-white/10 p-4 backdrop-blur"
+                  className="rounded-2xl border border-white/16 bg-white/10 p-3 backdrop-blur sm:rounded-3xl sm:p-4"
                   key={card.title}
                 >
                   <h2 className="text-sm font-extrabold text-white">{card.title}</h2>
-                  <p className="mt-2 text-sm text-white/70">{card.detail}</p>
+                  <p className="mt-1 text-xs leading-5 text-white/70 sm:mt-2 sm:text-sm">
+                    {card.detail}
+                  </p>
                 </article>
               ))}
             </div>
           </div>
         </div>
 
-        <div className="mx-auto w-full max-w-xl">
-          <div className="rounded-[2rem] border border-line/80 bg-white/85 p-3 shadow-2xl shadow-primary/10 backdrop-blur-xl sm:p-4">
-            <div className="rounded-[1.5rem] border border-line bg-card p-5 shadow-sm sm:p-7">
-              <div className="mb-6 flex items-start justify-between gap-4">
+        <div className="order-1 mx-auto w-full max-w-xl lg:order-2">
+          <div className="rounded-[1.5rem] border border-line/80 bg-white/85 p-2 shadow-2xl shadow-primary/10 backdrop-blur-xl sm:rounded-[2rem] sm:p-4">
+            <div className="rounded-[1.25rem] border border-line bg-card p-4 shadow-sm sm:rounded-[1.5rem] sm:p-7">
+              <div className="mb-5 flex items-start justify-between gap-4 sm:mb-6">
                 <div>
-                  <p className="text-sm font-bold uppercase tracking-[0.18em] text-accent">
+                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent sm:text-sm">
                     Mobile login
                   </p>
-                  <h2 className="mt-2 text-2xl font-extrabold tracking-[-0.04em] text-ink sm:text-3xl">
+                  <h2 className="mt-2 text-2xl font-extrabold leading-tight tracking-[-0.04em] text-ink sm:text-3xl">
                     Continue with OTP
                   </h2>
                   <p className="mt-2 text-sm text-muted">
                     Built for quick, verified access by constituency teams.
                   </p>
                 </div>
-                <div className="grid size-12 shrink-0 place-items-center rounded-2xl bg-soft-blue text-xl font-extrabold text-primary">
+                <div className="grid size-11 shrink-0 place-items-center rounded-2xl bg-soft-blue text-lg font-extrabold text-primary sm:size-12 sm:text-xl">
                   #
                 </div>
               </div>
@@ -193,11 +199,11 @@ function App() {
                   <label className="block" htmlFor="mobile-number">
                     <span className="text-sm font-bold text-ink">Mobile number</span>
                     <div className="mt-2 flex overflow-hidden rounded-2xl border border-line bg-white shadow-sm transition focus-within:border-primary-light focus-within:ring-4 focus-within:ring-primary-light/15">
-                      <span className="grid place-items-center border-r border-line bg-slate-50 px-4 text-sm font-extrabold text-primary">
+                      <span className="grid place-items-center border-r border-line bg-slate-50 px-3 text-sm font-extrabold text-primary sm:px-4">
                         +91
                       </span>
                       <input
-                        className="min-w-0 flex-1 border-0 px-4 py-4 text-base font-semibold text-ink outline-none placeholder:text-slate-400"
+                        className="min-w-0 flex-1 border-0 px-3 py-3.5 text-base font-semibold text-ink outline-none placeholder:text-slate-400 sm:px-4 sm:py-4"
                         id="mobile-number"
                         inputMode="numeric"
                         maxLength={10}
@@ -210,7 +216,7 @@ function App() {
                   </label>
 
                   <button
-                    className="flex w-full items-center justify-center rounded-full bg-primary px-5 py-4 text-base font-extrabold text-white shadow-xl shadow-primary/20 transition hover:-translate-y-0.5 hover:bg-primary-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary disabled:bg-slate-300 disabled:shadow-none"
+                    className="flex w-full items-center justify-center rounded-full bg-primary px-5 py-3.5 text-base font-extrabold text-white shadow-xl shadow-primary/20 transition hover:-translate-y-0.5 hover:bg-primary-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary disabled:bg-slate-300 disabled:shadow-none sm:py-4"
                     disabled={!isPhoneValid}
                     type="submit"
                   >
@@ -243,11 +249,11 @@ function App() {
                     <label className="text-sm font-bold text-ink" htmlFor="otp-0">
                       Enter 6 digit OTP
                     </label>
-                    <div className="mt-3 grid grid-cols-6 gap-2 sm:gap-3">
+                    <div className="mt-3 grid grid-cols-6 gap-1.5 sm:gap-3">
                       {otp.map((digit, index) => (
                         <input
                           aria-label={`OTP digit ${index + 1}`}
-                          className="aspect-square min-w-0 rounded-2xl border border-line bg-white text-center text-xl font-extrabold text-ink shadow-sm outline-none transition focus:border-primary-light focus:ring-4 focus:ring-primary-light/15"
+                          className="aspect-square min-w-0 rounded-xl border border-line bg-white text-center text-lg font-extrabold text-ink shadow-sm outline-none transition focus:border-primary-light focus:ring-4 focus:ring-primary-light/15 sm:rounded-2xl sm:text-xl"
                           id={`otp-${index}`}
                           inputMode="numeric"
                           key={`otp-${index}`}
@@ -266,7 +272,7 @@ function App() {
                   </div>
 
                   <button
-                    className="flex w-full items-center justify-center rounded-full bg-primary px-5 py-4 text-base font-extrabold text-white shadow-xl shadow-primary/20 transition hover:-translate-y-0.5 hover:bg-primary-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary disabled:bg-slate-300 disabled:shadow-none"
+                    className="flex w-full items-center justify-center rounded-full bg-primary px-5 py-3.5 text-base font-extrabold text-white shadow-xl shadow-primary/20 transition hover:-translate-y-0.5 hover:bg-primary-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary disabled:bg-slate-300 disabled:shadow-none sm:py-4"
                     disabled={!canVerify}
                     onClick={handleVerifyOtp}
                     type="button"
@@ -320,7 +326,7 @@ function App() {
             </div>
           </div>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+          <div className="mt-3 grid gap-2 sm:mt-5 sm:gap-3 sm:grid-cols-3">
             {accessHighlights.map((highlight) => (
               <div
                 className="rounded-2xl border border-line bg-white/80 px-4 py-3 text-sm font-bold text-muted shadow-sm"
