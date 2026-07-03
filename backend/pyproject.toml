@@ -1,0 +1,33 @@
+[project]
+name = "jankendra-backend"
+version = "0.1.0"
+description = "FastAPI backend for Jankendra-AI."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "alembic",
+    "aiosqlite",
+    "fastapi",
+    "pydantic-settings",
+    "sqlalchemy",
+    "uvicorn[standard]",
+]
+
+[project.optional-dependencies]
+test = [
+    "httpx",
+    "pytest",
+    "pytest-asyncio",
+]
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+pythonpath = ["."]
+testpaths = ["tests"]
