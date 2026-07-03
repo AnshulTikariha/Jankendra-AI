@@ -38,6 +38,12 @@ open docs/srs.html
 # Read architecture and plan
 cat docs/architecture.md
 cat docs/plan.md
+
+# Start the frontend blank app
+cd frontend
+cp .env.example .env
+npm install
+npm run dev
 ```
 
 ### Backend
