@@ -1,4 +1,4 @@
-import type { DashboardKpis } from '../../data/demoDashboard'
+import type { DashboardKpis } from '../../types/dashboard'
 
 type Props = {
   kpis: DashboardKpis

@@ -1,5 +1,5 @@
 import type { UserRole } from '../../types/auth'
-import { getDashboardGreeting } from '../../data/demoDashboard'
+import { getDashboardGreeting } from '../../types/dashboard'
 import { roleLabels } from '../../types/auth'
 import { getRoleTheme } from '../../theme/roleThemes'
 

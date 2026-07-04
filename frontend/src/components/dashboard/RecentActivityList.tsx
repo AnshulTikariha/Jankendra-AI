@@ -1,4 +1,4 @@
-import type { RecentActivity } from '../../data/demoDashboard'
+import type { RecentActivity } from '../../types/dashboard'
 import type { UserRole } from '../../types/auth'
 import { getRoleTheme } from '../../theme/roleThemes'
 

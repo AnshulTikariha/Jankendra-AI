@@ -1,4 +1,4 @@
-import type { WardRow } from '../../data/demoDashboard'
+import type { WardRow } from '../../types/dashboard'
 import { getRoleTheme } from '../../theme/roleThemes'
 
 type Props = {
