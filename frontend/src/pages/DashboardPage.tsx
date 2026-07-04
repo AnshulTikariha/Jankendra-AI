@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useAuthStore } from '../stores/useAuthStore'
 import { useDashboard } from '../hooks/useDashboard'
 import { CommitmentsAtRisk } from '../components/dashboard/CommitmentsAtRisk'
@@ -9,6 +10,7 @@ import { RecentActivityList } from '../components/dashboard/RecentActivityList'
 import { IssueHeatMap } from '../components/dashboard/IssueHeatMap'
 import { WardComparisonTable } from '../components/dashboard/WardComparisonTable'
 import { ApiError } from '../api/errors'
+import { mapWardRowsToMapPoints } from '../lib/wardMapMappers'
 
 function DashboardLoading() {
   return (
@@ -41,6 +43,10 @@ export function DashboardPage() {
   const isLeader = role === 'leader'
   const isStaff = role === 'staff'
   const { data, isLoading, isError, error, refetch } = useDashboard()
+  const mapWards = useMemo(
+    () => (data ? mapWardRowsToMapPoints(data.wardComparison) : undefined),
+    [data],
+  )
 
   if (role === 'citizen') return null
 
@@ -82,7 +88,7 @@ export function DashboardPage() {
 
       <KpiStrip kpis={data.kpis} showCitizenMetric />
 
-      <IssueHeatMap />
+      <IssueHeatMap wards={mapWards} />
 
       <div className="grid gap-6 xl:grid-cols-3">
         <div className="xl:col-span-2">

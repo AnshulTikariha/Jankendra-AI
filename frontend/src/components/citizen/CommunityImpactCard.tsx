@@ -1,11 +1,11 @@
-import { demoCitizenTransparency } from '../../data/demoCitizenDashboard'
 import { getRoleTheme } from '../../theme/roleThemes'
 
 type Props = {
   maxClusterCount: number
+  totalReports?: number
 }
 
-export function CommunityImpactCard({ maxClusterCount }: Props) {
+export function CommunityImpactCard({ maxClusterCount, totalReports = 0 }: Props) {
   const theme = getRoleTheme('citizen')
 
   return (
@@ -17,8 +17,8 @@ export function CommunityImpactCard({ maxClusterCount }: Props) {
       <div className="space-y-4 p-5">
         <div className={`rounded-2xl bg-gradient-to-br ${theme.primaryBtn} p-4 text-white shadow-lg`}>
           <p className="text-xs font-bold uppercase tracking-wide text-white/70">This week in your constituency</p>
-          <p className="mt-2 text-3xl font-extrabold">{demoCitizenTransparency.citizenReportsWeek}</p>
-          <p className="mt-1 text-sm text-white/80">citizen reports filed</p>
+          <p className="mt-2 text-3xl font-extrabold">{totalReports}</p>
+          <p className="mt-1 text-sm text-white/80">complaints you&apos;ve filed</p>
         </div>
 
         {maxClusterCount > 1 ? (
@@ -46,8 +46,10 @@ export function CommunityImpactCard({ maxClusterCount }: Props) {
             </svg>
           </div>
           <div>
-            <p className="text-xs font-bold text-muted">Avg. resolution time</p>
-            <p className="font-extrabold text-ink">{demoCitizenTransparency.avgResolutionDays} days</p>
+            <p className="text-xs font-bold text-muted">Your submissions</p>
+            <p className="font-extrabold text-ink">
+              {totalReports > 0 ? `${totalReports} on record` : 'Track via reference'}
+            </p>
           </div>
         </div>
       </div>

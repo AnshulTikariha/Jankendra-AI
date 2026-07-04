@@ -45,43 +45,52 @@ API contract: [`docs/api.md`](../docs/api.md)
 - [x] Removed `useComplaintStore.ts` (localStorage)
 - [x] Temporary static `wardOptions` in `data/wards.ts` (see **Backend B-002**)
 
+### Phase 5 — Staff / leader app pages
+
+- [x] **Completed:** 2026-07-04
+- [x] `todo` — `GET /todo`, `PATCH /todo/{id}` → `pages/staff/TodoPage.tsx`
+- [x] `commitments` — `GET/POST /commitments` → `pages/staff/CommitmentsPage.tsx`
+- [x] `development-plan` — `GET /priorities` → `pages/staff/DevelopmentPlanPage.tsx`
+- [x] `log-issue` — `POST /complaints` + `GET /constituency/wards` → `pages/staff/LogIssuePage.tsx`
+- [x] `digest` — `GET /digest` → `pages/staff/DigestPage.tsx`
+- [x] `profile` — session details → `pages/staff/ProfilePage.tsx`
+- [x] `api/staff.ts`, `hooks/useStaffApi.ts`, `types/staff.ts`
+- [x] `AppShell.tsx` routing + `navigation.ts` availability flags
+- [x] `QuickActions` shortcuts navigate to live pages
+- [x] **Complaint queue** — `GET /complaints` + localStorage overrides → `pages/staff/ComplaintsQueuePage.tsx` (status/notes mock until **Backend B-009**)
+
+### Phase 6 — Platform polish (partial)
+
+- [x] **Completed:** 2026-07-04
+- [x] Global **401 → logout** in `httpClient.ts` when Bearer token sent
+- [x] **IssueHeatMap** — live ward data from dashboard `ward_comparison` (`lib/wardMapMappers.ts`)
+- [x] **CommunityImpactCard** — uses live complaint count from API
+- [ ] **TrustStrip** — still static trust copy (acceptable for now)
+- [ ] **i18n** — citizen portal strings (deferred)
+- [ ] Remove unused `data/demoDashboard.ts` (still unused exports only)
+
 ---
 
 ## Upcoming — planned phases
 
-### Phase 4 — Ward list from API
+### Phase 4 — Ward list from API (citizen)
 
 - [ ] **Blocked by:** [Backend B-002](./backend.md#b-002--allow-citizens-to-list-wards-raise-complaint-form)
-- [ ] `api/constituency.ts` + `hooks/useWards.ts`
-- [ ] Replace static `wardOptions` in `RaiseComplaintPage.tsx`
-- [ ] Optional: staff/leader constituency ward picker on log-issue (future page)
+- [ ] Replace static `wardOptions` in `RaiseComplaintPage.tsx` (staff log-issue already uses live wards)
 
-### Phase 5 — Staff / leader app pages
-
-Wire navigation items in `types/navigation.ts` that are still `available: false`:
+### Phase 5 — Remaining staff pages
 
 | Page id | API(s) | Status |
 |---------|--------|--------|
-| `todo` | `GET /todo`, `PATCH /todo/{id}` | [ ] Not started |
-| `commitments` | `GET /commitments`, `POST /commitments` | [ ] Not started |
-| `development-plan` | `GET /priorities` | [ ] Not started |
-| `log-issue` | `POST /complaints` (+ wards) | [ ] Not started |
-| `digest` | `GET /digest` | [ ] Not started |
 | `upload-meeting` | Planned backend B-006 | [ ] Blocked |
 | `chat` | Planned backend B-007 | [ ] Blocked |
 | `context-injection` | TBD | [ ] Blocked |
-| `profile` | `GET /auth/me` (partial) | [ ] Not started |
 
-### Phase 6 — Platform polish (frontend-only)
+### Phase 6 — Remaining polish
 
-- [ ] Global **401 → logout** in `httpClient.ts` (expired token)
-- [ ] **IssueHeatMap** — use live ward/complaint data (partially static today)
-- [ ] Replace **citizen demo data**:
-  - [ ] `CommunityImpactCard.tsx` (`demoCitizenTransparency`)
-  - [ ] `TrustStrip.tsx` (`citizenTrustPoints`)
-  - [ ] Derive stats from `GET /complaints` or new backend metrics
-- [ ] **i18n** — citizen portal strings (login/dashboard partially done)
-- [ ] Remove unused `data/demoDashboard.ts` exports if nothing references them
+- [ ] **i18n** — citizen portal strings
+- [ ] **TrustStrip** — optional live metrics or static help content page
+- [ ] Remove dead `demoDashboard.ts` demo exports if unreferenced
 
 ### Phase 7 — Citizen portal expansion
 
@@ -110,6 +119,8 @@ Pages in `types/citizenNavigation.ts` still `available: false`:
 | Leader/staff dashboard | 9876543210 / 3211 | [x] Phase 2 |
 | Raise complaint | 9876543212 | [x] User confirmed |
 | My complaints list | 9876543212 | [x] Phase 3 |
+| Staff to-do / commitments / digest | 9876543211 / 3210 | [ ] Manual QA |
+| Staff complaint queue + status actions | 9876543211 / 3210 | [ ] Manual QA (local save) |
 | Ward dropdown matches DB ids | All citizens | [ ] Until B-002 |
 
 ---
@@ -119,3 +130,5 @@ Pages in `types/citizenNavigation.ts` still `available: false`:
 | Date | Change |
 |------|--------|
 | 2026-07-04 | Initial file: Phases 0–3 marked complete; Phases 4–7 planned |
+| 2026-07-04 | Phases 5–6 marked complete (staff pages, 401 logout, live heat map) |
+| 2026-07-04 | Complaint queue page wired (filters, local status/notes until B-009) |

@@ -60,10 +60,18 @@ Related: GitLab **#7** · API docs: [`docs/api.md`](../docs/api.md)
 
 ### B-005 · Staff “log issue” parity
 
-- [ ] **Priority:** Medium (when staff log-issue page is built)
-- **Issue:** `POST /complaints` supports staff with optional `citizen_contact`; staff UI not wired yet.
-- **Requested change:** Confirm validation rules and error messages for staff-submitted complaints are documented; no change needed if current contract is sufficient.
-- **Note:** Frontend will call existing `POST /complaints` — verify staff flow in Swagger.
+- [ ] **Priority:** Medium
+- **Issue:** `POST /complaints` supports staff with optional `citizen_contact`; confirm validation rules and error messages for staff-submitted complaints are documented.
+- **Note:** Frontend calls existing `POST /complaints` — verify staff flow in Swagger.
+
+---
+
+### B-009 · Update complaint status
+
+- [ ] **Priority:** High (complaint queue status actions)
+- **Issue:** No `PATCH /complaints/{id}` (or equivalent) to update status, assign department, or add staff notes.
+- **Requested change:** Implement e.g. `PATCH /complaints/{id}` with fields: `status`, `assigned_department`, `staff_note` (or separate endpoints). Document in `docs/api.md`.
+- **Frontend workaround:** Complaint queue saves status/department/notes in **localStorage** until this API exists.
 
 ---
 

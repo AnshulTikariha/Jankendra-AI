@@ -42,7 +42,7 @@ export function CitizenDashboardPage() {
             lastComplaintRef={lastComplaintRef}
             onNavigate={(view) => navigate(view)}
           />
-          <CommunityImpactCard maxClusterCount={stats.maxClusterCount} />
+          <CommunityImpactCard maxClusterCount={stats.maxClusterCount} totalReports={stats.total} />
         </div>
       </div>
 
