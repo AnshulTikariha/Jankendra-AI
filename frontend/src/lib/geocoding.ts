@@ -35,17 +35,31 @@ async function nominatimFetch<T>(path: string): Promise<T> {
   return response.json() as Promise<T>
 }
 
-export async function searchPlaces(query: string): Promise<GeocodingResult[]> {
+export async function searchPlaces(
+  query: string,
+  bias?: { lat: number; lng: number; cityName?: string },
+): Promise<GeocodingResult[]> {
   const trimmed = query.trim()
   if (trimmed.length < 2) return []
 
+  const searchText = bias?.cityName ? `${trimmed}, ${bias.cityName}, India` : trimmed
+
   const params = new URLSearchParams({
-    q: trimmed,
+    q: searchText,
     format: 'json',
     addressdetails: '1',
     limit: '6',
     countrycodes: 'in',
   })
+
+  if (bias) {
+    const delta = 0.45
+    params.set(
+      'viewbox',
+      `${bias.lng - delta},${bias.lat + delta},${bias.lng + delta},${bias.lat - delta}`,
+    )
+    params.set('bounded', '1')
+  }
 
   const results = await nominatimFetch<NominatimSearchItem[]>(`/search?${params}`)
 

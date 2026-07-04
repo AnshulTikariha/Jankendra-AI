@@ -1,3 +1,4 @@
+import type { WardOption } from '../api/types/constituency'
 import type { WardRow } from '../types/dashboard'
 import type { WardPrioritySummary } from '../types/staff'
 import {
@@ -16,6 +17,19 @@ function computeIntensity(
   return maxScore > 0 ? Math.round((score / maxScore) * 100) : 0
 }
 
+function findGeoWard(
+  row: { wardId: string; wardName: string },
+  geoWards?: WardOption[],
+): WardOption | undefined {
+  if (!geoWards?.length) return undefined
+
+  return (
+    geoWards.find((ward) => String(ward.id) === row.wardId) ??
+    geoWards.find((ward) => ward.name === row.wardName) ??
+    geoWards.find((ward) => row.wardName.includes(ward.code.replace('W', '')))
+  )
+}
+
 function findMapTemplate(wardName: string): WardMapPoint | undefined {
   return (
     wardMapPoints.find((w) => w.wardName === wardName) ??
@@ -23,21 +37,44 @@ function findMapTemplate(wardName: string): WardMapPoint | undefined {
   )
 }
 
-export function mapWardRowsToMapPoints(rows: WardRow[]): WardMapPoint[] {
+function resolveCoordinates(
+  row: { wardId: string; wardName: string },
+  geoWards: WardOption[] | undefined,
+  index: number,
+): { lat: number; lng: number } {
+  const geo = findGeoWard(row, geoWards)
+  if (geo?.centroidLat != null && geo.centroidLng != null) {
+    return { lat: geo.centroidLat, lng: geo.centroidLng }
+  }
+
+  const template = findMapTemplate(row.wardName)
+  if (template) {
+    return { lat: template.lat, lng: template.lng }
+  }
+
+  return {
+    lat: CONSTITUENCY_MAP_VIEW.center[0] + (index % 3) * 0.008,
+    lng: CONSTITUENCY_MAP_VIEW.center[1] + Math.floor(index / 3) * 0.008,
+  }
+}
+
+export function mapWardRowsToMapPoints(
+  rows: WardRow[],
+  geoWards?: WardOption[],
+): WardMapPoint[] {
   const scores = rows.map(
     (r) => r.openClusters * 12 + r.openClusters * 2 + r.overdueCommitments * 8,
   )
   const maxScore = Math.max(...scores, 1)
 
   return rows.map((row, index) => {
-    const template = findMapTemplate(row.wardName)
-    const lat = template?.lat ?? CONSTITUENCY_MAP_VIEW.center[0] + (index % 3) * 0.008
-    const lng = template?.lng ?? CONSTITUENCY_MAP_VIEW.center[1] + Math.floor(index / 3) * 0.008
+    const { lat, lng } = resolveCoordinates(row, geoWards, index)
     const openComplaints = row.openClusters
+    const geo = findGeoWard(row, geoWards)
 
     return {
       wardId: row.wardId,
-      wardName: row.wardName,
+      wardName: geo?.wardAreaName ? `${row.wardName} (${geo.wardAreaName})` : row.wardName,
       lat,
       lng,
       openClusters: row.openClusters,
@@ -53,16 +90,21 @@ export function mapWardRowsToMapPoints(rows: WardRow[]): WardMapPoint[] {
   })
 }
 
-export function mapPriorityWardsToMapPoints(rows: WardPrioritySummary[]): WardMapPoint[] {
+export function mapPriorityWardsToMapPoints(
+  rows: WardPrioritySummary[],
+  geoWards?: WardOption[],
+): WardMapPoint[] {
   const scores = rows.map(
     (r) => r.openClusters * 12 + r.openComplaints * 2 + r.overdueCommitments * 8,
   )
   const maxScore = Math.max(...scores, 1)
 
   return rows.map((row, index) => {
-    const template = findMapTemplate(row.wardName)
-    const lat = template?.lat ?? CONSTITUENCY_MAP_VIEW.center[0] + (index % 3) * 0.008
-    const lng = template?.lng ?? CONSTITUENCY_MAP_VIEW.center[1] + Math.floor(index / 3) * 0.008
+    const { lat, lng } = resolveCoordinates(
+      { wardId: String(row.wardId), wardName: row.wardName },
+      geoWards,
+      index,
+    )
 
     return {
       wardId: String(row.wardId),

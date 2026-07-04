@@ -18,23 +18,23 @@ Related: GitLab **#7** · API docs: [`docs/api.md`](../docs/api.md)
 
 ---
 
-## Open — required for current frontend
+## Completed (ward geo — Option A)
 
 ### B-002 · Allow citizens to list wards (raise-complaint form)
 
-- [ ] **Priority:** High
-- **Issue:** `GET /api/v1/constituency/wards` returns **403** for `citizen` role. The raise-complaint form needs a ward dropdown with **real integer `ward_id`** values from the database.
-- **Current frontend workaround:** Static `wardOptions` in `frontend/src/data/wards.ts` (ids 1–6 assumed from seed insertion order). This breaks if the DB is re-seeded or ward ids change.
-- **Requested change (pick one):**
-  - **Option A (preferred):** Allow `citizen` on `GET /constituency/wards` — read-only ward list (`id`, `name`, `code`); no demographics/infrastructure required.
-  - **Option B:** New endpoint e.g. `GET /constituency/wards/public` — no auth or citizen auth, summary fields only.
-- **Acceptance criteria:**
-  - Citizen token (`9876543212`) can fetch ward list successfully.
-  - Response includes stable integer `id` matching `POST /complaints` `ward_id`.
-  - Document in `docs/api.md`.
-- **Frontend blocked until:** This is done (Phase 4).
+- [x] **Status:** Done (2026-07-04)
+- **Resolution:** `GET /api/v1/constituency/wards` now allows `citizen`, `staff`, and `leader`. Returns centroids and boundary flags.
+- **Also added:** `GET /constituency/wards/resolve?latitude=&longitude=`, `GET /constituency/ward-boundaries`, migration `004_ward_geo`, `scripts/sync_bhopal_ward_boundaries.py`.
+
+### B-013 · Ward boundaries sync from Bharatlas
+
+- [x] **Status:** Done (2026-07-04)
+- **Script:** `python scripts/sync_bhopal_ward_boundaries.py` — matches demo wards W42–W47 to BMC polygons via Bharatlas OpenCity GeoJSON.
+- **Re-run after:** fresh seed or Bharatlas layer update.
 
 ---
+
+## Open — required for current frontend
 
 ### B-003 · Document ward id mapping for demo / seed data
 

@@ -1,8 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import L from 'leaflet'
-import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from 'react-leaflet'
+import {
+  GeoJSON,
+  MapContainer,
+  Marker,
+  TileLayer,
+  useMap,
+  useMapEvents,
+} from 'react-leaflet'
 import { useTranslation } from 'react-i18next'
-import { CONSTITUENCY_MAP_VIEW } from '../../../data/wardMapData'
 import { formatCoordinates } from '../../../lib/raiseComplaintFormat'
 import { reverseGeocode, searchPlaces, type GeocodingResult } from '../../../lib/geocoding'
 
@@ -19,9 +25,18 @@ export type MapLocationValue = {
   locationDetail: string
 }
 
+export type MapViewConfig = {
+  center: [number, number]
+  zoom: number
+}
+
 type Props = {
   value: MapLocationValue
   onChange: (value: MapLocationValue) => void
+  mapView: MapViewConfig
+  wardFocus?: { lat: number; lng: number } | null
+  wardBoundary?: Record<string, unknown> | null
+  searchBias?: { lat: number; lng: number; cityName?: string }
 }
 
 function MapClickHandler({ onPick }: { onPick: (lat: number, lng: number) => void }) {
@@ -33,18 +48,58 @@ function MapClickHandler({ onPick }: { onPick: (lat: number, lng: number) => voi
   return null
 }
 
-function MapFlyTo({ position }: { position: [number, number] | null }) {
+function MapFlyTo({
+  position,
+  zoom,
+  fitBoundary,
+}: {
+  position: [number, number] | null
+  zoom?: number
+  fitBoundary?: Record<string, unknown> | null
+}) {
   const map = useMap()
 
   useEffect(() => {
+    if (fitBoundary) {
+      const layer = L.geoJSON(fitBoundary as unknown as GeoJSON.Geometry)
+      const bounds = layer.getBounds()
+      if (bounds.isValid()) {
+        map.fitBounds(bounds, { padding: [28, 28], maxZoom: 16, duration: 0.45 })
+        return
+      }
+    }
+
     if (!position) return
-    map.flyTo(position, Math.max(map.getZoom(), 16), { duration: 0.45 })
-  }, [map, position])
+    map.flyTo(position, zoom ?? Math.max(map.getZoom(), 15), { duration: 0.45 })
+  }, [map, position, zoom, fitBoundary])
 
   return null
 }
 
-export function MapLocationPicker({ value, onChange }: Props) {
+function WardBoundaryLayer({ boundary }: { boundary: Record<string, unknown> | null }) {
+  if (!boundary) return null
+
+  return (
+    <GeoJSON
+      data={boundary as unknown as GeoJSON.GeoJsonObject}
+      pathOptions={{
+        color: '#0d9488',
+        weight: 2,
+        fillColor: '#14b8a6',
+        fillOpacity: 0.12,
+      }}
+    />
+  )
+}
+
+export function MapLocationPicker({
+  value,
+  onChange,
+  mapView,
+  wardFocus = null,
+  wardBoundary = null,
+  searchBias,
+}: Props) {
   const { t } = useTranslation('complaints')
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<GeocodingResult[]>([])
@@ -54,7 +109,10 @@ export function MapLocationPicker({ value, onChange }: Props) {
   const [addressLoading, setAddressLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [flyTarget, setFlyTarget] = useState<[number, number] | null>(null)
+  const [flyZoom, setFlyZoom] = useState<number | undefined>(undefined)
+  const [fitBoundary, setFitBoundary] = useState<Record<string, unknown> | null>(null)
   const searchSeq = useRef(0)
+  const wardFocusKey = useRef<string>('')
 
   const hasPin = value.latitude != null && value.longitude != null
   const markerPosition = useMemo<[number, number] | null>(() => {
@@ -62,10 +120,34 @@ export function MapLocationPicker({ value, onChange }: Props) {
     return [value.latitude!, value.longitude!]
   }, [hasPin, value.latitude, value.longitude])
 
+  useEffect(() => {
+    if (!wardFocus) return
+    const key = `${wardFocus.lat},${wardFocus.lng}:${wardBoundary ? 'b' : ''}`
+    if (wardFocusKey.current === key) return
+    wardFocusKey.current = key
+
+    if (wardBoundary) {
+      setFitBoundary(wardBoundary)
+      setFlyTarget(null)
+      setFlyZoom(undefined)
+      return
+    }
+
+    setFitBoundary(null)
+    setFlyTarget([wardFocus.lat, wardFocus.lng])
+    setFlyZoom(15)
+  }, [wardFocus, wardBoundary])
+
+  useEffect(() => {
+    wardFocusKey.current = ''
+  }, [mapView.center[0], mapView.center[1], mapView.zoom])
+
   const applyPin = useCallback(
     async (latitude: number, longitude: number, address?: string) => {
       setError(null)
+      setFitBoundary(null)
       setFlyTarget([latitude, longitude])
+      setFlyZoom(16)
 
       if (address) {
         onChange({ latitude, longitude, locationDetail: address })
@@ -102,7 +184,7 @@ export function MapLocationPicker({ value, onChange }: Props) {
     setSearchLoading(true)
 
     const timer = window.setTimeout(() => {
-      void searchPlaces(query)
+      void searchPlaces(query, searchBias)
         .then((results) => {
           if (seq !== searchSeq.current) return
           setSearchResults(results)
@@ -119,7 +201,7 @@ export function MapLocationPicker({ value, onChange }: Props) {
     }, 450)
 
     return () => window.clearTimeout(timer)
-  }, [searchQuery, t])
+  }, [searchQuery, searchBias, t])
 
   const handleSearchSelect = (result: GeocodingResult) => {
     setSearchQuery(result.label.split(',')[0] ?? result.label)
@@ -155,12 +237,16 @@ export function MapLocationPicker({ value, onChange }: Props) {
     setSearchResults([])
     setSearchOpen(false)
     setFlyTarget(null)
+    setFitBoundary(null)
     setError(null)
     onChange({ latitude: null, longitude: null, locationDetail: '' })
   }
 
   const mapsUrl =
     hasPin ? `https://www.google.com/maps?q=${value.latitude},${value.longitude}` : null
+
+  const mapCenter = markerPosition ?? mapView.center
+  const mapZoom = markerPosition ? 16 : mapView.zoom
 
   return (
     <div className="rounded-2xl border border-line/80 bg-slate-50/50 p-4">
@@ -214,19 +300,21 @@ export function MapLocationPicker({ value, onChange }: Props) {
 
       <div className="map-location-picker relative z-0 mt-3 h-56 overflow-hidden rounded-xl border border-line/80 sm:h-64">
         <MapContainer
-          center={markerPosition ?? CONSTITUENCY_MAP_VIEW.center}
+          center={mapCenter}
           className="size-full"
+          key={`${mapView.center[0]}-${mapView.center[1]}-${mapView.zoom}`}
           maxZoom={18}
-          minZoom={10}
+          minZoom={9}
           scrollWheelZoom
-          zoom={markerPosition ? 16 : CONSTITUENCY_MAP_VIEW.zoom}
+          zoom={mapZoom}
         >
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
+          <WardBoundaryLayer boundary={wardBoundary} />
           <MapClickHandler onPick={(lat, lng) => void applyPin(lat, lng)} />
-          <MapFlyTo position={flyTarget} />
+          <MapFlyTo fitBoundary={fitBoundary} position={flyTarget} zoom={flyZoom} />
           {markerPosition && (
             <Marker
               draggable

@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { wardOptions } from '../../../data/wards'
 import { useCitizenProfile } from '../../../hooks/useCitizenProfile'
+import { useCities, useResolveWard, useWardBoundary, useWards } from '../../../hooks/useConstituency'
 import { useCreateComplaint } from '../../../hooks/useComplaints'
 import { useRaiseComplaintDraft } from '../../../hooks/useRaiseComplaintDraft'
 import { useSimilarComplaints } from '../../../hooks/useSimilarComplaints'
@@ -80,9 +80,13 @@ export function RaiseComplaintWizard() {
   const setLastComplaintId = useUiStore((s) => s.setLastComplaintId)
 
   const saveAttachments = useComplaintAttachmentsStore((s) => s.saveAttachments)
+  const { data: citiesData, isLoading: citiesLoading } = useCities()
+  const [city, setCity] = useState('bengaluru')
+  const { data: wardsData, isLoading: wardsLoading } = useWards(city)
+  const resolveWardMutation = useResolveWard()
 
   const profileWardId = preferredWardId(profile?.wardId)
-
+  const wardOptions = wardsData?.wards ?? []
   const defaultWardId = profileWardId ?? wardOptions[0]?.id ?? 1
 
   const [form, setForm] = useState<RaiseComplaintForm>(() =>
@@ -93,9 +97,42 @@ export function RaiseComplaintWizard() {
   const [error, setError] = useState('')
   const [draftPrompt, setDraftPrompt] = useState<{ savedAt: string } | null>(null)
   const [wardPrefilled, setWardPrefilled] = useState(false)
+  const [wardDetected, setWardDetected] = useState<{
+    label: string
+    confidence: 'inside' | 'nearest'
+  } | null>(null)
   const [initialized, setInitialized] = useState(false)
+  const resolveTimerRef = useRef<number | null>(null)
+  const skipResolveRef = useRef(false)
+
+  const { data: wardBoundaryData } = useWardBoundary(form.wardId)
+
+  const selectedWard = wardOptions.find((ward) => ward.id === form.wardId)
+  const activeCity =
+    citiesData?.find((item) => item.city === city) ??
+    citiesData?.[0] ??
+    null
+  const mapView = activeCity
+    ? {
+        center: [activeCity.defaultLat, activeCity.defaultLng] as [number, number],
+        zoom: activeCity.defaultZoom,
+      }
+    : {
+        center: [12.9716, 77.5946] as [number, number],
+        zoom: 11,
+      }
+  const wardFocus =
+    selectedWard?.centroidLat != null && selectedWard.centroidLng != null
+      ? { lat: selectedWard.centroidLat, lng: selectedWard.centroidLng }
+      : null
 
   const { restoreDraft, clearDraft } = useRaiseComplaintDraft(form, step, defaultWardId)
+
+  useEffect(() => {
+    if (!citiesData?.length) return
+    if (citiesData.some((item) => item.city === city)) return
+    setCity(citiesData[0].city)
+  }, [citiesData, city])
 
   useEffect(() => {
     if (initialized) return
@@ -110,6 +147,56 @@ export function RaiseComplaintWizard() {
 
     setInitialized(true)
   }, [initialized, profileWardId, restoreDraft])
+
+  useEffect(() => {
+    if (wardOptions.length === 0) return
+    setForm((current) => {
+      if (wardOptions.some((ward) => ward.id === current.wardId)) return current
+      skipResolveRef.current = true
+      return { ...current, wardId: wardOptions[0].id }
+    })
+  }, [city, wardOptions])
+
+  useEffect(() => {
+    if (form.latitude == null || form.longitude == null) {
+      setWardDetected(null)
+      return
+    }
+
+    if (skipResolveRef.current) {
+      skipResolveRef.current = false
+      return
+    }
+
+    if (resolveTimerRef.current) {
+      window.clearTimeout(resolveTimerRef.current)
+    }
+
+    resolveTimerRef.current = window.setTimeout(() => {
+      resolveWardMutation.mutate(
+        { latitude: form.latitude!, longitude: form.longitude!, city },
+        {
+          onSuccess: (result) => {
+            setForm((current) => ({ ...current, wardId: result.ward_id }))
+            setWardPrefilled(false)
+            setWardDetected({
+              label: result.ward_area_name
+                ? `${result.name} — ${result.ward_area_name}`
+                : result.name,
+              confidence: result.confidence,
+            })
+          },
+          onError: () => setWardDetected(null),
+        },
+      )
+    }, 500)
+
+    return () => {
+      if (resolveTimerRef.current) {
+        window.clearTimeout(resolveTimerRef.current)
+      }
+    }
+  }, [form.latitude, form.longitude, city, resolveWardMutation])
 
   const primaryCategory = getPrimaryCategory(form.categories)
 
@@ -323,6 +410,28 @@ export function RaiseComplaintWizard() {
             {step === 'where' && (
               <div className="space-y-5">
                 <label className="block">
+                  <span className="text-sm font-bold">{t('raise.where.city')}</span>
+                  <p className="mt-0.5 text-xs text-muted">{t('raise.where.cityHint')}</p>
+                  <select
+                    className="mt-2 w-full rounded-xl border border-line bg-white px-4 py-3 font-semibold outline-none focus:ring-4 focus:ring-teal-200/40 disabled:opacity-60"
+                    disabled={citiesLoading || !citiesData?.length}
+                    onChange={(event) => {
+                      setCity(event.target.value)
+                      setWardPrefilled(false)
+                      setWardDetected(null)
+                      skipResolveRef.current = true
+                    }}
+                    value={city}
+                  >
+                    {(citiesData ?? []).map((item) => (
+                      <option key={item.city} value={item.city}>
+                        {item.displayName} ({item.wardCount})
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="block">
                   <span className="text-sm font-bold">{t('raise.where.ward')}</span>
                   <p className="mt-0.5 text-xs text-muted">{t('raise.where.wardHint')}</p>
                   {wardPrefilled && (
@@ -330,30 +439,57 @@ export function RaiseComplaintWizard() {
                       {t('raise.where.wardPrefilled')}
                     </p>
                   )}
+                  {wardDetected && (
+                    <p className="mt-1 text-xs font-semibold text-teal-800">
+                      {wardDetected.confidence === 'inside'
+                        ? t('raise.where.wardDetected', { ward: wardDetected.label })
+                        : t('raise.where.wardDetectedNearest', { ward: wardDetected.label })}
+                    </p>
+                  )}
                   <select
-                    className="mt-2 w-full rounded-xl border border-line bg-white px-4 py-3 font-semibold outline-none focus:ring-4 focus:ring-teal-200/40"
+                    className="mt-2 w-full rounded-xl border border-line bg-white px-4 py-3 font-semibold outline-none focus:ring-4 focus:ring-teal-200/40 disabled:opacity-60"
+                    disabled={wardsLoading || wardOptions.length === 0}
                     onChange={(e) => {
+                      skipResolveRef.current = true
                       updateForm('wardId', Number(e.target.value))
                       setWardPrefilled(false)
+                      setWardDetected(null)
                     }}
                     value={form.wardId}
                   >
                     {wardOptions.map((ward) => (
-                      <option key={ward.id} value={ward.id}>{ward.name}</option>
+                      <option key={ward.id} value={ward.id}>
+                        {ward.wardAreaName ? `${ward.name} — ${ward.wardAreaName}` : ward.name}
+                      </option>
                     ))}
                   </select>
+                  {wardsLoading && (
+                    <p className="mt-1 text-xs text-muted">{t('raise.where.wardLoading')}</p>
+                  )}
                 </label>
 
                 <MapLocationPicker
+                  mapView={mapView}
                   onChange={({ latitude, longitude, locationDetail }) => {
                     setForm((prev) => ({ ...prev, latitude, longitude, locationDetail }))
                     setError('')
                   }}
+                  searchBias={
+                    activeCity
+                      ? {
+                          lat: activeCity.defaultLat,
+                          lng: activeCity.defaultLng,
+                          cityName: activeCity.displayName,
+                        }
+                      : undefined
+                  }
                   value={{
                     latitude: form.latitude,
                     longitude: form.longitude,
                     locationDetail: form.locationDetail,
                   }}
+                  wardBoundary={wardBoundaryData?.geometry ?? null}
+                  wardFocus={wardFocus}
                 />
 
                 {session?.phone && (

@@ -77,8 +77,8 @@ API contract: [`docs/api.md`](../docs/api.md)
 
 ### Phase 4 — Ward list from API (citizen)
 
-- [ ] **Blocked by:** [Backend B-002](./backend.md#b-002--allow-citizens-to-list-wards-raise-complaint-form)
-- [ ] Replace static `wardOptions` in `RaiseComplaintPage.tsx` (staff log-issue already uses live wards)
+- [x] **Completed:** 2026-07-04 — live `GET /constituency/wards` for citizens; map pin auto-resolves ward via `GET /constituency/wards/resolve`; heat map uses API centroids
+- [ ] Render ward boundary polygons on heat map (`GET /constituency/ward-boundaries`) — optional polish
 
 ### Phase 5 — Remaining staff pages
 
@@ -127,7 +127,8 @@ Pages in `types/citizenNavigation.ts` still `available: false`:
 | Raise complaint (wizard) | 9876543212 | [ ] Manual QA |
 | Raise complaint (GPS + photos + sub-category) | 9876543212 | [ ] Manual QA |
 | Citizen profile edit | 9876543212 | [ ] Manual QA (local save) |
-| Ward dropdown matches DB ids | All citizens | [ ] Until B-002 |
+| Ward dropdown matches DB ids | All citizens | [x] Live API |
+| Map pin auto-selects ward | 9876543212 | [ ] Manual QA (run sync script + backend) |
 
 ---
 

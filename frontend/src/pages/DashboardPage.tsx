@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useAuthStore } from '../stores/useAuthStore'
 import { useDashboard } from '../hooks/useDashboard'
+import { useWards } from '../hooks/useConstituency'
 import { CommitmentsAtRisk } from '../components/dashboard/CommitmentsAtRisk'
 import { DashboardHero } from '../components/dashboard/DashboardHero'
 import { KpiStrip } from '../components/dashboard/KpiStrip'
@@ -43,9 +44,10 @@ export function DashboardPage() {
   const isLeader = role === 'leader'
   const isStaff = role === 'staff'
   const { data, isLoading, isError, error, refetch } = useDashboard()
+  const { data: wardGeo } = useWards()
   const mapWards = useMemo(
-    () => (data ? mapWardRowsToMapPoints(data.wardComparison) : undefined),
-    [data],
+    () => (data ? mapWardRowsToMapPoints(data.wardComparison, wardGeo?.wards) : undefined),
+    [data, wardGeo?.wards],
   )
 
   if (role === 'citizen') return null

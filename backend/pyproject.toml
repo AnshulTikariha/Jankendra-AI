@@ -13,6 +13,7 @@ dependencies = [
     "pydantic-settings",
     "PyJWT",
     "sqlalchemy",
+    "shapely",
     "uvicorn[standard]",
 ]
 

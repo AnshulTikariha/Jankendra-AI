@@ -6,7 +6,6 @@ import {
   fetchDigest,
   fetchPriorities,
   fetchTodo,
-  fetchWards,
   patchTodoItem,
 } from '../api/staff'
 import type { CreateCommitmentPayload, TodoActionPayload } from '../api/types/staff'
@@ -14,28 +13,7 @@ import type { CreateComplaintPayload } from '../api/types/complaints'
 import { mapCommitment, type DevelopmentPriority, type WardPrioritySummary } from '../types/staff'
 import { useAuthStore } from '../stores/useAuthStore'
 
-export function useWards() {
-  const token = useAuthStore((s) => s.session?.accessToken)
-
-  return useQuery({
-    queryKey: ['wards'],
-    queryFn: async () => {
-      if (!token) throw new Error('Not authenticated')
-      const response = await fetchWards(token)
-      return {
-        constituencyName: response.constituency_name,
-        wards: response.wards.map((w) => ({
-          id: w.id,
-          name: w.name,
-          code: w.code,
-          population: w.population,
-          registeredVoters: w.registered_voters,
-        })),
-      }
-    },
-    enabled: Boolean(token),
-  })
-}
+export { useWardBoundaries, useWards } from './useConstituency'
 
 export function useTodoList() {
   const token = useAuthStore((s) => s.session?.accessToken)

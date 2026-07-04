@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
-import { wardOptions } from '../data/wards'
 import { localeLabels, type SupportedLocale } from '../i18n/config'
+import { useWards } from './useConstituency'
 import { useAuthStore } from '../stores/useAuthStore'
 import { useCitizenProfileStore, type CitizenProfileData } from '../stores/useCitizenProfileStore'
 import { roleLabels } from '../types/auth'
@@ -42,6 +42,7 @@ export function useCitizenProfile() {
   const profiles = useCitizenProfileStore((s) => s.profiles)
   const updateProfile = useCitizenProfileStore((s) => s.updateProfile)
   const { locale, setLocale } = useLocale()
+  const { data: wardsData } = useWards()
 
   const userId = session?.userId ?? ''
   const stored = profiles[userId] ?? {}
@@ -50,7 +51,7 @@ export function useCitizenProfile() {
     if (!session) return null
 
     const ward = stored.wardId
-      ? wardOptions.find((w) => w.id === stored.wardId) ?? null
+      ? wardsData?.wards.find((w) => w.id === stored.wardId) ?? null
       : null
 
     return {
@@ -69,7 +70,7 @@ export function useCitizenProfile() {
       hasLocalEdits: hasLocalProfileEdits(stored),
       lastUpdated: stored.updatedAt ?? null,
     }
-  }, [session, stored, locale])
+  }, [session, stored, locale, wardsData?.wards])
 
   const saveProfile = (form: CitizenProfileForm) => {
     if (!session) return
