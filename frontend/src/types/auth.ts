@@ -1,6 +1,8 @@
 export type UserRole = 'citizen' | 'staff' | 'leader'
 
 export type AuthSession = {
+  userId: string
+  accessToken: string
   role: UserRole
   phone: string
   name: string

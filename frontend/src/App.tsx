@@ -1,4 +1,5 @@
 import { AppShell } from './components/AppShell'
+import { AuthBootstrap } from './components/AuthBootstrap'
 import { CitizenShell } from './components/CitizenShell'
 import { useAuthStore } from './stores/useAuthStore'
 import { useUiStore } from './stores/useUiStore'
@@ -46,7 +47,7 @@ function CitizenPortal() {
   )
 }
 
-function App() {
+function AppRoutes() {
   const session = useAuthStore((s) => s.session)
 
   if (!session) {
@@ -58,6 +59,14 @@ function App() {
   }
 
   return <AppShell />
+}
+
+function App() {
+  return (
+    <AuthBootstrap>
+      <AppRoutes />
+    </AuthBootstrap>
+  )
 }
 
 export default App

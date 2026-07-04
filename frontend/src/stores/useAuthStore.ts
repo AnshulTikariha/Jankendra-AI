@@ -1,12 +1,14 @@
 import { create } from 'zustand'
-import type { AuthSession, UserRole } from '../types/auth'
+import type { AuthSession } from '../types/auth'
 
 const AUTH_STORAGE_KEY = 'jankendra-auth'
 
 type AuthState = {
   session: AuthSession | null
   login: (session: AuthSession) => void
+  setSession: (session: AuthSession) => void
   logout: () => void
+  getAccessToken: () => string | null
 }
 
 function readStoredSession(): AuthSession | null {
@@ -14,34 +16,39 @@ function readStoredSession(): AuthSession | null {
   const raw = window.localStorage.getItem(AUTH_STORAGE_KEY)
   if (!raw) return null
   try {
-    return JSON.parse(raw) as AuthSession
+    const parsed = JSON.parse(raw) as AuthSession
+    if (!parsed.accessToken || !parsed.userId) return null
+    return parsed
   } catch {
     return null
   }
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
-  session: readStoredSession(),
-  login: (session) => {
+function persistSession(session: AuthSession | null) {
+  if (session) {
     window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session))
-    set({ session })
-  },
-  logout: () => {
+  } else {
     window.localStorage.removeItem(AUTH_STORAGE_KEY)
-    set({ session: null })
-  },
-}))
-
-export function buildSession(role: UserRole, phone: string): AuthSession {
-  const names: Record<UserRole, string> = {
-    citizen: 'Resident',
-    staff: 'Office Staff',
-    leader: 'Hon. Representative',
-  }
-  return {
-    role,
-    phone,
-    name: names[role],
-    constituencyName: 'Demo Constituency',
   }
 }
+
+export const useAuthStore = create<AuthState>((set, get) => ({
+  session: readStoredSession(),
+
+  login: (session) => {
+    persistSession(session)
+    set({ session })
+  },
+
+  setSession: (session) => {
+    persistSession(session)
+    set({ session })
+  },
+
+  logout: () => {
+    persistSession(null)
+    set({ session: null })
+  },
+
+  getAccessToken: () => get().session?.accessToken ?? null,
+}))
