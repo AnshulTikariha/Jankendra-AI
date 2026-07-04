@@ -3,5 +3,8 @@
   "appTagline": "Constituency intelligence platform",
   "productBadge": "Beta",
   "language": "Language",
-  "change": "Change"
+  "change": "Change",
+  "errors": {
+    "generic": "Something went wrong. Please try again."
+  }
 }

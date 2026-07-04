@@ -7,18 +7,20 @@ import {
   useState,
 } from 'react'
 import { useTranslation } from 'react-i18next'
+import { requestOtp, verifyOtp } from '../api/auth'
+import { ApiError } from '../api/errors'
 import { LanguageSwitcher } from '../components/LanguageSwitcher'
 import { useLocale } from '../hooks/useLocale'
-import { buildSession, useAuthStore } from '../stores/useAuthStore'
+import { mapTokenResponse } from '../lib/authMappers'
+import { useAuthStore } from '../stores/useAuthStore'
 import type { UserRole } from '../types/auth'
 
-const previewOtp = '246810'
-const otpLength = previewOtp.length
+const otpLength = 6
 const roles: UserRole[] = ['citizen', 'staff', 'leader']
 const philosophyKeys = ['localFirst', 'accountable', 'humanLed'] as const
 const highlightKeys = ['access', 'verified', 'mobileFirst'] as const
 
-type StatusKey = 'enterPhone' | 'invalidPhone' | 'otpGenerated' | 'otpMismatch'
+type StatusKey = 'enterPhone' | 'invalidPhone' | 'otpSent' | 'sendingOtp' | 'verifyingOtp'
 
 export function LoginPage() {
   const { t } = useTranslation(['auth', 'common'])
@@ -30,30 +32,49 @@ export function LoginPage() {
   const [otp, setOtp] = useState<string[]>(Array.from({ length: otpLength }, () => ''))
   const [hasRequestedOtp, setHasRequestedOtp] = useState(false)
   const [statusKey, setStatusKey] = useState<StatusKey>('enterPhone')
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [devOtpHint, setDevOtpHint] = useState<string | null>(null)
+  const [isSendingOtp, setIsSendingOtp] = useState(false)
+  const [isVerifying, setIsVerifying] = useState(false)
   const otpRefs = useRef<Array<HTMLInputElement | null>>([])
 
   const digitsOnly = useMemo(() => phone.replace(/\D/g, ''), [phone])
   const maskedPhone = digitsOnly.length >= 4 ? `+91 ***** **${digitsOnly.slice(-3)}` : t('auth:maskedPhoneDefault')
   const isPhoneValid = digitsOnly.length === 10
   const enteredOtp = otp.join('')
-  const canVerify = enteredOtp.length === otpLength
-  const statusMessage = t(`auth:status.${statusKey}`, { otp: previewOtp })
+  const canVerify = enteredOtp.length === otpLength && !isVerifying
+  const statusMessage = t(`auth:status.${statusKey}`)
   const selectedRoleLabel = t(`auth:roles.${selectedRole}`)
 
-  const requestOtp = () => {
+  const requestOtpCode = async () => {
     if (!isPhoneValid) {
       setStatusKey('invalidPhone')
+      setErrorMessage(null)
       return
     }
-    setHasRequestedOtp(true)
-    setOtp(Array.from({ length: otpLength }, () => ''))
-    setStatusKey('otpGenerated')
-    window.setTimeout(() => otpRefs.current[0]?.focus(), 80)
+
+    setIsSendingOtp(true)
+    setErrorMessage(null)
+    setStatusKey('sendingOtp')
+
+    try {
+      const response = await requestOtp(digitsOnly)
+      setHasRequestedOtp(true)
+      setOtp(Array.from({ length: otpLength }, () => ''))
+      setDevOtpHint(response.dev_otp ?? null)
+      setStatusKey('otpSent')
+      window.setTimeout(() => otpRefs.current[0]?.focus(), 80)
+    } catch (error) {
+      setErrorMessage(error instanceof ApiError ? error.message : t('common:errors.generic'))
+      setStatusKey('enterPhone')
+    } finally {
+      setIsSendingOtp(false)
+    }
   }
 
   const handlePhoneSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    requestOtp()
+    void requestOtpCode()
   }
 
   const handleOtpChange = (index: number, value: string) => {
@@ -78,17 +99,29 @@ export function LoginPage() {
     otpRefs.current[Math.min(pasted.length, otpLength) - 1]?.focus()
   }
 
-  const handleVerifyOtp = () => {
-    if (enteredOtp !== previewOtp) {
-      setStatusKey('otpMismatch')
-      return
+  const handleVerifyOtp = async () => {
+    if (!canVerify) return
+
+    setIsVerifying(true)
+    setErrorMessage(null)
+    setStatusKey('verifyingOtp')
+
+    try {
+      const response = await verifyOtp(digitsOnly, enteredOtp, selectedRole)
+      login(mapTokenResponse(response))
+    } catch (error) {
+      setErrorMessage(error instanceof ApiError ? error.message : t('common:errors.generic'))
+      setStatusKey('otpSent')
+    } finally {
+      setIsVerifying(false)
     }
-    login(buildSession(selectedRole, digitsOnly))
   }
 
   const handleChangeNumber = () => {
     setHasRequestedOtp(false)
     setOtp(Array.from({ length: otpLength }, () => ''))
+    setDevOtpHint(null)
+    setErrorMessage(null)
     setStatusKey('enterPhone')
   }
 
@@ -213,10 +246,10 @@ export function LoginPage() {
 
                   <button
                     className="flex w-full items-center justify-center rounded-full bg-primary px-5 py-3.5 text-base font-extrabold text-white shadow-xl shadow-primary/20 transition hover:-translate-y-0.5 hover:bg-primary-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary disabled:bg-slate-300 disabled:shadow-none sm:py-4"
-                    disabled={!isPhoneValid}
+                    disabled={!isPhoneValid || isSendingOtp}
                     type="submit"
                   >
-                    {t('auth:sendOtp')}
+                    {isSendingOtp ? t('auth:status.sendingOtp') : t('auth:sendOtp')}
                   </button>
                 </form>
               ) : (
@@ -271,32 +304,39 @@ export function LoginPage() {
                   <button
                     className="flex w-full items-center justify-center rounded-full bg-primary px-5 py-3.5 text-base font-extrabold text-white shadow-xl shadow-primary/20 transition hover:-translate-y-0.5 hover:bg-primary-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary disabled:bg-slate-300 disabled:shadow-none sm:py-4"
                     disabled={!canVerify}
-                    onClick={handleVerifyOtp}
+                    onClick={() => void handleVerifyOtp()}
                     type="button"
                   >
-                    {t('auth:verifyAndContinue')}
+                    {isVerifying ? t('auth:status.verifyingOtp') : t('auth:verifyAndContinue')}
                   </button>
 
                   <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
                     <button
-                      className="font-extrabold text-primary transition hover:text-primary-dark"
-                      onClick={requestOtp}
+                      className="font-extrabold text-primary transition hover:text-primary-dark disabled:opacity-50"
+                      disabled={isSendingOtp}
+                      onClick={() => void requestOtpCode()}
                       type="button"
                     >
                       {t('auth:resendOtp')}
                     </button>
-                    <span className="rounded-full bg-slate-100 px-3 py-1 font-bold text-muted">
-                      {t('auth:previewCode', { code: previewOtp })}
-                    </span>
+                    {devOtpHint && (
+                      <span className="rounded-full bg-slate-100 px-3 py-1 font-bold text-muted">
+                        {t('auth:previewCode', { code: devOtpHint })}
+                      </span>
+                    )}
                   </div>
                 </div>
               )}
 
               <p
-                className="mt-5 break-words rounded-2xl border border-line bg-slate-50 px-4 py-3 text-sm font-semibold text-muted"
+                className={`mt-5 break-words rounded-2xl border px-4 py-3 text-sm font-semibold ${
+                  errorMessage
+                    ? 'border-red-200 bg-red-50 text-red-700'
+                    : 'border-line bg-slate-50 text-muted'
+                }`}
                 role="status"
               >
-                {statusMessage}
+                {errorMessage ?? statusMessage}
               </p>
             </div>
           </div>
