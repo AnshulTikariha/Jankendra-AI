@@ -78,6 +78,8 @@ Phone and role must match. Example: phone `9876543210` with role `staff` returns
 | `PATCH` | `/todo/{commitment_id}` | Bearer (leader, staff) | Complete or extend a to-do item |
 | `GET` | `/commitments` | Bearer (leader, staff) | Commitment tracker (active + completed) |
 | `POST` | `/commitments` | Bearer (leader, staff) | Manually add a commitment |
+| `GET` | `/priorities` | Bearer (leader, staff) | Development plan page |
+| `GET` | `/digest` | Bearer (leader, staff) | Weekly digest page |
 | `GET` | `/health` | No | Optional health check |
 
 Citizen tokens receive `403` on constituency and dashboard routes.  
@@ -760,6 +762,140 @@ Meeting transcript upload + AI extraction is **not** built yet (Phase 3 AI work 
 
 ---
 
+## Priorities & Digest APIs
+
+Staff and leader only. Scores and digest metrics are computed from live SQL data (no LLM).
+
+### 15. Development priorities
+
+| | |
+|--|--|
+| **Method / URL** | `GET /api/v1/priorities` |
+| **Frontend page** | Development plan (`navigation` id: `development-plan`) |
+| **When to call** | Page load for ranked development actions |
+| **Auth** | Bearer (`leader` or `staff`) |
+
+**Query params**
+
+| Param | Default | Notes |
+|-------|---------|--------|
+| `ward_id` | all wards | Optional filter to one ward |
+| `limit` | `20` | Max ranked actions (1–100) |
+
+**Success `200`**
+
+```json
+{
+  "constituency_name": "South Delhi",
+  "total": 5,
+  "priorities": [
+    {
+      "id": "uuid",
+      "ward_id": 1,
+      "ward_name": "Ward 42",
+      "title": "Drainage issues",
+      "category": "drainage",
+      "source_type": "complaint_cluster",
+      "score": 27.0,
+      "rank": 1,
+      "reasons": [
+        "2 related complaints in cluster",
+        "Department suggestion: PWD",
+        "Ward population factor: 50000"
+      ],
+      "citizen_impact": 20.0,
+      "urgency": 2.0,
+      "commitment_pressure": 0.0,
+      "population_factor": 5.0
+    }
+  ],
+  "ward_comparison": [
+    {
+      "ward_id": 1,
+      "ward_name": "Ward 42",
+      "total_score": 54.5,
+      "open_clusters": 1,
+      "open_complaints": 2,
+      "overdue_commitments": 2,
+      "infra_alerts": 1,
+      "population": 50000,
+      "top_action": "Drainage issues"
+    }
+  ]
+}
+```
+
+`source_type` is one of: `complaint_cluster`, `infrastructure`, `commitment`.
+
+Scoring factors (transparent, SQL-based for now; Bharath can replace later):
+- citizen impact (cluster size / population)
+- urgency (infra status, overdue weight)
+- commitment pressure
+- population factor
+
+**Frontend integration notes**
+
+- Use `priorities` for the ranked development plan list.
+- Use `ward_comparison` for ward-to-ward resource allocation table.
+- Show `reasons` as the reasoning trace under each action.
+
+---
+
+### 16. Weekly digest (numbers only)
+
+| | |
+|--|--|
+| **Method / URL** | `GET /api/v1/digest` |
+| **Frontend page** | Weekly digest (`navigation` id: `digest`) |
+| **When to call** | Digest page load |
+| **Auth** | Bearer (`leader` or `staff`) |
+
+**Query params**
+
+| Param | Default | Notes |
+|-------|---------|--------|
+| `period_start` | 6 days before `period_end` | `YYYY-MM-DD` |
+| `period_end` | today | `YYYY-MM-DD` |
+
+**Success `200`**
+
+```json
+{
+  "constituency_name": "South Delhi",
+  "period_start": "2026-06-28",
+  "period_end": "2026-07-04",
+  "totals": {
+    "complaints_opened": 3,
+    "active_commitments": 3,
+    "overdue_commitments": 2,
+    "completed_commitments": 0,
+    "open_clusters": 2,
+    "critical_infra_alerts": 5,
+    "total_population": 270000,
+    "total_registered_voters": 182400
+  },
+  "wards": [
+    {
+      "ward_id": 1,
+      "ward_name": "Ward 42",
+      "population": 50000,
+      "registered_voters": 33800,
+      "complaints_opened": 2,
+      "complaints_by_category": { "drainage": 2 },
+      "active_commitments": 2,
+      "overdue_commitments": 2,
+      "completed_commitments": 0,
+      "open_clusters": 1,
+      "critical_infra_alerts": 1
+    }
+  ]
+}
+```
+
+No narrative text — numbers only (FR-DD-03 / FR-DD-04). Use `wards[]` for drill-down overlays.
+
+---
+
 ## Planned APIs (not built yet)
 
 | Area | Frontend page(s) | Planned endpoints |
@@ -767,7 +903,6 @@ Meeting transcript upload + AI extraction is **not** built yet (Phase 3 AI work 
 | Meeting upload | Upload Meeting page | `POST /meetings/upload`, `GET /jobs/{id}` |
 | Chat / RAG | Chat page | `POST /chat` |
 | AI clustering | Background | Semantic cluster recompute (Bharath) |
-| Prioritization / digest | Development plan, digest | `GET /priorities`, `GET /digest` |
 
 ---
 
@@ -787,6 +922,7 @@ Backend enforces roles with JWT claims. Frontend should still hide menus by role
 
 | Date | Change |
 |------|--------|
+| 2026-07-04 | Priorities & digest: `GET /priorities` (ranked actions + ward comparison + reasons), `GET /digest` (weekly numbers only). |
 | 2026-07-04 | Commitments & to-do: `GET /todo`, `PATCH /todo/{id}` (complete/extend), `GET/POST /commitments`, weight escalation ladder, archive on complete. |
 | 2026-07-04 | Complaints APIs: `POST /complaints`, `GET /complaints`, `GET /complaints/{id}` with ward+category clustering. Dashboard uses live complaints when present. |
 | 2026-07-04 | Constituency APIs: `GET /constituency/wards`, `GET /constituency/wards/{ward_id}` (leader/staff). |
