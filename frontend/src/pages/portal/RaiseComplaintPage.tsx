@@ -1,8 +1,8 @@
 import { type FormEvent, useState } from 'react'
-import { wards } from '../../data/wards'
-import { useAuthStore } from '../../stores/useAuthStore'
-import { useComplaintStore } from '../../stores/useComplaintStore'
+import { wardOptions } from '../../data/wards'
+import { useCreateComplaint } from '../../hooks/useComplaints'
 import { useUiStore } from '../../stores/useUiStore'
+import { ApiError } from '../../api/errors'
 import {
   complaintCategoryLabels,
   type ComplaintCategory,
@@ -11,38 +11,40 @@ import {
 const categories = Object.keys(complaintCategoryLabels) as ComplaintCategory[]
 
 export function RaiseComplaintPage() {
-  const session = useAuthStore((s) => s.session)
-  const addComplaint = useComplaintStore((s) => s.addComplaint)
+  const createComplaint = useCreateComplaint()
   const setCitizenView = useUiStore((s) => s.setCitizenView)
   const setLastComplaintRef = useUiStore((s) => s.setLastComplaintRef)
+  const setLastComplaintId = useUiStore((s) => s.setLastComplaintId)
 
-  const [wardId, setWardId] = useState(wards[3]?.id ?? '42')
+  const [wardId, setWardId] = useState(wardOptions[0]?.id ?? 1)
   const [category, setCategory] = useState<ComplaintCategory>('water')
   const [description, setDescription] = useState('')
   const [locationDetail, setLocationDetail] = useState('')
   const [error, setError] = useState('')
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (description.trim().length < 20) {
       setError('Please provide at least 20 characters describing the issue.')
       return
     }
-    const ward = wards.find((w) => w.id === wardId)
-    if (!ward || !session) return
 
-    const complaint = addComplaint({
-      wardId: ward.id,
-      wardName: ward.name,
-      category,
-      description: description.trim(),
-      locationDetail: locationDetail.trim() || undefined,
-      reporterPhone: session.phone,
-      source: 'citizen',
-    })
+    setError('')
 
-    setLastComplaintRef(complaint.publicReference)
-    setCitizenView('confirmation')
+    try {
+      const complaint = await createComplaint.mutateAsync({
+        ward_id: wardId,
+        category,
+        description: description.trim(),
+        location_detail: locationDetail.trim() || undefined,
+      })
+
+      setLastComplaintId(complaint.id)
+      setLastComplaintRef(complaint.publicReference)
+      setCitizenView('confirmation')
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.')
+    }
   }
 
   return (
@@ -56,15 +58,15 @@ export function RaiseComplaintPage() {
           </p>
         </div>
 
-        <form className="space-y-5 p-5 sm:p-6" onSubmit={handleSubmit}>
+        <form className="space-y-5 p-5 sm:p-6" onSubmit={(event) => void handleSubmit(event)}>
           <label className="block">
             <span className="text-sm font-bold">Ward</span>
             <select
               className="mt-2 w-full rounded-xl border border-line bg-white px-4 py-3 font-semibold outline-none focus:ring-4 focus:ring-teal-200/40"
-              onChange={(e) => setWardId(e.target.value)}
+              onChange={(e) => setWardId(Number(e.target.value))}
               value={wardId}
             >
-              {wards.map((ward) => (
+              {wardOptions.map((ward) => (
                 <option key={ward.id} value={ward.id}>{ward.name}</option>
               ))}
             </select>
@@ -108,10 +110,11 @@ export function RaiseComplaintPage() {
           {error && <p className="text-sm font-semibold text-red-600" role="alert">{error}</p>}
 
           <button
-            className="w-full rounded-full bg-gradient-to-r from-teal-600 to-emerald-600 py-3.5 font-extrabold text-white shadow-lg transition hover:shadow-xl"
+            className="w-full rounded-full bg-gradient-to-r from-teal-600 to-emerald-600 py-3.5 font-extrabold text-white shadow-lg transition hover:shadow-xl disabled:opacity-60"
+            disabled={createComplaint.isPending}
             type="submit"
           >
-            Submit complaint
+            {createComplaint.isPending ? 'Submitting…' : 'Submit complaint'}
           </button>
         </form>
       </div>

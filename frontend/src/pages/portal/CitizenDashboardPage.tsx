@@ -13,7 +13,7 @@ export function CitizenDashboardPage() {
   const session = useAuthStore((s) => s.session)
   const setCitizenView = useUiStore((s) => s.setCitizenView)
   const lastComplaintRef = useUiStore((s) => s.lastComplaintRef)
-  const { stats } = useCitizenDashboard(session?.phone)
+  const { stats, isLoading } = useCitizenDashboard()
 
   const navigate = (view: CitizenView) => setCitizenView(view)
 
@@ -26,12 +26,13 @@ export function CitizenDashboardPage() {
         stats={stats}
       />
 
-      <CitizenKpiStrip stats={stats} />
+      <CitizenKpiStrip isLoading={isLoading} stats={stats} />
 
       <div className="grid gap-6 xl:grid-cols-3">
         <div className="xl:col-span-2">
           <MyComplaintsPreview
             complaints={stats.recent}
+            isLoading={isLoading}
             onReportIssue={() => navigate('raise')}
             onViewAll={() => navigate('my-complaints')}
           />
