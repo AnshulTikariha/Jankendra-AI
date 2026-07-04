@@ -1,11 +1,5 @@
 import { useAuthStore } from '../stores/useAuthStore'
-import {
-  demoCommitmentsAtRisk,
-  demoKpis,
-  demoPriorityItems,
-  demoRecentActivity,
-  demoWardComparison,
-} from '../data/demoDashboard'
+import { useDashboard } from '../hooks/useDashboard'
 import { CommitmentsAtRisk } from '../components/dashboard/CommitmentsAtRisk'
 import { DashboardHero } from '../components/dashboard/DashboardHero'
 import { KpiStrip } from '../components/dashboard/KpiStrip'
@@ -14,24 +8,79 @@ import { QuickActions } from '../components/dashboard/QuickActions'
 import { RecentActivityList } from '../components/dashboard/RecentActivityList'
 import { IssueHeatMap } from '../components/dashboard/IssueHeatMap'
 import { WardComparisonTable } from '../components/dashboard/WardComparisonTable'
+import { ApiError } from '../api/errors'
+
+function DashboardLoading() {
+  return (
+    <div className="flex min-h-[20rem] flex-col items-center justify-center rounded-3xl border border-dashed border-slate-300/80 bg-white/80 p-8 text-center shadow-sm">
+      <div className="size-10 animate-spin rounded-full border-4 border-primary/20 border-t-primary" />
+      <p className="mt-4 text-sm font-semibold text-muted">Loading dashboard…</p>
+    </div>
+  )
+}
+
+function DashboardError({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div className="flex min-h-[20rem] flex-col items-center justify-center rounded-3xl border border-red-200 bg-red-50/80 p-8 text-center shadow-sm">
+      <p className="text-lg font-extrabold text-red-800">Could not load dashboard</p>
+      <p className="mt-2 max-w-md text-sm text-red-700">{message}</p>
+      <button
+        className="mt-4 rounded-full bg-primary px-5 py-2.5 text-sm font-extrabold text-white shadow-md transition hover:bg-primary-dark"
+        onClick={onRetry}
+        type="button"
+      >
+        Try again
+      </button>
+    </div>
+  )
+}
 
 export function DashboardPage() {
   const session = useAuthStore((s) => s.session)
   const role = session?.role ?? 'staff'
   const isLeader = role === 'leader'
   const isStaff = role === 'staff'
+  const { data, isLoading, isError, error, refetch } = useDashboard()
 
   if (role === 'citizen') return null
+
+  if (isLoading) {
+    return (
+      <section className="space-y-6">
+        <DashboardHero
+          constituencyName={session?.constituencyName ?? 'Constituency'}
+          phone={session?.phone}
+          role={role}
+        />
+        <DashboardLoading />
+      </section>
+    )
+  }
+
+  if (isError || !data) {
+    const message =
+      error instanceof ApiError ? error.message : 'Something went wrong. Please try again.'
+    return (
+      <section className="space-y-6">
+        <DashboardHero
+          constituencyName={session?.constituencyName ?? 'Constituency'}
+          phone={session?.phone}
+          role={role}
+        />
+        <DashboardError message={message} onRetry={() => void refetch()} />
+      </section>
+    )
+  }
 
   return (
     <section className="space-y-6">
       <DashboardHero
-        constituencyName={session?.constituencyName ?? 'Constituency'}
+        constituencyName={data.constituencyName}
         phone={session?.phone}
         role={role}
       />
 
-      <KpiStrip kpis={demoKpis} showCitizenMetric />
+      <KpiStrip kpis={data.kpis} showCitizenMetric />
 
       <IssueHeatMap />
 
@@ -39,20 +88,20 @@ export function DashboardPage() {
         <div className="xl:col-span-2">
           <PriorityList
             actionable={isStaff}
-            items={demoPriorityItems}
+            items={data.priorities}
             role={role}
             title={isStaff ? 'Your queue today' : "Today's focus"}
           />
         </div>
         <div className="space-y-6">
-          {isLeader && <CommitmentsAtRisk items={demoCommitmentsAtRisk} />}
+          {isLeader && <CommitmentsAtRisk items={data.commitmentsAtRisk} />}
           <QuickActions role={role} />
         </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        {isLeader && <WardComparisonTable rows={demoWardComparison} />}
-        <RecentActivityList items={demoRecentActivity} role={role} />
+        {isLeader && <WardComparisonTable rows={data.wardComparison} />}
+        <RecentActivityList items={data.recentActivity} role={role} />
       </div>
     </section>
   )

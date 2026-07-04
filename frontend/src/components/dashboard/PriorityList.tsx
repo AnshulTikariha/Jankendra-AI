@@ -1,4 +1,4 @@
-import type { PriorityItem } from '../../data/demoDashboard'
+import type { PriorityItem } from '../../types/dashboard'
 import type { UserRole } from '../../types/auth'
 import { getRoleTheme } from '../../theme/roleThemes'
 
@@ -16,7 +16,7 @@ const typeStyles = {
 } as const
 
 export function PriorityList({ items, title, actionable, role }: Props) {
-  const maxWeight = Math.max(...items.map((i) => i.weight))
+  const maxWeight = items.length > 0 ? Math.max(...items.map((i) => i.weight)) : 1
   const theme = getRoleTheme(role)
 
   return (
@@ -33,6 +33,9 @@ export function PriorityList({ items, title, actionable, role }: Props) {
         </div>
       </div>
 
+      {items.length === 0 ? (
+        <p className="p-6 text-sm font-semibold text-muted">No priority items right now.</p>
+      ) : (
       <ul className="divide-y divide-line/60 p-3 sm:p-4">
         {items.map((item, index) => {
           const style = typeStyles[item.type]
@@ -83,6 +86,7 @@ export function PriorityList({ items, title, actionable, role }: Props) {
           )
         })}
       </ul>
+      )}
     </section>
   )
 }

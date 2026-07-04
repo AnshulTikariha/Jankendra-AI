@@ -6,6 +6,7 @@ const theme = getRoleTheme('citizen')
 
 type Props = {
   complaints: Complaint[]
+  isLoading?: boolean
   onViewAll: () => void
   onReportIssue: () => void
 }
@@ -52,7 +53,21 @@ function StatusStepper({ status }: { status: CitizenComplaintStatus }) {
   )
 }
 
-export function MyComplaintsPreview({ complaints, onViewAll, onReportIssue }: Props) {
+export function MyComplaintsPreview({ complaints, isLoading, onViewAll, onReportIssue }: Props) {
+  if (isLoading) {
+    return (
+      <section className="overflow-hidden rounded-3xl border border-line/80 bg-white shadow-md shadow-slate-200/50">
+        <div className={`border-b border-line/80 bg-gradient-to-r ${theme.sectionHeaderBg} px-5 py-4 sm:px-6`}>
+          <p className={`text-xs font-bold uppercase tracking-[0.18em] ${theme.sectionEyebrow}`}>Your complaints</p>
+          <h2 className="mt-1 text-xl font-extrabold text-ink">Recent activity</h2>
+        </div>
+        <div className="flex min-h-[12rem] items-center justify-center p-8">
+          <div className="size-8 animate-spin rounded-full border-4 border-teal-200 border-t-teal-600" />
+        </div>
+      </section>
+    )
+  }
+
   if (complaints.length === 0) {
     return (
       <section className="overflow-hidden rounded-3xl border border-line/80 bg-white shadow-md shadow-slate-200/50">

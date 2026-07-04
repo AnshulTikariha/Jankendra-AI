@@ -1,4 +1,4 @@
-import type { CommitmentAtRisk } from '../../data/demoDashboard'
+import type { CommitmentAtRisk } from '../../types/dashboard'
 import { getRoleTheme } from '../../theme/roleThemes'
 
 type Props = {

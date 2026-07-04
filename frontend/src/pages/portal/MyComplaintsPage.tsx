@@ -1,6 +1,6 @@
-import { useAuthStore } from '../../stores/useAuthStore'
-import { useComplaintStore } from '../../stores/useComplaintStore'
+import { useComplaints } from '../../hooks/useComplaints'
 import { useUiStore } from '../../stores/useUiStore'
+import { ApiError } from '../../api/errors'
 import {
   citizenStatusLabels,
   complaintCategoryLabels,
@@ -50,11 +50,36 @@ function StatusStepper({ status }: { status: CitizenComplaintStatus }) {
 }
 
 export function MyComplaintsPage() {
-  const session = useAuthStore((s) => s.session)
-  const getByPhone = useComplaintStore((s) => s.getByPhone)
+  const { data, isLoading, isError, error, refetch } = useComplaints()
   const setCitizenView = useUiStore((s) => s.setCitizenView)
+  const complaints = data?.complaints ?? []
 
-  const complaints = session ? getByPhone(session.phone) : []
+  if (isLoading) {
+    return (
+      <section className="flex min-h-[20rem] flex-col items-center justify-center rounded-3xl border border-dashed border-slate-300/80 bg-white/80 p-8 text-center shadow-sm">
+        <div className="size-10 animate-spin rounded-full border-4 border-teal-200 border-t-teal-600" />
+        <p className="mt-4 text-sm font-semibold text-muted">Loading your complaints…</p>
+      </section>
+    )
+  }
+
+  if (isError) {
+    const message =
+      error instanceof ApiError ? error.message : 'Something went wrong. Please try again.'
+    return (
+      <section className="flex min-h-[20rem] flex-col items-center justify-center rounded-3xl border border-red-200 bg-red-50/80 p-8 text-center shadow-sm">
+        <p className="text-lg font-extrabold text-red-800">Could not load complaints</p>
+        <p className="mt-2 text-sm text-red-700">{message}</p>
+        <button
+          className="mt-4 rounded-full bg-teal-600 px-5 py-2.5 text-sm font-extrabold text-white"
+          onClick={() => void refetch()}
+          type="button"
+        >
+          Try again
+        </button>
+      </section>
+    )
+  }
 
   if (complaints.length === 0) {
     return (
@@ -110,6 +135,11 @@ export function MyComplaintsPage() {
             {complaint.clusterCount > 1 && (
               <p className="mt-4 rounded-xl bg-teal-50 px-3 py-2 text-xs font-semibold text-teal-800">
                 {complaint.clusterCount} residents reported similar issues in your ward
+              </p>
+            )}
+            {complaint.departmentSuggestion && (
+              <p className="mt-3 rounded-xl bg-slate-50 px-3 py-2 text-xs font-semibold text-muted">
+                Suggested department: {complaint.departmentSuggestion}
               </p>
             )}
           </div>

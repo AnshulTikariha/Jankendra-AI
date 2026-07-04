@@ -26,6 +26,7 @@ export type Complaint = {
   source: 'citizen' | 'staff'
   submittedAt: string
   reporterPhone: string
+  departmentSuggestion?: string
 }
 
 export const complaintCategoryLabels: Record<ComplaintCategory, string> = {

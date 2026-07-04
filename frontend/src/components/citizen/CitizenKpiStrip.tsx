@@ -1,11 +1,11 @@
 import type { CitizenStats } from '../../hooks/useCitizenDashboard'
-import { demoCitizenTransparency } from '../../data/demoCitizenDashboard'
 
 type Props = {
   stats: CitizenStats
+  isLoading?: boolean
 }
 
-export function CitizenKpiStrip({ stats }: Props) {
+export function CitizenKpiStrip({ stats, isLoading }: Props) {
   const cards = [
     {
       id: 'open',
@@ -38,14 +38,14 @@ export function CitizenKpiStrip({ stats }: Props) {
       sub:
         stats.maxClusterCount > 1
           ? 'Similar reports in your ward'
-          : `${demoCitizenTransparency.citizenReportsWeek} reports this week`,
+          : 'Across your submissions',
       gradient: 'from-violet-500 to-purple-600',
       icon: <PeopleIcon />,
     },
   ]
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div className={`grid gap-4 sm:grid-cols-2 xl:grid-cols-4 ${isLoading ? 'animate-pulse opacity-70' : ''}`}>
       {cards.map((card) => (
         <article
           className="group relative overflow-hidden rounded-2xl border border-white/60 bg-white p-4 shadow-md shadow-slate-200/60 transition hover:-translate-y-0.5 hover:shadow-lg"

@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { useComplaintStore } from '../stores/useComplaintStore'
+import { useComplaints } from './useComplaints'
 import type { Complaint } from '../types/complaint'
 
 export type CitizenStats = {
@@ -11,45 +11,37 @@ export type CitizenStats = {
   recent: Complaint[]
 }
 
-export function useCitizenDashboard(phone: string | undefined) {
-  const complaints = useComplaintStore((s) => s.complaints)
+export function useCitizenDashboard() {
+  const { data, isLoading, isError, error, refetch } = useComplaints()
+  const complaints = data?.complaints ?? []
 
-  return useMemo(() => {
-    if (!phone) {
-      return {
-        complaints: [] as Complaint[],
-        stats: {
-          open: 0,
-          inProgress: 0,
-          resolved: 0,
-          total: 0,
-          maxClusterCount: 0,
-          recent: [],
-        } satisfies CitizenStats,
-      }
-    }
-
-    const mine = complaints.filter((c) => c.reporterPhone === phone)
-    const open = mine.filter((c) => c.status !== 'resolved').length
-    const inProgress = mine.filter(
+  const stats = useMemo((): CitizenStats => {
+    const open = complaints.filter((c) => c.status !== 'resolved').length
+    const inProgress = complaints.filter(
       (c) => c.status === 'in_progress' || c.status === 'under_review',
     ).length
-    const resolved = mine.filter((c) => c.status === 'resolved').length
-    const maxClusterCount = mine.reduce((max, c) => Math.max(max, c.clusterCount), 0)
-    const recent = [...mine]
+    const resolved = complaints.filter((c) => c.status === 'resolved').length
+    const maxClusterCount = complaints.reduce((max, c) => Math.max(max, c.clusterCount), 0)
+    const recent = [...complaints]
       .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
       .slice(0, 3)
 
     return {
-      complaints: mine,
-      stats: {
-        open,
-        inProgress,
-        resolved,
-        total: mine.length,
-        maxClusterCount,
-        recent,
-      },
+      open,
+      inProgress,
+      resolved,
+      total: complaints.length,
+      maxClusterCount,
+      recent,
     }
-  }, [complaints, phone])
+  }, [complaints])
+
+  return {
+    complaints,
+    stats,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  }
 }
