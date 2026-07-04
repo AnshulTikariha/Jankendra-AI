@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useComplaint } from '../../hooks/useComplaints'
+import { useComplaintAttachmentsStore } from '../../stores/useComplaintAttachmentsStore'
 import { useUiStore } from '../../stores/useUiStore'
 import { complaintCategoryLabels } from '../../types/complaint'
 
@@ -11,6 +12,9 @@ export function ComplaintConfirmationPage() {
   const setCitizenView = useUiStore((s) => s.setCitizenView)
   const setViewingComplaintId = useUiStore((s) => s.setViewingComplaintId)
   const { data: complaint, isLoading } = useComplaint(lastComplaintId)
+  const attachmentCount = useComplaintAttachmentsStore((s) =>
+    lastComplaintId ? s.getAttachments(lastComplaintId).length : 0,
+  )
   const [copied, setCopied] = useState(false)
 
   const reference = complaint?.publicReference ?? lastComplaintRef
@@ -72,6 +76,11 @@ export function ComplaintConfirmationPage() {
             {complaint.departmentSuggestion && (
               <p className="mt-2 text-xs font-semibold text-teal-800">
                 {t('confirmation.routedTo', { department: complaint.departmentSuggestion })}
+              </p>
+            )}
+            {attachmentCount > 0 && (
+              <p className="mt-2 text-xs font-semibold text-muted">
+                {t('detail.attachments.count', { count: attachmentCount })}
               </p>
             )}
           </div>

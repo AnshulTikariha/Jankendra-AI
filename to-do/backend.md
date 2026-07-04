@@ -84,6 +84,24 @@ Related: GitLab **#7** · API docs: [`docs/api.md`](../docs/api.md)
 
 ---
 
+### B-011 · Complaint photo attachments
+
+- [ ] **Priority:** Medium (raise complaint Phase D)
+- **Issue:** No API to upload or retrieve complaint photos. Citizens can attach up to 3 images in the wizard; files are stored in **localStorage** keyed by complaint id.
+- **Requested change:** Implement e.g. `POST /complaints/{id}/attachments` (multipart) and `GET /complaints/{id}/attachments` (or include `attachments[]` in complaint detail). Document size limits and mime types in `docs/api.md`.
+- **Frontend workaround:** `useComplaintAttachmentsStore` persists base64 data URLs locally until this API exists.
+
+---
+
+### B-012 · Extended complaint metadata (geo, sub-category, priority)
+
+- [ ] **Priority:** Medium (raise complaint Phase E)
+- **Issue:** Sub-category, official priority/urgency, and GPS coordinates are embedded in `description` and `location_detail` text fields rather than structured API fields.
+- **Requested change:** Extend `POST /complaints` (and complaint detail response) with optional fields e.g. `sub_category`, `priority` (`low` | `medium` | `high` | `critical`), `latitude`, `longitude`. Document in `docs/api.md`.
+- **Frontend workaround:** Metadata appended to description via `buildComplaintDescription()`; GPS appended to `location_detail` via `buildLocationDetail()`.
+
+---
+
 ## Planned APIs (not built — track separately)
 
 From [`docs/api.md`](../docs/api.md) § Planned APIs:
