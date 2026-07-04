@@ -3,6 +3,7 @@ import { fetchMe } from '../api/auth'
 import { ApiError } from '../api/errors'
 import { mapUserToSession } from '../lib/authMappers'
 import { useAuthStore } from '../stores/useAuthStore'
+import { getStoredDisplayName } from '../stores/useCitizenProfileStore'
 
 type Props = {
   children: ReactNode
@@ -25,7 +26,12 @@ export function AuthBootstrap({ children }: Props) {
     fetchMe(session.accessToken)
       .then((user) => {
         if (cancelled) return
-        setSession(mapUserToSession(user, session.accessToken))
+        const restored = mapUserToSession(user, session.accessToken)
+        const localName = getStoredDisplayName(user.id)
+        if (localName) {
+          restored.name = localName
+        }
+        setSession(restored)
         setReady(true)
       })
       .catch((error: unknown) => {

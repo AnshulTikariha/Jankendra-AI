@@ -17,6 +17,7 @@ export function useCitizenShell() {
 
   const sidebarActiveId: CitizenPageId = useMemo(() => {
     if (citizenView === 'confirmation') return 'raise'
+    if (citizenView === 'complaint-detail') return 'my-complaints'
     if (citizenPages.some((p) => p.id === citizenView)) return citizenView as CitizenPageId
     return 'home'
   }, [citizenView])

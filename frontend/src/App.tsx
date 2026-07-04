@@ -9,6 +9,8 @@ import { CitizenDashboardPage } from './pages/portal/CitizenDashboardPage'
 import { ComplaintConfirmationPage } from './pages/portal/ComplaintConfirmationPage'
 import { MyComplaintsPage } from './pages/portal/MyComplaintsPage'
 import { RaiseComplaintPage } from './pages/portal/RaiseComplaintPage'
+import { CitizenProfilePage } from './pages/portal/CitizenProfilePage'
+import { ComplaintDetailPage } from './pages/portal/ComplaintDetailPage'
 
 function CitizenComingSoon({ label, description }: { label: string; description: string }) {
   return (
@@ -31,8 +33,7 @@ function CitizenPortal() {
 
   const isComingSoon =
     citizenView === 'ward-updates' ||
-    citizenView === 'help' ||
-    citizenView === 'profile'
+    citizenView === 'help'
 
   return (
     <CitizenShell>
@@ -40,6 +41,8 @@ function CitizenPortal() {
       {citizenView === 'raise' && <RaiseComplaintPage />}
       {citizenView === 'my-complaints' && <MyComplaintsPage />}
       {citizenView === 'confirmation' && <ComplaintConfirmationPage />}
+      {citizenView === 'profile' && <CitizenProfilePage />}
+      {citizenView === 'complaint-detail' && <ComplaintDetailPage />}
       {isComingSoon && (
         <CitizenComingSoon description={activePage.description} label={activePage.label} />
       )}

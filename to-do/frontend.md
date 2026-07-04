@@ -44,6 +44,7 @@ API contract: [`docs/api.md`](../docs/api.md)
 - [x] `hooks/useComplaints.ts` (list, detail, create mutation)
 - [x] Removed `useComplaintStore.ts` (localStorage)
 - [x] Temporary static `wardOptions` in `data/wards.ts` (see **Backend B-002**)
+- [x] **Raise complaint wizard (Phase A+B)** — 4-step flow, category cards, guided description, review, draft autosave, similar-report banner, i18n (`complaints` namespace), profile ward prefill, confirmation copy/share
 
 ### Phase 5 — Staff / leader app pages
 
@@ -92,7 +93,9 @@ API contract: [`docs/api.md`](../docs/api.md)
 - [ ] **TrustStrip** — optional live metrics or static help content page
 - [ ] Remove dead `demoDashboard.ts` demo exports if unreferenced
 
-### Phase 7 — Citizen portal expansion
+### Phase 7 — Citizen portal expansion (partial)
+
+- [x] **Citizen profile** — `GET /auth/me` + localStorage → `pages/portal/CitizenProfilePage.tsx` (edit until **Backend B-010**)
 
 Pages in `types/citizenNavigation.ts` still `available: false`:
 
@@ -100,7 +103,6 @@ Pages in `types/citizenNavigation.ts` still `available: false`:
 |---------|------------|--------|
 | `ward-updates` | Backend B-004 | [ ] Blocked |
 | `help` | Static content OK | [ ] Not started |
-| `profile` | `GET /auth/me` | [ ] Not started |
 
 ---
 
@@ -121,6 +123,8 @@ Pages in `types/citizenNavigation.ts` still `available: false`:
 | My complaints list | 9876543212 | [x] Phase 3 |
 | Staff to-do / commitments / digest | 9876543211 / 3210 | [ ] Manual QA |
 | Staff complaint queue + status actions | 9876543211 / 3210 | [ ] Manual QA (local save) |
+| Raise complaint (wizard) | 9876543212 | [ ] Manual QA |
+| Citizen profile edit | 9876543212 | [ ] Manual QA (local save) |
 | Ward dropdown matches DB ids | All citizens | [ ] Until B-002 |
 
 ---
