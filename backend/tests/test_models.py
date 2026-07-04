@@ -57,10 +57,13 @@ async def test_ward_and_complaint_can_be_inserted() -> None:
         await session.flush()
 
         complaint = Complaint(
+            public_reference="JK-2026-0001",
             ward_id=ward.id,
             description="Drainage canal overflow during monsoon",
             category="drainage",
             citizen_contact="9999999999",
+            status="submitted",
+            source="citizen",
         )
         session.add(complaint)
         await session.commit()

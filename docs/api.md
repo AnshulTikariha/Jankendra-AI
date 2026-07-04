@@ -71,9 +71,17 @@ Phone and role must match. Example: phone `9876543210` with role `staff` returns
 | `GET` | `/constituency/wards` | Bearer (leader, staff) | Profile / constituency views, ward selectors |
 | `GET` | `/constituency/wards/{ward_id}` | Bearer (leader, staff) | Ward detail / profile drill-down |
 | `GET` | `/dashboard` | Bearer (leader, staff) | `DashboardPage.tsx` |
+| `POST` | `/complaints` | Bearer (citizen, staff, leader) | `RaiseComplaintPage.tsx`, staff log-issue form |
+| `GET` | `/complaints` | Bearer (citizen, staff, leader) | `MyComplaintsPage.tsx`, staff complaint list |
+| `GET` | `/complaints/{complaint_id}` | Bearer (citizen, staff, leader) | Complaint detail / confirmation |
+| `GET` | `/todo` | Bearer (leader, staff) | To-do list page (weighted active commitments) |
+| `PATCH` | `/todo/{commitment_id}` | Bearer (leader, staff) | Complete or extend a to-do item |
+| `GET` | `/commitments` | Bearer (leader, staff) | Commitment tracker (active + completed) |
+| `POST` | `/commitments` | Bearer (leader, staff) | Manually add a commitment |
 | `GET` | `/health` | No | Optional health check |
 
-Citizen tokens receive `403` on constituency and dashboard routes.
+Citizen tokens receive `403` on constituency and dashboard routes.  
+Citizens only see **their own** complaints (`reporter_phone` = logged-in phone).
 
 ---
 
@@ -455,13 +463,311 @@ Staff and leader only. Use for profile / ward views (replace static ward lists).
 
 ---
 
+## Complaints APIs
+
+Append-only complaint intake (never deleted). Simple ward + category clustering (AI semantic clustering comes later).
+
+### 8. Create complaint
+
+| | |
+|--|--|
+| **Method / URL** | `POST /api/v1/complaints` |
+| **Frontend page** | `frontend/src/pages/portal/RaiseComplaintPage.tsx` (citizen), staff log-issue form |
+| **When to call** | User submits the raise-complaint form |
+| **Auth** | Bearer (`citizen`, `staff`, or `leader`) |
+
+**Request body**
+
+```json
+{
+  "ward_id": 1,
+  "category": "drainage",
+  "description": "Standing water after rain near the main market entrance.",
+  "location_detail": "Main market entrance"
+}
+```
+
+| Field | Required | Notes |
+|-------|----------|--------|
+| `ward_id` | Yes | Integer ward id from `GET /constituency/wards` |
+| `category` | Yes | `water`, `roads`, `drainage`, `electricity`, `health`, `sanitation`, `other` |
+| `description` | Yes | Complaint text |
+| `location_detail` | No | Optional landmark / address note |
+| `citizen_contact` | No | Staff/leader only; citizen phone is taken from the logged-in user |
+
+**Success `201`**
+
+```json
+{
+  "id": "uuid",
+  "public_reference": "JK-2026-0004",
+  "ward_id": 1,
+  "ward_name": "Ward 42",
+  "category": "drainage",
+  "description": "Standing water after rain near the main market entrance.",
+  "location_detail": "Main market entrance",
+  "status": "submitted",
+  "cluster_count": 3,
+  "source": "citizen",
+  "submitted_at": "2026-07-04T11:00:00+00:00",
+  "reporter_phone": "9876543212",
+  "department_suggestion": "PWD"
+}
+```
+
+**Frontend field mapping** (`types/complaint.ts`)
+
+| API field | Frontend field |
+|-----------|----------------|
+| `public_reference` | `publicReference` |
+| `ward_id` | `wardId` (string on UI — convert with `String(ward_id)`) |
+| `ward_name` | `wardName` |
+| `location_detail` | `locationDetail` |
+| `cluster_count` | `clusterCount` |
+| `submitted_at` | `submittedAt` |
+| `reporter_phone` | `reporterPhone` |
+
+**Errors**
+
+| Status | When |
+|--------|------|
+| `401` | Missing or invalid token |
+| `404` | Ward not found |
+| `422` | Invalid category or phone |
+
+**Frontend integration notes**
+
+- Replace `useComplaintStore.addComplaint` localStorage write with this API.
+- Show `public_reference` on `ComplaintConfirmationPage`.
+- Use ward `id` from constituency API (not hardcoded `"42"` string codes alone).
+
+---
+
+### 9. List complaints
+
+| | |
+|--|--|
+| **Method / URL** | `GET /api/v1/complaints` |
+| **Frontend page** | `MyComplaintsPage.tsx`, staff complaint queue |
+| **When to call** | Page load for my-complaints / staff list |
+| **Auth** | Bearer (`citizen`, `staff`, or `leader`) |
+
+**Query params**
+
+| Param | Who | Notes |
+|-------|-----|--------|
+| `ward_id` | staff / leader | Optional filter, e.g. `?ward_id=1` |
+
+Citizens always get only their own complaints (filter by phone). `ward_id` is ignored for citizens.
+
+**Success `200`**
+
+```json
+{
+  "total": 2,
+  "complaints": [
+    {
+      "id": "uuid",
+      "public_reference": "JK-2026-0001",
+      "ward_id": 1,
+      "ward_name": "Ward 42",
+      "category": "drainage",
+      "description": "Standing water after rain near the main market entrance.",
+      "location_detail": "Main market entrance",
+      "status": "under_review",
+      "cluster_count": 2,
+      "source": "citizen",
+      "submitted_at": "2026-06-28T14:20:00",
+      "reporter_phone": "9876543212",
+      "department_suggestion": "PWD"
+    }
+  ]
+}
+```
+
+**Frontend integration notes**
+
+- Replace `getByPhone(session.phone)` with `GET /complaints` using the citizen token.
+- Staff/leader use the same endpoint for the full queue.
+
+---
+
+### 10. Get complaint by id
+
+| | |
+|--|--|
+| **Method / URL** | `GET /api/v1/complaints/{complaint_id}` |
+| **Frontend page** | Confirmation / detail view |
+| **When to call** | After create, or opening one complaint |
+| **Auth** | Bearer (`citizen`, `staff`, or `leader`) |
+
+Citizens may only fetch their own complaint (`403` otherwise).
+
+---
+
+## Commitments & To-do APIs
+
+Staff and leader only. Weight follows the SRS escalation ladder:
+
+| Status | Weight |
+|--------|--------|
+| On time / before deadline | W1 |
+| 1–3 days overdue | W2 |
+| 4–7 days overdue | W3 |
+| 8–14 days overdue | W5 |
+| 15+ days overdue | W8 |
+
+Weights refresh automatically when listing `/todo` or `/commitments`.
+
+### 11. To-do list (weighted active commitments)
+
+| | |
+|--|--|
+| **Method / URL** | `GET /api/v1/todo` |
+| **Frontend page** | To-do list (`navigation` id: `todo`) |
+| **When to call** | Page load for staff/leader to-do |
+| **Auth** | Bearer (`leader` or `staff`) |
+
+**Success `200`**
+
+```json
+{
+  "total": 2,
+  "items": [
+    {
+      "id": "uuid",
+      "title": "Clear drainage canal before monsoon",
+      "description": "Desilt Ward 42 canal and remove market-side blockages.",
+      "ward_id": 1,
+      "ward_name": "Ward 42",
+      "assignee": "PWD Supervisor",
+      "deadline": "2026-06-29",
+      "weight": 3,
+      "weight_tier": "W3",
+      "status": "active",
+      "days_overdue": 5,
+      "source_meeting_id": null,
+      "created_at": "2026-07-04T10:00:00+00:00"
+    }
+  ]
+}
+```
+
+Items are sorted by `weight` then `days_overdue` (highest first).
+
+---
+
+### 12. Complete or extend to-do item
+
+| | |
+|--|--|
+| **Method / URL** | `PATCH /api/v1/todo/{commitment_id}` |
+| **Frontend page** | To-do list complete / extend actions |
+| **When to call** | Staff/leader marks complete or extends deadline |
+| **Auth** | Bearer (`leader` or `staff`) |
+
+**Extend request**
+
+```json
+{
+  "action": "extend",
+  "new_deadline": "2026-07-20",
+  "note": "Parts delayed"
+}
+```
+
+`new_deadline` must be after the current deadline.
+
+**Complete request**
+
+```json
+{
+  "action": "complete",
+  "note": "Work finished"
+}
+```
+
+On complete:
+- commitment `status` becomes `completed`
+- row is archived to resolved commitments (DB2) for institutional memory
+- item disappears from `/todo`
+
+**Success `200`** — same `CommitmentResponse` shape as list items.
+
+**Errors**
+
+| Status | When |
+|--------|------|
+| `401` / `403` | Auth / role |
+| `404` | Commitment not found |
+| `409` | Commitment is not active |
+| `422` | Invalid action or deadline |
+
+---
+
+### 13. Commitment tracker list
+
+| | |
+|--|--|
+| **Method / URL** | `GET /api/v1/commitments` |
+| **Frontend page** | Commitment tracker (`navigation` id: `commitments`) |
+| **When to call** | Tracker page load; tabs for active / completed |
+| **Auth** | Bearer (`leader` or `staff`) |
+
+**Query params**
+
+| Param | Values | Default |
+|-------|--------|---------|
+| `status` | `all`, `active`, `completed` | `all` |
+
+**Success `200`**
+
+```json
+{
+  "total": 3,
+  "commitments": [ { "...": "CommitmentResponse" } ]
+}
+```
+
+---
+
+### 14. Create commitment (manual)
+
+| | |
+|--|--|
+| **Method / URL** | `POST /api/v1/commitments` |
+| **Frontend page** | Commitment tracker / staff add form (until meeting upload exists) |
+| **When to call** | Staff/leader adds a commitment without transcript upload |
+| **Auth** | Bearer (`leader` or `staff`) |
+
+**Request body**
+
+```json
+{
+  "title": "Restore morning water supply hours",
+  "description": "Coordinate tanker support until pipeline pressure stabilizes.",
+  "ward_id": 2,
+  "assignee": "WMD Officer",
+  "deadline": "2026-07-15"
+}
+```
+
+`ward_id` and `assignee` are optional. If `assignee` is omitted, the logged-in user’s name is used.
+
+**Success `201`** — `CommitmentResponse`.
+
+Meeting transcript upload + AI extraction is **not** built yet (Phase 3 AI work with Bharath).
+
+---
+
 ## Planned APIs (not built yet)
 
 | Area | Frontend page(s) | Planned endpoints |
 |------|------------------|-------------------|
-| Complaints | Citizen raise / my complaints, staff log issue | `GET/POST /complaints` |
-| Commitments | Commitment tracker | `GET /todo`, commitments |
+| Meeting upload | Upload Meeting page | `POST /meetings/upload`, `GET /jobs/{id}` |
 | Chat / RAG | Chat page | `POST /chat` |
+| AI clustering | Background | Semantic cluster recompute (Bharath) |
+| Prioritization / digest | Development plan, digest | `GET /priorities`, `GET /digest` |
 
 ---
 
@@ -481,6 +787,8 @@ Backend enforces roles with JWT claims. Frontend should still hide menus by role
 
 | Date | Change |
 |------|--------|
+| 2026-07-04 | Commitments & to-do: `GET /todo`, `PATCH /todo/{id}` (complete/extend), `GET/POST /commitments`, weight escalation ladder, archive on complete. |
+| 2026-07-04 | Complaints APIs: `POST /complaints`, `GET /complaints`, `GET /complaints/{id}` with ward+category clustering. Dashboard uses live complaints when present. |
 | 2026-07-04 | Constituency APIs: `GET /constituency/wards`, `GET /constituency/wards/{ward_id}` (leader/staff). |
 | 2026-07-04 | Dashboard API: `GET /dashboard` with KPIs, priorities, ward comparison, recent activity (leader/staff). |
 | 2026-07-04 | Phone + OTP auth: `POST /auth/otp/request`, `POST /auth/otp/verify`, `GET /auth/me`. Email/password login removed. |

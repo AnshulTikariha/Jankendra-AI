@@ -7,7 +7,7 @@ from sqlalchemy.orm import selectinload
 
 from app.api.deps import require_roles
 from app.core.database import get_db_session
-from app.models import Commitment, Complaint, Infrastructure, User, Ward
+from app.models import Commitment, Complaint, ComplaintCluster, Infrastructure, User, Ward
 from app.schemas.dashboard import (
     CommitmentAtRisk,
     DashboardKpis,
@@ -38,7 +38,16 @@ async def get_dashboard(
             )
         ).all()
     )
-    complaints = list((await session.scalars(select(Complaint))).all())
+    complaints = list(
+        (
+            await session.scalars(
+                select(Complaint)
+                .options(selectinload(Complaint.cluster))
+                .order_by(Complaint.created_at.desc())
+            )
+        ).all()
+    )
+    clusters = list((await session.scalars(select(ComplaintCluster))).all())
     commitments = list((await session.scalars(select(Commitment))).all())
 
     constituency_name = wards[0].constituency_name if wards else "South Delhi"
@@ -59,8 +68,16 @@ async def get_dashboard(
             if item.status in ALERT_STATUSES:
                 alert_items.append((ward, item))
 
+    complaint_counts: dict[int, int] = {}
+    for complaint in complaints:
+        complaint_counts[complaint.ward_id] = complaint_counts.get(complaint.ward_id, 0) + 1
+
     hot_ward = HotWard(id="", name="")
-    if alert_items:
+    if complaint_counts:
+        hot_ward_id = max(complaint_counts, key=complaint_counts.get)
+        hot = ward_by_id[hot_ward_id]
+        hot_ward = HotWard(id=str(hot.id), name=hot.name)
+    elif alert_items:
         alert_counts: dict[int, int] = {}
         for ward, _item in alert_items:
             alert_counts[ward.id] = alert_counts.get(ward.id, 0) + 1
@@ -71,17 +88,33 @@ async def get_dashboard(
         hot_ward = HotWard(id=str(wards[0].id), name=wards[0].name)
 
     priorities: list[PriorityItem] = []
-    for ward, item in alert_items:
-        priorities.append(
-            PriorityItem(
-                id=item.id,
-                type="complaint",
-                title=item.description,
-                ward_name=ward.name,
-                weight=STATUS_WEIGHT.get(item.status, 1),
-                source="staff",
+    if complaints:
+        for complaint in complaints:
+            ward_name = ward_by_id[complaint.ward_id].name if complaint.ward_id in ward_by_id else "Unknown"
+            weight = complaint.cluster.citizen_count if complaint.cluster else 1
+            priorities.append(
+                PriorityItem(
+                    id=complaint.id,
+                    type="complaint",
+                    title=complaint.description,
+                    ward_name=ward_name,
+                    weight=weight,
+                    source=complaint.source,
+                )
             )
-        )
+    else:
+        for ward, item in alert_items:
+            priorities.append(
+                PriorityItem(
+                    id=item.id,
+                    type="complaint",
+                    title=item.description,
+                    ward_name=ward.name,
+                    weight=STATUS_WEIGHT.get(item.status, 1),
+                    source="staff",
+                )
+            )
+
     priorities.sort(key=lambda row: row.weight, reverse=True)
 
     for commitment in overdue_commitments:
@@ -112,6 +145,10 @@ async def get_dashboard(
             )
         )
 
+    cluster_counts: dict[int, int] = {}
+    for cluster in clusters:
+        cluster_counts[cluster.ward_id] = cluster_counts.get(cluster.ward_id, 0) + 1
+
     ward_comparison: list[WardComparisonRow] = []
     for ward in wards:
         infra_alerts = [
@@ -119,35 +156,47 @@ async def get_dashboard(
             for item in ward.infrastructure
             if item.status in ALERT_STATUSES
         ]
-        ward_overdue = len(
-            [
-                item
-                for item in overdue_commitments
-                if item.ward_id == ward.id
-            ]
-        )
+        ward_overdue = len([item for item in overdue_commitments if item.ward_id == ward.id])
         ward_comparison.append(
             WardComparisonRow(
                 ward_id=str(ward.id),
                 ward_name=ward.name,
-                open_clusters=0,
+                open_clusters=cluster_counts.get(ward.id, 0),
                 overdue_commitments=ward_overdue,
                 infra_alerts=infra_alerts,
             )
         )
 
     recent_activity: list[RecentActivityItem] = []
-    for ward, item in alert_items[:10]:
-        recent_activity.append(
-            RecentActivityItem(
-                id=item.id,
-                timestamp=datetime.now(timezone.utc).isoformat(),
-                type="staff_complaint",
-                summary=item.description,
-                ward_name=ward.name,
+    if complaints:
+        for complaint in complaints[:10]:
+            ward_name = ward_by_id[complaint.ward_id].name if complaint.ward_id in ward_by_id else "Unknown"
+            activity_type = "citizen_complaint" if complaint.source == "citizen" else "staff_complaint"
+            submitted_at = complaint.created_at
+            if submitted_at is not None and submitted_at.tzinfo is None:
+                submitted_at = submitted_at.replace(tzinfo=timezone.utc)
+            recent_activity.append(
+                RecentActivityItem(
+                    id=complaint.id,
+                    timestamp=submitted_at.isoformat() if submitted_at else datetime.now(timezone.utc).isoformat(),
+                    type=activity_type,
+                    summary=complaint.description,
+                    ward_name=ward_name,
+                )
             )
-        )
+    else:
+        for ward, item in alert_items[:10]:
+            recent_activity.append(
+                RecentActivityItem(
+                    id=item.id,
+                    timestamp=datetime.now(timezone.utc).isoformat(),
+                    type="staff_complaint",
+                    summary=item.description,
+                    ward_name=ward.name,
+                )
+            )
 
+    citizen_complaints_week = len([item for item in complaints if item.source == "citizen"])
     proxy_open_issues = open_complaints if open_complaints > 0 else len(alert_items)
 
     return DashboardResponse(
@@ -159,7 +208,7 @@ async def get_dashboard(
             overdue_commitments=len(overdue_commitments),
             resolved_this_week=0,
             on_time_rate_pct=100 if not overdue_commitments else 0,
-            citizen_complaints_week=0,
+            citizen_complaints_week=citizen_complaints_week,
             hot_ward=hot_ward,
         ),
         priorities=priorities,

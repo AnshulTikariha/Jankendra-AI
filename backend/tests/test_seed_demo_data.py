@@ -21,6 +21,10 @@ async def test_seed_demo_data_creates_users_and_wards(monkeypatch) -> None:
     assert result["users"]["users"] == len(USER_SEED)
     assert result["wards"]["skipped"] == 0
     assert result["wards"]["wards"] == 6
+    assert result["complaints"]["skipped"] == 0
+    assert result["complaints"]["complaints"] == 3
+    assert result["commitments"]["skipped"] == 0
+    assert result["commitments"]["commitments"] == 3
     assert result["wards"]["demographics"] == 6
     assert result["wards"]["infrastructure"] == len(
         [item for ward in WARD_SEED for item in ward["infrastructure"]]
@@ -55,5 +59,7 @@ async def test_seed_demo_data_creates_users_and_wards(monkeypatch) -> None:
     second_run = await seed_demo_data()
     assert second_run["users"]["skipped"] == 1
     assert second_run["wards"]["skipped"] == 1
+    assert second_run["complaints"]["skipped"] == 1
+    assert second_run["commitments"]["skipped"] == 1
 
     await engine.dispose()

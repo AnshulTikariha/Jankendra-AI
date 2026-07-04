@@ -31,10 +31,14 @@ class Complaint(Base):
     __tablename__ = "db4_complaints"
 
     id: Mapped[str] = mapped_column(Uuid(as_uuid=False), primary_key=True, default=lambda: str(uuid4()))
+    public_reference: Mapped[str] = mapped_column(String(30), unique=True, index=True)
     ward_id: Mapped[int] = mapped_column(ForeignKey("db1_wards.id"), index=True)
     description: Mapped[str] = mapped_column(Text)
     category: Mapped[str] = mapped_column(String(100), index=True)
-    citizen_contact: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    location_detail: Mapped[str | None] = mapped_column(Text, nullable=True)
+    citizen_contact: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    status: Mapped[str] = mapped_column(String(50), default="submitted", index=True)
+    source: Mapped[str] = mapped_column(String(20), default="citizen")
     cluster_id: Mapped[str | None] = mapped_column(
         ForeignKey("db4_complaint_clusters.id"),
         nullable=True,
