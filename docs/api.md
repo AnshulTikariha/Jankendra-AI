@@ -71,9 +71,13 @@ Phone and role must match. Example: phone `9876543210` with role `staff` returns
 | `GET` | `/constituency/wards` | Bearer (leader, staff) | Profile / constituency views, ward selectors |
 | `GET` | `/constituency/wards/{ward_id}` | Bearer (leader, staff) | Ward detail / profile drill-down |
 | `GET` | `/dashboard` | Bearer (leader, staff) | `DashboardPage.tsx` |
+| `POST` | `/complaints` | Bearer (citizen, staff, leader) | `RaiseComplaintPage.tsx`, staff log-issue form |
+| `GET` | `/complaints` | Bearer (citizen, staff, leader) | `MyComplaintsPage.tsx`, staff complaint list |
+| `GET` | `/complaints/{complaint_id}` | Bearer (citizen, staff, leader) | Complaint detail / confirmation |
 | `GET` | `/health` | No | Optional health check |
 
-Citizen tokens receive `403` on constituency and dashboard routes.
+Citizen tokens receive `403` on constituency and dashboard routes.  
+Citizens only see **their own** complaints (`reporter_phone` = logged-in phone).
 
 ---
 
@@ -455,13 +459,155 @@ Staff and leader only. Use for profile / ward views (replace static ward lists).
 
 ---
 
+## Complaints APIs
+
+Append-only complaint intake (never deleted). Simple ward + category clustering (AI semantic clustering comes later).
+
+### 8. Create complaint
+
+| | |
+|--|--|
+| **Method / URL** | `POST /api/v1/complaints` |
+| **Frontend page** | `frontend/src/pages/portal/RaiseComplaintPage.tsx` (citizen), staff log-issue form |
+| **When to call** | User submits the raise-complaint form |
+| **Auth** | Bearer (`citizen`, `staff`, or `leader`) |
+
+**Request body**
+
+```json
+{
+  "ward_id": 1,
+  "category": "drainage",
+  "description": "Standing water after rain near the main market entrance.",
+  "location_detail": "Main market entrance"
+}
+```
+
+| Field | Required | Notes |
+|-------|----------|--------|
+| `ward_id` | Yes | Integer ward id from `GET /constituency/wards` |
+| `category` | Yes | `water`, `roads`, `drainage`, `electricity`, `health`, `sanitation`, `other` |
+| `description` | Yes | Complaint text |
+| `location_detail` | No | Optional landmark / address note |
+| `citizen_contact` | No | Staff/leader only; citizen phone is taken from the logged-in user |
+
+**Success `201`**
+
+```json
+{
+  "id": "uuid",
+  "public_reference": "JK-2026-0004",
+  "ward_id": 1,
+  "ward_name": "Ward 42",
+  "category": "drainage",
+  "description": "Standing water after rain near the main market entrance.",
+  "location_detail": "Main market entrance",
+  "status": "submitted",
+  "cluster_count": 3,
+  "source": "citizen",
+  "submitted_at": "2026-07-04T11:00:00+00:00",
+  "reporter_phone": "9876543212",
+  "department_suggestion": "PWD"
+}
+```
+
+**Frontend field mapping** (`types/complaint.ts`)
+
+| API field | Frontend field |
+|-----------|----------------|
+| `public_reference` | `publicReference` |
+| `ward_id` | `wardId` (string on UI — convert with `String(ward_id)`) |
+| `ward_name` | `wardName` |
+| `location_detail` | `locationDetail` |
+| `cluster_count` | `clusterCount` |
+| `submitted_at` | `submittedAt` |
+| `reporter_phone` | `reporterPhone` |
+
+**Errors**
+
+| Status | When |
+|--------|------|
+| `401` | Missing or invalid token |
+| `404` | Ward not found |
+| `422` | Invalid category or phone |
+
+**Frontend integration notes**
+
+- Replace `useComplaintStore.addComplaint` localStorage write with this API.
+- Show `public_reference` on `ComplaintConfirmationPage`.
+- Use ward `id` from constituency API (not hardcoded `"42"` string codes alone).
+
+---
+
+### 9. List complaints
+
+| | |
+|--|--|
+| **Method / URL** | `GET /api/v1/complaints` |
+| **Frontend page** | `MyComplaintsPage.tsx`, staff complaint queue |
+| **When to call** | Page load for my-complaints / staff list |
+| **Auth** | Bearer (`citizen`, `staff`, or `leader`) |
+
+**Query params**
+
+| Param | Who | Notes |
+|-------|-----|--------|
+| `ward_id` | staff / leader | Optional filter, e.g. `?ward_id=1` |
+
+Citizens always get only their own complaints (filter by phone). `ward_id` is ignored for citizens.
+
+**Success `200`**
+
+```json
+{
+  "total": 2,
+  "complaints": [
+    {
+      "id": "uuid",
+      "public_reference": "JK-2026-0001",
+      "ward_id": 1,
+      "ward_name": "Ward 42",
+      "category": "drainage",
+      "description": "Standing water after rain near the main market entrance.",
+      "location_detail": "Main market entrance",
+      "status": "under_review",
+      "cluster_count": 2,
+      "source": "citizen",
+      "submitted_at": "2026-06-28T14:20:00",
+      "reporter_phone": "9876543212",
+      "department_suggestion": "PWD"
+    }
+  ]
+}
+```
+
+**Frontend integration notes**
+
+- Replace `getByPhone(session.phone)` with `GET /complaints` using the citizen token.
+- Staff/leader use the same endpoint for the full queue.
+
+---
+
+### 10. Get complaint by id
+
+| | |
+|--|--|
+| **Method / URL** | `GET /api/v1/complaints/{complaint_id}` |
+| **Frontend page** | Confirmation / detail view |
+| **When to call** | After create, or opening one complaint |
+| **Auth** | Bearer (`citizen`, `staff`, or `leader`) |
+
+Citizens may only fetch their own complaint (`403` otherwise).
+
+---
+
 ## Planned APIs (not built yet)
 
 | Area | Frontend page(s) | Planned endpoints |
 |------|------------------|-------------------|
-| Complaints | Citizen raise / my complaints, staff log issue | `GET/POST /complaints` |
 | Commitments | Commitment tracker | `GET /todo`, commitments |
 | Chat / RAG | Chat page | `POST /chat` |
+| AI clustering | Background | Semantic cluster recompute (Bharath) |
 
 ---
 
@@ -481,6 +627,7 @@ Backend enforces roles with JWT claims. Frontend should still hide menus by role
 
 | Date | Change |
 |------|--------|
+| 2026-07-04 | Complaints APIs: `POST /complaints`, `GET /complaints`, `GET /complaints/{id}` with ward+category clustering. Dashboard uses live complaints when present. |
 | 2026-07-04 | Constituency APIs: `GET /constituency/wards`, `GET /constituency/wards/{ward_id}` (leader/staff). |
 | 2026-07-04 | Dashboard API: `GET /dashboard` with KPIs, priorities, ward comparison, recent activity (leader/staff). |
 | 2026-07-04 | Phone + OTP auth: `POST /auth/otp/request`, `POST /auth/otp/verify`, `GET /auth/me`. Email/password login removed. |

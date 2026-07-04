@@ -9,7 +9,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from app.core.database import AsyncSessionLocal, async_engine
-from app.models import Demographic, Infrastructure, Scheme, User, Ward
+from app.models import Complaint, ComplaintCluster, Demographic, Infrastructure, Scheme, User, Ward
 
 CONSTITUENCY_NAME = "South Delhi"
 MLA_NAME = "Shri Rajendra Kumar Verma"
@@ -241,12 +241,91 @@ async def seed_wards(session) -> dict[str, int]:
     }
 
 
+async def seed_complaints(session) -> dict[str, int]:
+    existing_count = await session.scalar(select(func.count()).select_from(Complaint))
+    if existing_count and existing_count > 0:
+        return {"skipped": 1, "complaints": existing_count}
+
+    ward_42 = await session.scalar(select(Ward).where(Ward.code == "W42"))
+    ward_43 = await session.scalar(select(Ward).where(Ward.code == "W43"))
+    if ward_42 is None:
+        return {"skipped": 1, "complaints": 0}
+
+    cluster = ComplaintCluster(
+        ward_id=ward_42.id,
+        label="Drainage issues",
+        category="drainage",
+        citizen_count=2,
+        department_suggestion="PWD",
+    )
+    session.add(cluster)
+    await session.flush()
+
+    session.add(
+        Complaint(
+            public_reference="JK-2026-0001",
+            ward_id=ward_42.id,
+            description="Standing water after rain near the main market entrance.",
+            category="drainage",
+            location_detail="Main market entrance",
+            citizen_contact="9876543212",
+            status="under_review",
+            source="citizen",
+            cluster_id=cluster.id,
+        )
+    )
+    session.add(
+        Complaint(
+            public_reference="JK-2026-0002",
+            ward_id=ward_42.id,
+            description="Recurring drainage canal overflow during monsoon.",
+            category="drainage",
+            location_detail="Canal road",
+            citizen_contact="9876543212",
+            status="submitted",
+            source="citizen",
+            cluster_id=cluster.id,
+        )
+    )
+
+    if ward_43 is not None:
+        water_cluster = ComplaintCluster(
+            ward_id=ward_43.id,
+            label="Water issues",
+            category="water",
+            citizen_count=1,
+            department_suggestion="WMD",
+        )
+        session.add(water_cluster)
+        await session.flush()
+        session.add(
+            Complaint(
+                public_reference="JK-2026-0003",
+                ward_id=ward_43.id,
+                description="Irregular piped water supply in southern blocks.",
+                category="water",
+                citizen_contact="9876543211",
+                status="submitted",
+                source="staff",
+                cluster_id=water_cluster.id,
+            )
+        )
+
+    await session.flush()
+    return {"skipped": 0, "complaints": 3 if ward_43 is not None else 2}
+
+
 async def seed_demo_data() -> dict[str, dict[str, int]]:
     async with AsyncSessionLocal() as session:
         users_result = await seed_users(session)
         wards_result = await seed_wards(session)
+        complaints_result = await seed_complaints(session)
         await session.commit()
-        return {"users": users_result, "wards": wards_result}
+        return {
+            "users": users_result,
+            "wards": wards_result,
+            "complaints": complaints_result,
+        }
 
 
 async def main() -> None:
@@ -255,6 +334,7 @@ async def main() -> None:
 
     users = result["users"]
     wards = result["wards"]
+    complaints = result["complaints"]
 
     if users["skipped"]:
         print(f"Users seed skipped. Database already has {users['users']} user(s).")
@@ -275,6 +355,12 @@ async def main() -> None:
         print(f"  Schemes: {wards['schemes']}")
         print(f"  Constituency: {CONSTITUENCY_NAME}")
         print(f"  MLA: {MLA_NAME}")
+
+    if complaints["skipped"]:
+        print(f"Complaints seed skipped. Database already has {complaints['complaints']} complaint(s).")
+    else:
+        print("Demo complaints seeded successfully.")
+        print(f"  Complaints: {complaints['complaints']}")
 
 
 if __name__ == "__main__":
