@@ -1,0 +1,164 @@
+{
+  "raise": {
+    "eyebrow": "Report an issue",
+    "title": "Tell us what needs attention",
+    "subtitle": "Your complaint will be recorded and grouped with similar issues in your ward.",
+    "steps": {
+      "where": "Where",
+      "what": "What",
+      "details": "Details",
+      "review": "Review"
+    },
+    "stepOf": "Step {{current}} of {{total}}",
+    "whatHappensNext": {
+      "title": "What happens next?",
+      "step1": "You submit the complaint and receive a reference number.",
+      "step2": "Staff review and group it with similar reports in your ward.",
+      "step3": "You can track status anytime under My complaints."
+    },
+    "draft": {
+      "resumeTitle": "Resume unfinished report?",
+      "resumeBody": "You have a saved draft from {{time}}.",
+      "resume": "Resume draft",
+      "discard": "Start fresh"
+    },
+    "where": {
+      "ward": "Ward",
+      "wardHint": "Choose the ward where the issue is located.",
+      "wardPrefilled": "Pre-filled from your profile — you can change it.",
+      "location": "Location / landmark",
+      "locationOptional": "(optional)",
+      "locationPlaceholder": "Near main market, Block C, opposite school…",
+      "locationHint": "A clear landmark helps staff find the issue faster.",
+      "contact": "Contact for updates",
+      "contactHint": "We use your registered mobile number for status updates."
+    },
+    "what": {
+      "title": "What type of problem?",
+      "subtitle": "Pick the category that best matches your issue.",
+      "examples": {
+        "water": "e.g. no water supply, low pressure, contaminated water",
+        "roads": "e.g. potholes, broken footpath, damaged road",
+        "drainage": "e.g. blocked drain, standing water after rain",
+        "electricity": "e.g. power outage, broken street light",
+        "health": "e.g. mosquito breeding, clinic access, waste hazard",
+        "sanitation": "e.g. garbage not collected, open dumping",
+        "other": "e.g. anything not listed above"
+      },
+      "customCategory": "Describe the category",
+      "customCategoryHint": "Required when you choose Other — tell us what type of issue this is.",
+      "customCategoryPlaceholder": "e.g. street lighting, noise, park maintenance"
+    },
+    "details": {
+      "titleOptional": "Short title",
+      "titleOptionalHint": "(optional)",
+      "titlePlaceholder": "Brief summary in one line",
+      "description": "Describe the issue",
+      "descriptionHint": "Include location, when it started, and how it affects residents.",
+      "charCount": "{{count}} / {{max}} characters",
+      "quality": {
+        "empty": "Add a clear description to help staff act faster.",
+        "short": "Add a few more details — at least {{min}} characters.",
+        "good": "Good detail — staff can understand the issue.",
+        "long": "Description is quite long — consider keeping the most important points."
+      },
+      "duration": "When did this start?",
+      "impact": "Who is affected?",
+      "durationOptions": {
+        "today": "Today",
+        "this_week": "This week",
+        "this_month": "This month",
+        "over_month": "Over a month",
+        "long_standing": "Long-standing issue"
+      },
+      "impactOptions": {
+        "individual": "Just me / my household",
+        "neighbours": "Neighbours nearby",
+        "street": "Whole street / lane",
+        "public": "Public space / many people"
+      }
+    },
+    "similar": {
+      "title": "Similar reports in this ward",
+      "body": "{{count}} similar {{category}} report(s) already filed. Yours will be grouped with them so staff can act on the pattern.",
+      "cluster": "Up to {{count}} related reports in this cluster."
+    },
+    "review": {
+      "title": "Review before submitting",
+      "subtitle": "Check everything looks correct.",
+      "privacy": "Your phone number is used only for complaint updates. It is not shown publicly.",
+      "edit": "Edit",
+      "notProvided": "Not provided",
+      "submissionPreview": "Full submission text",
+      "submissionPreviewHint": "This is what staff will see in the complaint description.",
+      "fields": {
+        "ward": "Ward",
+        "location": "Location / landmark",
+        "contact": "Contact phone",
+        "category": "Category",
+        "title": "Short title",
+        "description": "Description",
+        "duration": "When it started",
+        "impact": "Who is affected"
+      }
+    },
+    "nav": {
+      "back": "Back",
+      "continue": "Continue",
+      "continueToReview": "Continue to review",
+      "submit": "Submit complaint",
+      "submitting": "Submitting…"
+    },
+    "errors": {
+      "descriptionMin": "Please provide at least {{min}} characters describing the issue.",
+      "customCategoryRequired": "Please describe the issue category when choosing Other.",
+      "generic": "Something went wrong. Please try again."
+    },
+    "categories": {
+      "water": "Water supply",
+      "roads": "Roads",
+      "drainage": "Drainage",
+      "electricity": "Electricity",
+      "health": "Health",
+      "sanitation": "Sanitation",
+      "other": "Other"
+    }
+  },
+  "confirmation": {
+    "title": "Complaint registered",
+    "subtitle": "Your complaint has been recorded. Save this reference to track progress.",
+    "loading": "Loading reference…",
+    "routedTo": "Routed to: {{department}}",
+    "copy": "Copy reference",
+    "copied": "Copied!",
+    "share": "Share",
+    "shareText": "My Jankendra complaint reference: {{ref}}",
+    "viewComplaints": "View my complaints",
+    "backHome": "Back to dashboard",
+    "reportAnother": "Report another issue"
+  },
+  "detail": {
+    "eyebrow": "Complaint details",
+    "fullDetails": "Full details",
+    "backToList": "Back to my complaints",
+    "loading": "Loading complaint details…",
+    "loadFailed": "Could not load complaint",
+    "loadError": "Something went wrong. Please try again.",
+    "notSelected": "No complaint selected.",
+    "viewDetails": "View full details",
+    "clusterCount": "{{count}} related reports in this ward cluster",
+    "clusterSingle": "No related cluster yet",
+    "fields": {
+      "reference": "Reference",
+      "status": "Status",
+      "category": "Category",
+      "ward": "Ward",
+      "location": "Location",
+      "submitted": "Submitted",
+      "contact": "Contact",
+      "department": "Suggested department",
+      "cluster": "Similar reports",
+      "description": "Full description"
+    }
+  }
+}

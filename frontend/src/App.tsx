@@ -10,6 +10,7 @@ import { ComplaintConfirmationPage } from './pages/portal/ComplaintConfirmationP
 import { MyComplaintsPage } from './pages/portal/MyComplaintsPage'
 import { RaiseComplaintPage } from './pages/portal/RaiseComplaintPage'
 import { CitizenProfilePage } from './pages/portal/CitizenProfilePage'
+import { ComplaintDetailPage } from './pages/portal/ComplaintDetailPage'
 
 function CitizenComingSoon({ label, description }: { label: string; description: string }) {
   return (
@@ -41,6 +42,7 @@ function CitizenPortal() {
       {citizenView === 'my-complaints' && <MyComplaintsPage />}
       {citizenView === 'confirmation' && <ComplaintConfirmationPage />}
       {citizenView === 'profile' && <CitizenProfilePage />}
+      {citizenView === 'complaint-detail' && <ComplaintDetailPage />}
       {isComingSoon && (
         <CitizenComingSoon description={activePage.description} label={activePage.label} />
       )}

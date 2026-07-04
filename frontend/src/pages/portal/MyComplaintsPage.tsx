@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useComplaints } from '../../hooks/useComplaints'
 import { useUiStore } from '../../stores/useUiStore'
 import { ApiError } from '../../api/errors'
@@ -50,9 +51,16 @@ function StatusStepper({ status }: { status: CitizenComplaintStatus }) {
 }
 
 export function MyComplaintsPage() {
+  const { t } = useTranslation('complaints')
   const { data, isLoading, isError, error, refetch } = useComplaints()
   const setCitizenView = useUiStore((s) => s.setCitizenView)
+  const setViewingComplaintId = useUiStore((s) => s.setViewingComplaintId)
   const complaints = data?.complaints ?? []
+
+  const openDetail = (id: string) => {
+    setViewingComplaintId(id)
+    setCitizenView('complaint-detail')
+  }
 
   if (isLoading) {
     return (
@@ -121,9 +129,9 @@ export function MyComplaintsPage() {
             </div>
           </div>
           <div className="p-5">
-            <h2 className="font-extrabold text-lg">{complaintCategoryLabels[complaint.category]}</h2>
+            <h2 className="text-lg font-extrabold">{complaintCategoryLabels[complaint.category]}</h2>
             <p className="mt-1 text-sm text-muted">{complaint.wardName} · {formatDate(complaint.submittedAt)}</p>
-            <p className="mt-3 text-sm leading-6 text-ink">{complaint.description}</p>
+            <p className="mt-3 line-clamp-3 text-sm leading-6 text-ink">{complaint.description}</p>
             <StatusStepper status={complaint.status} />
             <div className="mt-3 flex flex-wrap gap-2">
               {statusOrder.map((step) => (
@@ -142,6 +150,13 @@ export function MyComplaintsPage() {
                 Suggested department: {complaint.departmentSuggestion}
               </p>
             )}
+            <button
+              className="mt-4 w-full rounded-full border border-teal-200 bg-teal-50 py-2.5 text-sm font-extrabold text-teal-800 transition hover:bg-teal-100 sm:w-auto sm:px-6"
+              onClick={() => openDetail(complaint.id)}
+              type="button"
+            >
+              {t('detail.viewDetails')} →
+            </button>
           </div>
         </article>
       ))}
