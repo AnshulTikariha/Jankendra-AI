@@ -1,3 +1,4 @@
+import { useUiStore } from '../../stores/useUiStore'
 import { getRoleTheme } from '../../theme/roleThemes'
 
 type Props = {
@@ -5,18 +6,19 @@ type Props = {
 }
 
 const staffActions = [
-  { label: 'Log issue', desc: 'Record a citizen complaint', gradient: 'from-blue-500 to-cyan-500', icon: '＋' },
-  { label: 'Upload meeting', desc: 'Submit a transcript', gradient: 'from-indigo-500 to-violet-500', icon: '↑' },
-  { label: 'Update ward data', desc: 'Edit constituency records', gradient: 'from-primary to-indigo-500', icon: '✎' },
+  { label: 'Log issue', desc: 'Record a citizen complaint', pageId: 'log-issue', gradient: 'from-blue-500 to-cyan-500', icon: '＋' },
+  { label: 'To-do list', desc: 'Complete or extend items', pageId: 'todo', gradient: 'from-emerald-500 to-teal-600', icon: '✓' },
+  { label: 'Commitments', desc: 'Track active promises', pageId: 'commitments', gradient: 'from-primary to-indigo-500', icon: '◆' },
 ]
 
 const leaderActions = [
-  { label: 'Development plan', desc: 'Ranked ward actions', gradient: 'from-violet-500 to-purple-500', icon: '◆' },
-  { label: 'Weekly digest', desc: 'Governance numbers', gradient: 'from-purple-400 to-indigo-500', icon: '▤' },
-  { label: 'Ask assistant', desc: 'Grounded answers', gradient: 'from-indigo-400 to-violet-500', icon: '?' },
+  { label: 'Development plan', desc: 'Ranked ward actions', pageId: 'development-plan', gradient: 'from-violet-500 to-purple-500', icon: '◆' },
+  { label: 'Weekly digest', desc: 'Governance numbers', pageId: 'digest', gradient: 'from-purple-400 to-indigo-500', icon: '▤' },
+  { label: 'To-do list', desc: 'Review overdue items', pageId: 'todo', gradient: 'from-emerald-500 to-teal-600', icon: '✓' },
 ]
 
 export function QuickActions({ role }: Props) {
+  const setActivePageId = useUiStore((s) => s.setActivePageId)
   const actions = role === 'staff' ? staffActions : leaderActions
   const theme = getRoleTheme(role)
 
@@ -31,6 +33,7 @@ export function QuickActions({ role }: Props) {
           <button
             className="group flex items-center gap-4 rounded-2xl border border-line/80 bg-white p-3 text-left transition hover:-translate-y-0.5 hover:border-transparent hover:shadow-lg"
             key={action.label}
+            onClick={() => setActivePageId(action.pageId)}
             type="button"
           >
             <div className={`grid size-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-br ${action.gradient} text-lg font-bold text-white shadow-md transition group-hover:scale-105`}>
