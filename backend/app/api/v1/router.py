@@ -5,7 +5,9 @@ from app.api.v1.commitments import router as commitments_router
 from app.api.v1.complaints import router as complaints_router
 from app.api.v1.constituency import router as constituency_router
 from app.api.v1.dashboard import router as dashboard_router
+from app.api.v1.digest import router as digest_router
 from app.api.v1.health import router as health_router
+from app.api.v1.priorities import router as priorities_router
 
 api_router = APIRouter()
 api_router.include_router(health_router)
@@ -14,3 +16,5 @@ api_router.include_router(constituency_router)
 api_router.include_router(dashboard_router)
 api_router.include_router(complaints_router)
 api_router.include_router(commitments_router)
+api_router.include_router(priorities_router)
+api_router.include_router(digest_router)
