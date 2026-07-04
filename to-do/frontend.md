@@ -57,6 +57,7 @@ API contract: [`docs/api.md`](../docs/api.md)
 - [x] `api/staff.ts`, `hooks/useStaffApi.ts`, `types/staff.ts`
 - [x] `AppShell.tsx` routing + `navigation.ts` availability flags
 - [x] `QuickActions` shortcuts navigate to live pages
+- [x] **Complaint queue** — `GET /complaints` + localStorage overrides → `pages/staff/ComplaintsQueuePage.tsx` (status/notes mock until **Backend B-009**)
 
 ### Phase 6 — Platform polish (partial)
 
@@ -119,6 +120,7 @@ Pages in `types/citizenNavigation.ts` still `available: false`:
 | Raise complaint | 9876543212 | [x] User confirmed |
 | My complaints list | 9876543212 | [x] Phase 3 |
 | Staff to-do / commitments / digest | 9876543211 / 3210 | [ ] Manual QA |
+| Staff complaint queue + status actions | 9876543211 / 3210 | [ ] Manual QA (local save) |
 | Ward dropdown matches DB ids | All citizens | [ ] Until B-002 |
 
 ---
@@ -129,3 +131,4 @@ Pages in `types/citizenNavigation.ts` still `available: false`:
 |------|--------|
 | 2026-07-04 | Initial file: Phases 0–3 marked complete; Phases 4–7 planned |
 | 2026-07-04 | Phases 5–6 marked complete (staff pages, 401 logout, live heat map) |
+| 2026-07-04 | Complaint queue page wired (filters, local status/notes until B-009) |

@@ -21,6 +21,10 @@ const navVisuals: Record<string, { gradient: string; icon: React.ReactNode }> = 
     gradient: 'from-emerald-500 to-teal-600',
     icon: <TodoIcon />,
   },
+  'complaints-queue': {
+    gradient: 'from-blue-500 to-cyan-600',
+    icon: <QueueIcon />,
+  },
   commitments: {
     gradient: 'from-violet-500 to-purple-600',
     icon: <CommitmentIcon />,
@@ -195,6 +199,14 @@ function TodoIcon() {
   return (
     <svg aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
       <path d="M9 6h12M9 12h12M9 18h12M4 6h.01M4 12h.01M4 18h.01" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function QueueIcon() {
+  return (
+    <svg aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+      <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" strokeLinecap="round" />
     </svg>
   )
 }

@@ -6,15 +6,15 @@ type Props = {
 }
 
 const staffActions = [
-  { label: 'Log issue', desc: 'Record a citizen complaint', pageId: 'log-issue', gradient: 'from-blue-500 to-cyan-500', icon: '＋' },
+  { label: 'Complaint queue', desc: 'All complaints & filters', pageId: 'complaints-queue', gradient: 'from-blue-500 to-cyan-500', icon: '☰' },
+  { label: 'Log issue', desc: 'Record a citizen complaint', pageId: 'log-issue', gradient: 'from-rose-500 to-pink-600', icon: '＋' },
   { label: 'To-do list', desc: 'Complete or extend items', pageId: 'todo', gradient: 'from-emerald-500 to-teal-600', icon: '✓' },
-  { label: 'Commitments', desc: 'Track active promises', pageId: 'commitments', gradient: 'from-primary to-indigo-500', icon: '◆' },
 ]
 
 const leaderActions = [
+  { label: 'Complaint queue', desc: 'All complaints & filters', pageId: 'complaints-queue', gradient: 'from-blue-500 to-cyan-500', icon: '☰' },
   { label: 'Development plan', desc: 'Ranked ward actions', pageId: 'development-plan', gradient: 'from-violet-500 to-purple-500', icon: '◆' },
   { label: 'Weekly digest', desc: 'Governance numbers', pageId: 'digest', gradient: 'from-purple-400 to-indigo-500', icon: '▤' },
-  { label: 'To-do list', desc: 'Review overdue items', pageId: 'todo', gradient: 'from-emerald-500 to-teal-600', icon: '✓' },
 ]
 
 export function QuickActions({ role }: Props) {

@@ -10,6 +10,7 @@ import { DevelopmentPlanPage } from '../pages/staff/DevelopmentPlanPage'
 import { LogIssuePage } from '../pages/staff/LogIssuePage'
 import { DigestPage } from '../pages/staff/DigestPage'
 import { ProfilePage } from '../pages/staff/ProfilePage'
+import { ComplaintsQueuePage } from '../pages/staff/ComplaintsQueuePage'
 
 function ComingSoonPanel({ label, description }: { label: string; description: string }) {
   return (
@@ -32,6 +33,8 @@ function StaffMainContent({ pageId }: { pageId: string }) {
       return <DashboardPage />
     case 'todo':
       return <TodoPage />
+    case 'complaints-queue':
+      return <ComplaintsQueuePage />
     case 'commitments':
       return <CommitmentsPage />
     case 'development-plan':
