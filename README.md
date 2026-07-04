@@ -11,6 +11,7 @@ AI-powered constituency intelligence platform for elected representatives — de
 | [docs/architecture.md](docs/architecture.md) | System architecture — Frontend, Backend, AI Modules |
 | [docs/plan.md](docs/plan.md) | 8-week implementation plan (Phases 0–6) |
 | [docs/backend-database.md](docs/backend-database.md) | Backend framework, ORM, and database choices |
+| [docs/api.md](docs/api.md) | Frontend API guide — endpoints, payloads, page mapping (Saurabh) |
 
 ## Team Roles
 
