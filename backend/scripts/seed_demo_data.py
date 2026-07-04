@@ -1,5 +1,6 @@
 import asyncio
 import sys
+from datetime import date, timedelta
 from pathlib import Path
 
 from sqlalchemy import func, select
@@ -8,8 +9,19 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from app.core.commitment_weights import compute_commitment_weight
 from app.core.database import AsyncSessionLocal, async_engine
-from app.models import Complaint, ComplaintCluster, Demographic, Infrastructure, Scheme, User, Ward
+from app.models import (
+    Commitment,
+    CommitmentHistory,
+    Complaint,
+    ComplaintCluster,
+    Demographic,
+    Infrastructure,
+    Scheme,
+    User,
+    Ward,
+)
 
 CONSTITUENCY_NAME = "South Delhi"
 MLA_NAME = "Shri Rajendra Kumar Verma"
@@ -315,16 +327,83 @@ async def seed_complaints(session) -> dict[str, int]:
     return {"skipped": 0, "complaints": 3 if ward_43 is not None else 2}
 
 
+async def seed_commitments(session) -> dict[str, int]:
+    existing_count = await session.scalar(select(func.count()).select_from(Commitment))
+    if existing_count and existing_count > 0:
+        return {"skipped": 1, "commitments": existing_count}
+
+    ward_42 = await session.scalar(select(Ward).where(Ward.code == "W42"))
+    ward_43 = await session.scalar(select(Ward).where(Ward.code == "W43"))
+    today = date.today()
+
+    seed_items = [
+        {
+            "title": "Clear drainage canal before monsoon",
+            "description": "Desilt Ward 42 canal and remove market-side blockages.",
+            "ward": ward_42,
+            "assignee": "PWD Supervisor",
+            "deadline": today - timedelta(days=5),
+        },
+        {
+            "title": "Complete streetlight repair on Block C",
+            "description": "Replace failed poles and restore night lighting.",
+            "ward": ward_42,
+            "assignee": "Electrical Wing",
+            "deadline": today - timedelta(days=10),
+        },
+        {
+            "title": "Restore morning water supply hours",
+            "description": "Coordinate tanker support until pipeline pressure stabilizes.",
+            "ward": ward_43,
+            "assignee": "WMD Officer",
+            "deadline": today + timedelta(days=7),
+        },
+    ]
+
+    created = 0
+    for item in seed_items:
+        ward = item["ward"]
+        if ward is None:
+            continue
+        weight = compute_commitment_weight(item["deadline"], today)
+        commitment = Commitment(
+            title=item["title"],
+            description=item["description"],
+            ward_id=ward.id,
+            assignee=item["assignee"],
+            deadline=item["deadline"],
+            weight=weight,
+            status="active",
+        )
+        session.add(commitment)
+        await session.flush()
+        session.add(
+            CommitmentHistory(
+                commitment_id=commitment.id,
+                action="created",
+                new_deadline=item["deadline"],
+                new_weight=weight,
+                note="Seeded demo commitment",
+            )
+        )
+        created += 1
+
+    await session.flush()
+    return {"skipped": 0, "commitments": created}
+
+
 async def seed_demo_data() -> dict[str, dict[str, int]]:
     async with AsyncSessionLocal() as session:
         users_result = await seed_users(session)
         wards_result = await seed_wards(session)
         complaints_result = await seed_complaints(session)
+        commitments_result = await seed_commitments(session)
         await session.commit()
         return {
             "users": users_result,
             "wards": wards_result,
             "complaints": complaints_result,
+            "commitments": commitments_result,
         }
 
 
@@ -335,6 +414,7 @@ async def main() -> None:
     users = result["users"]
     wards = result["wards"]
     complaints = result["complaints"]
+    commitments = result["commitments"]
 
     if users["skipped"]:
         print(f"Users seed skipped. Database already has {users['users']} user(s).")
@@ -361,6 +441,12 @@ async def main() -> None:
     else:
         print("Demo complaints seeded successfully.")
         print(f"  Complaints: {complaints['complaints']}")
+
+    if commitments["skipped"]:
+        print(f"Commitments seed skipped. Database already has {commitments['commitments']} commitment(s).")
+    else:
+        print("Demo commitments seeded successfully.")
+        print(f"  Commitments: {commitments['commitments']}")
 
 
 if __name__ == "__main__":
