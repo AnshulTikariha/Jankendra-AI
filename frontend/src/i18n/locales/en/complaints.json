@@ -22,20 +22,51 @@
       "resume": "Resume draft",
       "discard": "Start fresh"
     },
+    "previewBadge": "Local preview",
     "where": {
+      "city": "City",
+      "cityHint": "Select the city where the issue is located.",
       "ward": "Ward",
-      "wardHint": "Choose the ward where the issue is located.",
+      "wardHint": "Choose the ward where the issue is located. Pinning on the map can auto-select the ward.",
       "wardPrefilled": "Pre-filled from your profile — you can change it.",
+      "wardLoading": "Loading wards…",
+      "wardDetected": "Ward detected from map pin: {{ward}}",
+      "wardDetectedNearest": "Nearest ward from map pin: {{ward}} (please confirm)",
       "location": "Location / landmark",
       "locationOptional": "(optional)",
       "locationPlaceholder": "Near main market, Block C, opposite school…",
       "locationHint": "A clear landmark helps staff find the issue faster.",
       "contact": "Contact for updates",
-      "contactHint": "We use your registered mobile number for status updates."
+      "contactHint": "We use your registered mobile number for status updates.",
+      "map": {
+        "title": "Pin location on map",
+        "hint": "Search for a place, tap the map, or drag the pin to mark the exact spot.",
+        "searchPlaceholder": "Search street, landmark, or area…",
+        "tapHint": "Tap anywhere on the map to drop a pin, or drag the pin to adjust.",
+        "addressHint": "Address is filled from the map — you can edit it if needed.",
+        "resolving": "Looking up address…",
+        "searchError": "Could not search locations. Try again or tap the map.",
+        "addressError": "Pin saved, but address lookup failed. You can type the address manually."
+      },
+      "geo": {
+        "title": "GPS location",
+        "hint": "Pin the issue on a map — saved locally until backend geo API exists.",
+        "capture": "Use my location",
+        "loading": "Getting location…",
+        "clear": "Clear",
+        "openMap": "Open in Google Maps",
+        "unsupported": "Geolocation is not supported on this device.",
+        "denied": "Location access denied. Enter a landmark instead."
+      }
     },
     "what": {
       "title": "What type of problem?",
-      "subtitle": "Pick the category that best matches your issue.",
+      "subtitle": "Select every category that applies — you can choose more than one.",
+      "multiSelectHint": "Tap to select or deselect. At least one type is required.",
+      "selectedCount": "{{count}} type(s) selected",
+      "subCategoryPrimaryHint": "Sub-category applies to {{category}} (primary type for routing).",
+      "subCategory": "Sub-category",
+      "subCategoryHint": "Pick the closest match — required for standard categories.",
       "examples": {
         "water": "e.g. no water supply, low pressure, contaminated water",
         "roads": "e.g. potholes, broken footpath, damaged road",
@@ -64,6 +95,24 @@
       },
       "duration": "When did this start?",
       "impact": "Who is affected?",
+      "priority": "Urgency",
+      "priorityHint": "How urgently should staff address this?",
+      "priorityOptions": {
+        "low": "Low",
+        "medium": "Medium",
+        "high": "High",
+        "critical": "Critical"
+      },
+      "photos": {
+        "title": "Photo evidence",
+        "hint": "Add up to 3 photos. Stored on this device until upload API exists.",
+        "add": "Add photo",
+        "remove": "Remove photo",
+        "count": "{{count}} / {{max}} photos",
+        "maxReached": "Maximum {{max}} photos allowed.",
+        "tooLarge": "Each photo must be under {{maxKb}} KB.",
+        "invalidType": "Only image files are allowed."
+      },
       "durationOptions": {
         "today": "Today",
         "this_week": "This week",
@@ -96,6 +145,11 @@
         "location": "Location / landmark",
         "contact": "Contact phone",
         "category": "Category",
+        "categories": "Problem type(s)",
+        "subCategory": "Sub-category",
+        "priority": "Urgency",
+        "gps": "GPS coordinates",
+        "photos": "Photos",
         "title": "Short title",
         "description": "Description",
         "duration": "When it started",
@@ -110,9 +164,52 @@
       "submitting": "Submitting…"
     },
     "errors": {
+      "categoryRequired": "Please select at least one problem type.",
       "descriptionMin": "Please provide at least {{min}} characters describing the issue.",
       "customCategoryRequired": "Please describe the issue category when choosing Other.",
+      "subCategoryRequired": "Please select a sub-category for this issue type.",
       "generic": "Something went wrong. Please try again."
+    },
+    "subCategories": {
+      "water": {
+        "no_supply": "No water supply",
+        "low_pressure": "Low pressure",
+        "contamination": "Contaminated water",
+        "pipeline_leak": "Pipeline leak"
+      },
+      "roads": {
+        "pothole": "Pothole",
+        "footpath_damage": "Damaged footpath",
+        "road_surface": "Damaged road surface",
+        "traffic_signal": "Traffic signal issue"
+      },
+      "drainage": {
+        "blocked_drain": "Blocked drain",
+        "standing_water": "Standing water",
+        "sewage_overflow": "Sewage overflow",
+        "open_manhole": "Open / broken manhole"
+      },
+      "electricity": {
+        "power_outage": "Power outage",
+        "street_light": "Street light not working",
+        "unsafe_wiring": "Unsafe wiring",
+        "transformer_issue": "Transformer issue"
+      },
+      "health": {
+        "mosquito_breeding": "Mosquito breeding",
+        "clinic_access": "Clinic / hospital access",
+        "waste_hazard": "Health hazard / waste",
+        "stray_animals": "Stray animals"
+      },
+      "sanitation": {
+        "garbage_collection": "Garbage not collected",
+        "open_dumping": "Open dumping",
+        "public_toilet": "Public toilet issue",
+        "dead_animal": "Dead animal"
+      },
+      "other": {
+        "general": "General"
+      }
     },
     "categories": {
       "water": "Water supply",
@@ -158,7 +255,14 @@
       "contact": "Contact",
       "department": "Suggested department",
       "cluster": "Similar reports",
-      "description": "Full description"
+      "description": "Full description",
+      "subCategory": "Sub-category",
+      "priority": "Urgency"
+    },
+    "attachments": {
+      "title": "Photo attachments",
+      "previewNote": "Saved on this device only until backend attachment API is available.",
+      "count": "{{count}} photo(s) attached locally"
     }
   }
 }

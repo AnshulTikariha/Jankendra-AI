@@ -1,23 +1,23 @@
 import { useTranslation } from 'react-i18next'
 import {
   buildComplaintDescription,
-  getCategoryDisplayLabel,
+  buildLocationDetail,
+  formatCoordinates,
+  getCategoriesDisplayLabel,
+  getPrimaryCategory,
 } from '../../../lib/raiseComplaintFormat'
-import type {
-  ComplaintDuration,
-  ComplaintImpact,
-  RaiseComplaintForm,
-} from '../../../types/raiseComplaint'
+import type { ComplaintPhoto, RaiseComplaintForm } from '../../../types/raiseComplaint'
+import type { ComplaintSubmitMeta } from '../../../lib/raiseComplaintFormat'
+import { getSubCategoryLabel } from './SubCategoryPicker'
+import { PhotoGallery } from './PhotoGallery'
 import { SimilarComplaintsBanner } from './SimilarComplaintsBanner'
 
 type Props = {
   form: RaiseComplaintForm
+  photos: ComplaintPhoto[]
   wardName: string
   phone?: string
-  metaLabels: {
-    duration: Record<ComplaintDuration, string>
-    impact: Record<ComplaintImpact, string>
-  }
+  submitMeta: ComplaintSubmitMeta
   similarCount: number
   clusterCount: number
   hasSimilar: boolean
@@ -26,40 +26,68 @@ type Props = {
 
 export function RaiseComplaintReviewPanel({
   form,
+  photos,
   wardName,
   phone,
-  metaLabels,
+  submitMeta,
   similarCount,
   clusterCount,
   hasSimilar,
   onEdit,
 }: Props) {
   const { t } = useTranslation('complaints')
-  const categoryLabel = getCategoryDisplayLabel(
-    form,
-    t(`raise.categories.${form.category}`),
+  const primaryCategory = getPrimaryCategory(form.categories)
+  const categoryLabel = getCategoriesDisplayLabel(form, (category) =>
+    t(`raise.categories.${category}`),
   )
-  const formattedSubmission = buildComplaintDescription(form, metaLabels)
+  const subCategoryLabel = getSubCategoryLabel(primaryCategory, form.subCategory, t)
+  const formattedSubmission = buildComplaintDescription(form, {
+    ...submitMeta,
+    subCategoryLabel,
+  })
+  const locationDisplay = buildLocationDetail(form) ?? t('raise.review.notProvided')
 
   const rows: Array<{
     section: 'where' | 'what' | 'details'
     label: string
     value: string
     optional?: boolean
+    multiline?: boolean
   }> = [
     { section: 'where', label: t('raise.review.fields.ward'), value: wardName },
     {
       section: 'where',
       label: t('raise.review.fields.location'),
-      value: form.locationDetail.trim() || t('raise.review.notProvided'),
-      optional: !form.locationDetail.trim(),
+      value: locationDisplay,
+      optional: !form.locationDetail.trim() && form.latitude == null,
+      multiline: true,
+    },
+    {
+      section: 'where',
+      label: t('raise.review.fields.gps'),
+      value:
+        form.latitude != null && form.longitude != null
+          ? formatCoordinates(form.latitude, form.longitude)
+          : t('raise.review.notProvided'),
+      optional: form.latitude == null,
     },
     {
       section: 'where',
       label: t('raise.review.fields.contact'),
       value: phone ? `+91 ${phone}` : t('raise.review.notProvided'),
     },
-    { section: 'what', label: t('raise.review.fields.category'), value: categoryLabel },
+    { section: 'what', label: t('raise.review.fields.categories'), value: categoryLabel },
+    {
+      section: 'what',
+      label: t('raise.review.fields.subCategory'),
+      value: subCategoryLabel ?? t('raise.review.notProvided'),
+      optional: !subCategoryLabel,
+    },
+    {
+      section: 'details',
+      label: t('raise.review.fields.priority'),
+      value: t(`raise.details.priorityOptions.${form.priority}`),
+    },
     {
       section: 'details',
       label: t('raise.review.fields.title'),
@@ -70,12 +98,13 @@ export function RaiseComplaintReviewPanel({
       section: 'details',
       label: t('raise.review.fields.description'),
       value: form.description.trim(),
+      multiline: true,
     },
     {
       section: 'details',
       label: t('raise.review.fields.duration'),
       value: form.duration
-        ? metaLabels.duration[form.duration]
+        ? submitMeta.duration[form.duration]
         : t('raise.review.notProvided'),
       optional: !form.duration,
     },
@@ -83,9 +112,18 @@ export function RaiseComplaintReviewPanel({
       section: 'details',
       label: t('raise.review.fields.impact'),
       value: form.impact
-        ? metaLabels.impact[form.impact]
+        ? submitMeta.impact[form.impact]
         : t('raise.review.notProvided'),
       optional: !form.impact,
+    },
+    {
+      section: 'details',
+      label: t('raise.review.fields.photos'),
+      value:
+        photos.length > 0
+          ? t('detail.attachments.count', { count: photos.length })
+          : t('raise.review.notProvided'),
+      optional: photos.length === 0,
     },
   ]
 
@@ -130,7 +168,7 @@ export function RaiseComplaintReviewPanel({
                   <dd
                     className={`text-sm font-semibold leading-6 ${
                       row.optional ? 'text-muted' : 'text-ink'
-                    } ${row.label === t('raise.review.fields.description') ? 'whitespace-pre-wrap' : ''}`}
+                    } ${row.multiline ? 'whitespace-pre-wrap' : ''}`}
                   >
                     {row.value}
                   </dd>
@@ -141,9 +179,11 @@ export function RaiseComplaintReviewPanel({
         )
       })}
 
+      {photos.length > 0 && <PhotoGallery compact photos={photos} />}
+
       {hasSimilar && (
         <SimilarComplaintsBanner
-          category={form.category}
+          category={primaryCategory}
           clusterCount={clusterCount}
           count={similarCount}
         />

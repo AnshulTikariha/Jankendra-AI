@@ -124,13 +124,15 @@ def test_list_wards_requires_auth(api_client: TestClient) -> None:
     assert response.status_code == 401
 
 
-def test_list_wards_forbids_citizen(api_client: TestClient) -> None:
+def test_list_wards_for_citizen(api_client: TestClient) -> None:
     token = _token(api_client, "9876543212", "citizen")
     response = api_client.get(
         "/api/v1/constituency/wards",
         headers={"Authorization": f"Bearer {token}"},
     )
-    assert response.status_code == 403
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body["wards"]) == 2
 
 
 def test_list_wards_for_staff(api_client: TestClient) -> None:

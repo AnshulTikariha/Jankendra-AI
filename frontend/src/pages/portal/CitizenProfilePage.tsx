@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { wardOptions } from '../../data/wards'
 import { useCitizenProfile, type CitizenProfileForm } from '../../hooks/useCitizenProfile'
+import { useWards } from '../../hooks/useConstituency'
 import { supportedLocales, localeLabels, type SupportedLocale } from '../../i18n/config'
 import { getRoleTheme } from '../../theme/roleThemes'
 
@@ -23,6 +23,8 @@ function isValidEmail(value: string) {
 export function CitizenProfilePage() {
   const theme = getRoleTheme('citizen')
   const { profile, saveProfile } = useCitizenProfile()
+  const { data: wardsData } = useWards()
+  const wardOptions = wardsData?.wards ?? []
   const [isEditing, setIsEditing] = useState(false)
   const [form, setForm] = useState<CitizenProfileForm | null>(null)
   const [savedMessage, setSavedMessage] = useState<string | null>(null)

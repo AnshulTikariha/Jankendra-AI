@@ -5,7 +5,6 @@ import type {
   ApiDigestResponse,
   ApiPrioritiesResponse,
   ApiTodoListResponse,
-  ApiWardListResponse,
   CreateCommitmentPayload,
   TodoActionPayload,
 } from './types/staff'
@@ -68,9 +67,7 @@ export function fetchDigest(
   return apiFetch<ApiDigestResponse>(`/digest${query}`, { token })
 }
 
-export function fetchWards(token: string): Promise<ApiWardListResponse> {
-  return apiFetch<ApiWardListResponse>('/constituency/wards', { token })
-}
+export { fetchWards } from './constituency'
 
 export function createStaffComplaint(
   token: string,

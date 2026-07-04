@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react'
+import type { ComplaintCategory } from '../types/complaint'
 import { defaultRaiseComplaintForm, type RaiseComplaintForm, type RaiseComplaintStep } from '../types/raiseComplaint'
 import { useAuthStore } from '../stores/useAuthStore'
 
@@ -8,6 +9,17 @@ type SavedDraft = {
   form: RaiseComplaintForm
   step: RaiseComplaintStep
   savedAt: string
+}
+
+type LegacyDraftForm = RaiseComplaintForm & { category?: ComplaintCategory }
+
+function normalizeDraftForm(form: LegacyDraftForm): RaiseComplaintForm {
+  if (form.categories?.length) return form
+  if (form.category) {
+    const { category, ...rest } = form
+    return { ...rest, categories: [category] }
+  }
+  return { ...form, categories: ['water'] }
 }
 
 function readAllDrafts(): Record<string, SavedDraft> {
@@ -46,8 +58,11 @@ function isDraftEmpty(form: RaiseComplaintForm): boolean {
     !form.description.trim() &&
     !form.locationDetail.trim() &&
     !form.customCategory.trim() &&
+    !form.subCategory &&
+    form.latitude == null &&
     !form.duration &&
-    !form.impact
+    !form.impact &&
+    form.priority === 'medium'
   )
 }
 
@@ -76,8 +91,12 @@ export function useRaiseComplaintDraft(
   } | null => {
     if (!userId) return null
     const draft = readDraft(userId)
-    if (!draft || isDraftEmpty(draft.form)) return null
-    return draft
+    if (!draft || isDraftEmpty(normalizeDraftForm(draft.form))) return null
+    return {
+      form: normalizeDraftForm(draft.form),
+      step: draft.step,
+      savedAt: draft.savedAt,
+    }
   }, [userId])
 
   useEffect(() => {

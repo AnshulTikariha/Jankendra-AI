@@ -1,30 +1,40 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { wardOptions } from '../../../data/wards'
 import { useCitizenProfile } from '../../../hooks/useCitizenProfile'
+import { useCities, useResolveWard, useWardBoundary, useWards } from '../../../hooks/useConstituency'
 import { useCreateComplaint } from '../../../hooks/useComplaints'
 import { useRaiseComplaintDraft } from '../../../hooks/useRaiseComplaintDraft'
 import { useSimilarComplaints } from '../../../hooks/useSimilarComplaints'
 import {
   descriptionQuality,
   formToCreatePayload,
+  getPrimaryCategory,
+  includesOtherCategory,
+  isOnlyOtherCategory,
 } from '../../../lib/raiseComplaintFormat'
 import { useAuthStore } from '../../../stores/useAuthStore'
 import { useUiStore } from '../../../stores/useUiStore'
 import { ApiError } from '../../../api/errors'
+import { useComplaintAttachmentsStore } from '../../../stores/useComplaintAttachmentsStore'
 import {
   defaultRaiseComplaintForm,
   raiseComplaintSteps,
   type ComplaintDuration,
   type ComplaintImpact,
+  type ComplaintPhoto,
+  type ComplaintPriority,
   type RaiseComplaintForm,
   type RaiseComplaintStep,
 } from '../../../types/raiseComplaint'
 import { CategoryCardGrid } from './CategoryCardGrid'
 import { CustomCategoryField } from './CustomCategoryField'
+import { MapLocationPicker } from './MapLocationPicker'
+import { PhotoAttachmentPicker } from './PhotoAttachmentPicker'
+import { PriorityPicker } from './PriorityPicker'
 import { RaiseComplaintReviewPanel } from './RaiseComplaintReviewPanel'
 import { RaiseComplaintStepper } from './RaiseComplaintStepper'
 import { SimilarComplaintsBanner } from './SimilarComplaintsBanner'
+import { SubCategoryPicker, getSubCategoryLabel } from './SubCategoryPicker'
 import { WhatHappensNext } from './WhatHappensNext'
 
 const DESCRIPTION_MIN = 20
@@ -44,6 +54,8 @@ const impactOptions: ComplaintImpact[] = [
   'street',
   'public',
 ]
+
+const priorityOptions: ComplaintPriority[] = ['low', 'medium', 'high', 'critical']
 
 function formatDraftTime(iso: string) {
   return new Date(iso).toLocaleString('en-IN', {
@@ -67,20 +79,60 @@ export function RaiseComplaintWizard() {
   const setLastComplaintRef = useUiStore((s) => s.setLastComplaintRef)
   const setLastComplaintId = useUiStore((s) => s.setLastComplaintId)
 
-  const profileWardId = preferredWardId(profile?.wardId)
+  const saveAttachments = useComplaintAttachmentsStore((s) => s.saveAttachments)
+  const { data: citiesData, isLoading: citiesLoading } = useCities()
+  const [city, setCity] = useState('bengaluru')
+  const { data: wardsData, isLoading: wardsLoading } = useWards(city)
+  const resolveWardMutation = useResolveWard()
 
+  const profileWardId = preferredWardId(profile?.wardId)
+  const wardOptions = wardsData?.wards ?? []
   const defaultWardId = profileWardId ?? wardOptions[0]?.id ?? 1
 
   const [form, setForm] = useState<RaiseComplaintForm>(() =>
     defaultRaiseComplaintForm(defaultWardId),
   )
+  const [photos, setPhotos] = useState<ComplaintPhoto[]>([])
   const [step, setStep] = useState<RaiseComplaintStep>('where')
   const [error, setError] = useState('')
   const [draftPrompt, setDraftPrompt] = useState<{ savedAt: string } | null>(null)
   const [wardPrefilled, setWardPrefilled] = useState(false)
+  const [wardDetected, setWardDetected] = useState<{
+    label: string
+    confidence: 'inside' | 'nearest'
+  } | null>(null)
   const [initialized, setInitialized] = useState(false)
+  const resolveTimerRef = useRef<number | null>(null)
+  const skipResolveRef = useRef(false)
+
+  const { data: wardBoundaryData } = useWardBoundary(form.wardId)
+
+  const selectedWard = wardOptions.find((ward) => ward.id === form.wardId)
+  const activeCity =
+    citiesData?.find((item) => item.city === city) ??
+    citiesData?.[0] ??
+    null
+  const mapView = activeCity
+    ? {
+        center: [activeCity.defaultLat, activeCity.defaultLng] as [number, number],
+        zoom: activeCity.defaultZoom,
+      }
+    : {
+        center: [12.9716, 77.5946] as [number, number],
+        zoom: 11,
+      }
+  const wardFocus =
+    selectedWard?.centroidLat != null && selectedWard.centroidLng != null
+      ? { lat: selectedWard.centroidLat, lng: selectedWard.centroidLng }
+      : null
 
   const { restoreDraft, clearDraft } = useRaiseComplaintDraft(form, step, defaultWardId)
+
+  useEffect(() => {
+    if (!citiesData?.length) return
+    if (citiesData.some((item) => item.city === city)) return
+    setCity(citiesData[0].city)
+  }, [citiesData, city])
 
   useEffect(() => {
     if (initialized) return
@@ -96,7 +148,59 @@ export function RaiseComplaintWizard() {
     setInitialized(true)
   }, [initialized, profileWardId, restoreDraft])
 
-  const metaLabels = useMemo(
+  useEffect(() => {
+    if (wardOptions.length === 0) return
+    setForm((current) => {
+      if (wardOptions.some((ward) => ward.id === current.wardId)) return current
+      skipResolveRef.current = true
+      return { ...current, wardId: wardOptions[0].id }
+    })
+  }, [city, wardOptions])
+
+  useEffect(() => {
+    if (form.latitude == null || form.longitude == null) {
+      setWardDetected(null)
+      return
+    }
+
+    if (skipResolveRef.current) {
+      skipResolveRef.current = false
+      return
+    }
+
+    if (resolveTimerRef.current) {
+      window.clearTimeout(resolveTimerRef.current)
+    }
+
+    resolveTimerRef.current = window.setTimeout(() => {
+      resolveWardMutation.mutate(
+        { latitude: form.latitude!, longitude: form.longitude!, city },
+        {
+          onSuccess: (result) => {
+            setForm((current) => ({ ...current, wardId: result.ward_id }))
+            setWardPrefilled(false)
+            setWardDetected({
+              label: result.ward_area_name
+                ? `${result.name} — ${result.ward_area_name}`
+                : result.name,
+              confidence: result.confidence,
+            })
+          },
+          onError: () => setWardDetected(null),
+        },
+      )
+    }, 500)
+
+    return () => {
+      if (resolveTimerRef.current) {
+        window.clearTimeout(resolveTimerRef.current)
+      }
+    }
+  }, [form.latitude, form.longitude, city, resolveWardMutation])
+
+  const primaryCategory = getPrimaryCategory(form.categories)
+
+  const submitMeta = useMemo(
     () => ({
       duration: Object.fromEntries(
         durationOptions.map((d) => [d, t(`raise.details.durationOptions.${d}`)]),
@@ -104,13 +208,22 @@ export function RaiseComplaintWizard() {
       impact: Object.fromEntries(
         impactOptions.map((i) => [i, t(`raise.details.impactOptions.${i}`)]),
       ) as Record<ComplaintImpact, string>,
+      priority: Object.fromEntries(
+        priorityOptions.map((p) => [p, t(`raise.details.priorityOptions.${p}`)]),
+      ) as Record<ComplaintPriority, string>,
+      subCategoryLabel: getSubCategoryLabel(primaryCategory, form.subCategory, t),
+      categoryLabels: form.categories.map((category) =>
+        category === 'other' && form.customCategory.trim()
+          ? form.customCategory.trim()
+          : t(`raise.categories.${category}`),
+      ),
     }),
-    [t],
+    [form.categories, form.customCategory, form.subCategory, primaryCategory, t],
   )
 
   const { count: similarCount, clusterCount, hasSimilar } = useSimilarComplaints(
     form.wardId,
-    form.category,
+    primaryCategory,
   )
 
   const stepIndex = raiseComplaintSteps.indexOf(step)
@@ -135,6 +248,7 @@ export function RaiseComplaintWizard() {
     clearDraft()
     setDraftPrompt(null)
     setForm(defaultRaiseComplaintForm(defaultWardId))
+    setPhotos([])
     setStep('where')
     if (profileWardId !== null) {
       setForm((f) => ({ ...f, wardId: profileWardId }))
@@ -143,13 +257,23 @@ export function RaiseComplaintWizard() {
   }
 
   const validateStep = (targetStep: RaiseComplaintStep): boolean => {
-    if (form.category === 'other' && form.customCategory.trim().length < 2) {
+    if (form.categories.length === 0) {
+      setError(t('raise.errors.categoryRequired'))
+      return false
+    }
+    if (primaryCategory !== 'other' && !form.subCategory) {
+      if (targetStep === 'details' || targetStep === 'review') {
+        setError(t('raise.errors.subCategoryRequired'))
+        return false
+      }
+    }
+    if (isOnlyOtherCategory(form.categories) && form.customCategory.trim().length < 2) {
       if (targetStep === 'details' || targetStep === 'review') {
         setError(t('raise.errors.customCategoryRequired'))
         return false
       }
     }
-    if (targetStep === 'details' || targetStep === 'review') {
+    if (targetStep === 'review') {
       if (form.description.trim().length < DESCRIPTION_MIN) {
         setError(t('raise.errors.descriptionMin', { min: DESCRIPTION_MIN }))
         return false
@@ -162,11 +286,14 @@ export function RaiseComplaintWizard() {
     return true
   }
 
-  const handleCategoryChange = (cat: typeof form.category) => {
+  const handleCategoriesChange = (categories: typeof form.categories) => {
+    const prevPrimary = getPrimaryCategory(form.categories)
+    const nextPrimary = getPrimaryCategory(categories)
     setForm((prev) => ({
       ...prev,
-      category: cat,
-      customCategory: cat === 'other' ? prev.customCategory : '',
+      categories,
+      subCategory: nextPrimary !== prevPrimary ? '' : prev.subCategory,
+      customCategory: includesOtherCategory(categories) ? prev.customCategory : '',
     }))
     setError('')
   }
@@ -174,6 +301,7 @@ export function RaiseComplaintWizard() {
   const goNext = () => {
     const next = raiseComplaintSteps[stepIndex + 1]
     if (!next) return
+    if (step === 'what' && !validateStep('details')) return
     if (step === 'details' && !validateStep('review')) return
     // Defer review transition so the Continue click cannot land on Submit (same slot).
     if (next === 'review') {
@@ -215,10 +343,15 @@ export function RaiseComplaintWizard() {
 
     try {
       const complaint = await createComplaint.mutateAsync(
-        formToCreatePayload(form, metaLabels),
+        formToCreatePayload(form, submitMeta),
       )
 
+      if (photos.length > 0) {
+        saveAttachments(complaint.id, photos)
+      }
+
       clearDraft()
+      setPhotos([])
       setLastComplaintId(complaint.id)
       setLastComplaintRef(complaint.publicReference)
       setCitizenView('confirmation')
@@ -277,6 +410,28 @@ export function RaiseComplaintWizard() {
             {step === 'where' && (
               <div className="space-y-5">
                 <label className="block">
+                  <span className="text-sm font-bold">{t('raise.where.city')}</span>
+                  <p className="mt-0.5 text-xs text-muted">{t('raise.where.cityHint')}</p>
+                  <select
+                    className="mt-2 w-full rounded-xl border border-line bg-white px-4 py-3 font-semibold outline-none focus:ring-4 focus:ring-teal-200/40 disabled:opacity-60"
+                    disabled={citiesLoading || !citiesData?.length}
+                    onChange={(event) => {
+                      setCity(event.target.value)
+                      setWardPrefilled(false)
+                      setWardDetected(null)
+                      skipResolveRef.current = true
+                    }}
+                    value={city}
+                  >
+                    {(citiesData ?? []).map((item) => (
+                      <option key={item.city} value={item.city}>
+                        {item.displayName} ({item.wardCount})
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="block">
                   <span className="text-sm font-bold">{t('raise.where.ward')}</span>
                   <p className="mt-0.5 text-xs text-muted">{t('raise.where.wardHint')}</p>
                   {wardPrefilled && (
@@ -284,34 +439,58 @@ export function RaiseComplaintWizard() {
                       {t('raise.where.wardPrefilled')}
                     </p>
                   )}
+                  {wardDetected && (
+                    <p className="mt-1 text-xs font-semibold text-teal-800">
+                      {wardDetected.confidence === 'inside'
+                        ? t('raise.where.wardDetected', { ward: wardDetected.label })
+                        : t('raise.where.wardDetectedNearest', { ward: wardDetected.label })}
+                    </p>
+                  )}
                   <select
-                    className="mt-2 w-full rounded-xl border border-line bg-white px-4 py-3 font-semibold outline-none focus:ring-4 focus:ring-teal-200/40"
+                    className="mt-2 w-full rounded-xl border border-line bg-white px-4 py-3 font-semibold outline-none focus:ring-4 focus:ring-teal-200/40 disabled:opacity-60"
+                    disabled={wardsLoading || wardOptions.length === 0}
                     onChange={(e) => {
+                      skipResolveRef.current = true
                       updateForm('wardId', Number(e.target.value))
                       setWardPrefilled(false)
+                      setWardDetected(null)
                     }}
                     value={form.wardId}
                   >
                     {wardOptions.map((ward) => (
-                      <option key={ward.id} value={ward.id}>{ward.name}</option>
+                      <option key={ward.id} value={ward.id}>
+                        {ward.wardAreaName ? `${ward.name} — ${ward.wardAreaName}` : ward.name}
+                      </option>
                     ))}
                   </select>
+                  {wardsLoading && (
+                    <p className="mt-1 text-xs text-muted">{t('raise.where.wardLoading')}</p>
+                  )}
                 </label>
 
-                <label className="block">
-                  <span className="text-sm font-bold">
-                    {t('raise.where.location')}{' '}
-                    <span className="font-normal text-muted">{t('raise.where.locationOptional')}</span>
-                  </span>
-                  <p className="mt-0.5 text-xs text-muted">{t('raise.where.locationHint')}</p>
-                  <input
-                    className="mt-2 w-full rounded-xl border border-line px-4 py-3 font-medium outline-none focus:ring-4 focus:ring-teal-200/40"
-                    onChange={(e) => updateForm('locationDetail', e.target.value)}
-                    placeholder={t('raise.where.locationPlaceholder')}
-                    type="text"
-                    value={form.locationDetail}
-                  />
-                </label>
+                <MapLocationPicker
+                  mapView={mapView}
+                  onChange={({ latitude, longitude, locationDetail }) => {
+                    setForm((prev) => ({ ...prev, latitude, longitude, locationDetail }))
+                    setError('')
+                  }}
+                  searchBias={
+                    activeCity
+                      ? {
+                          lat: activeCity.defaultLat,
+                          lng: activeCity.defaultLng,
+                          cityName: activeCity.displayName,
+                        }
+                      : undefined
+                  }
+                  value={{
+                    latitude: form.latitude,
+                    longitude: form.longitude,
+                    locationDetail: form.locationDetail,
+                  }}
+                  wardBoundary={wardBoundaryData?.geometry ?? null}
+                  wardFocus={wardFocus}
+                />
 
                 {session?.phone && (
                   <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
@@ -330,30 +509,61 @@ export function RaiseComplaintWizard() {
                   <p className="mt-1 text-sm text-muted">{t('raise.what.subtitle')}</p>
                 </div>
                 <CategoryCardGrid
-                  onChange={handleCategoryChange}
-                  value={form.category}
+                  onChange={handleCategoriesChange}
+                  value={form.categories}
                 />
-                {form.category === 'other' && (
+                {includesOtherCategory(form.categories) && (
                   <CustomCategoryField
                     onChange={(value) => updateForm('customCategory', value)}
                     value={form.customCategory}
                   />
+                )}
+                {primaryCategory !== 'other' && (
+                  <>
+                    {form.categories.length > 1 && (
+                      <p className="text-xs font-semibold text-teal-800">
+                        {t('raise.what.subCategoryPrimaryHint', {
+                          category: t(`raise.categories.${primaryCategory}`),
+                        })}
+                      </p>
+                    )}
+                    <SubCategoryPicker
+                      category={primaryCategory}
+                      onChange={(subCategory) => updateForm('subCategory', subCategory)}
+                      value={form.subCategory}
+                    />
+                  </>
                 )}
               </div>
             )}
 
             {step === 'details' && (
               <div className="space-y-5">
-                {form.category === 'other' && (
+                {includesOtherCategory(form.categories) && (
                   <CustomCategoryField
                     onChange={(value) => updateForm('customCategory', value)}
                     value={form.customCategory}
                   />
                 )}
 
+                {!form.subCategory && primaryCategory !== 'other' && (
+                  <SubCategoryPicker
+                    category={primaryCategory}
+                    onChange={(subCategory) => updateForm('subCategory', subCategory)}
+                    value={form.subCategory}
+                  />
+                )}
+
+                <PriorityPicker
+                  onChange={(priority) => updateForm('priority', priority)}
+                  value={form.priority}
+                />
+
+                <PhotoAttachmentPicker onChange={setPhotos} photos={photos} />
+
                 {hasSimilar && (
                   <SimilarComplaintsBanner
-                    category={form.category}
+                    category={primaryCategory}
                     clusterCount={clusterCount}
                     count={similarCount}
                   />
@@ -381,7 +591,7 @@ export function RaiseComplaintWizard() {
                     className="mt-2 w-full rounded-xl border border-line px-4 py-3 font-medium outline-none focus:ring-4 focus:ring-teal-200/40"
                     maxLength={DESCRIPTION_MAX}
                     onChange={(e) => updateForm('description', e.target.value)}
-                    placeholder={t(`raise.what.examples.${form.category}`)}
+                    placeholder={t(`raise.what.examples.${primaryCategory}`)}
                     rows={5}
                     value={form.description}
                   />
@@ -441,10 +651,11 @@ export function RaiseComplaintWizard() {
                 clusterCount={clusterCount}
                 form={form}
                 hasSimilar={hasSimilar}
-                metaLabels={metaLabels}
                 onEdit={goToStep}
                 phone={session?.phone}
+                photos={photos}
                 similarCount={similarCount}
+                submitMeta={submitMeta}
                 wardName={wardName}
               />
             )}

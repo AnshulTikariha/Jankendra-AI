@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { PhotoGallery } from '../../components/citizen/raise/PhotoGallery'
 import { useComplaint } from '../../hooks/useComplaints'
+import { parseComplaintMetadata } from '../../lib/raiseComplaintFormat'
+import { useComplaintAttachmentsStore } from '../../stores/useComplaintAttachmentsStore'
 import { useUiStore } from '../../stores/useUiStore'
 import { ApiError } from '../../api/errors'
 import {
@@ -66,6 +69,9 @@ export function ComplaintDetailPage() {
   const setCitizenView = useUiStore((s) => s.setCitizenView)
   const setViewingComplaintId = useUiStore((s) => s.setViewingComplaintId)
   const { data: complaint, isLoading, isError, error } = useComplaint(viewingComplaintId)
+  const attachments = useComplaintAttachmentsStore((s) =>
+    viewingComplaintId ? s.getAttachments(viewingComplaintId) : [],
+  )
   const [copied, setCopied] = useState(false)
 
   const handleBack = () => {
@@ -126,10 +132,18 @@ export function ComplaintDetailPage() {
     )
   }
 
+  const metadata = parseComplaintMetadata(complaint.description)
+
   const detailRows = [
     { label: t('detail.fields.reference'), value: complaint.publicReference },
     { label: t('detail.fields.status'), value: citizenStatusLabels[complaint.status] },
     { label: t('detail.fields.category'), value: complaintCategoryLabels[complaint.category] },
+    ...(metadata.subCategory
+      ? [{ label: t('detail.fields.subCategory'), value: metadata.subCategory }]
+      : []),
+    ...(metadata.priority
+      ? [{ label: t('detail.fields.priority'), value: metadata.priority }]
+      : []),
     { label: t('detail.fields.ward'), value: complaint.wardName },
     {
       label: t('detail.fields.location'),
@@ -208,6 +222,8 @@ export function ComplaintDetailPage() {
           ))}
         </dl>
       </div>
+
+      {attachments.length > 0 && <PhotoGallery photos={attachments} />}
 
       <div className="overflow-hidden rounded-3xl border border-line/80 bg-white shadow-md">
         <div className="border-b border-line/60 bg-slate-50/80 px-5 py-3">

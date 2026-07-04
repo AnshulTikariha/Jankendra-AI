@@ -45,6 +45,7 @@ API contract: [`docs/api.md`](../docs/api.md)
 - [x] Removed `useComplaintStore.ts` (localStorage)
 - [x] Temporary static `wardOptions` in `data/wards.ts` (see **Backend B-002**)
 - [x] **Raise complaint wizard (Phase A+B)** — 4-step flow, category cards, guided description, review, draft autosave, similar-report banner, i18n (`complaints` namespace), profile ward prefill, confirmation copy/share
+- [x] **Raise complaint wizard (Phase D+E)** — GPS pin, photo attachments (localStorage), sub-categories, urgency/priority picker, attachment gallery on detail view (mock until **Backend B-011** / **B-012**)
 
 ### Phase 5 — Staff / leader app pages
 
@@ -76,8 +77,8 @@ API contract: [`docs/api.md`](../docs/api.md)
 
 ### Phase 4 — Ward list from API (citizen)
 
-- [ ] **Blocked by:** [Backend B-002](./backend.md#b-002--allow-citizens-to-list-wards-raise-complaint-form)
-- [ ] Replace static `wardOptions` in `RaiseComplaintPage.tsx` (staff log-issue already uses live wards)
+- [x] **Completed:** 2026-07-04 — live `GET /constituency/wards` for citizens; map pin auto-resolves ward via `GET /constituency/wards/resolve`; heat map uses API centroids
+- [ ] Render ward boundary polygons on heat map (`GET /constituency/ward-boundaries`) — optional polish
 
 ### Phase 5 — Remaining staff pages
 
@@ -124,8 +125,10 @@ Pages in `types/citizenNavigation.ts` still `available: false`:
 | Staff to-do / commitments / digest | 9876543211 / 3210 | [ ] Manual QA |
 | Staff complaint queue + status actions | 9876543211 / 3210 | [ ] Manual QA (local save) |
 | Raise complaint (wizard) | 9876543212 | [ ] Manual QA |
+| Raise complaint (GPS + photos + sub-category) | 9876543212 | [ ] Manual QA |
 | Citizen profile edit | 9876543212 | [ ] Manual QA (local save) |
-| Ward dropdown matches DB ids | All citizens | [ ] Until B-002 |
+| Ward dropdown matches DB ids | All citizens | [x] Live API |
+| Map pin auto-selects ward | 9876543212 | [ ] Manual QA (run sync script + backend) |
 
 ---
 

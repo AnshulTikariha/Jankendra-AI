@@ -77,6 +77,15 @@ button:disabled {
   transform-origin: center;
 }
 
+.map-location-picker .leaflet-container {
+  background: #e2e8f0;
+  font-family: inherit;
+}
+
+.map-location-picker .leaflet-control-attribution {
+  font-size: 0.6rem;
+}
+
 .issue-heat-map .leaflet-container {
   background: #0f172a;
   font-family: inherit;
