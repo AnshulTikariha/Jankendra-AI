@@ -48,6 +48,6 @@ export const citizenPages: CitizenPage[] = [
     id: 'profile',
     label: 'Profile',
     description: 'Your contact details and preferences.',
-    available: false,
+    available: true,
   },
 ]

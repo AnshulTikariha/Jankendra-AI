@@ -75,6 +75,15 @@ Related: GitLab **#7** · API docs: [`docs/api.md`](../docs/api.md)
 
 ---
 
+### B-010 · Update citizen profile
+
+- [ ] **Priority:** Medium (citizen profile edit)
+- **Issue:** No `PATCH /auth/me` (or equivalent) to update display name, email, ward preference, or notification settings.
+- **Requested change:** Implement e.g. `PATCH /auth/me` with citizen-safe fields. Document in `docs/api.md`.
+- **Frontend workaround:** Citizen profile saves editable fields in **localStorage** until this API exists.
+
+---
+
 ## Planned APIs (not built — track separately)
 
 From [`docs/api.md`](../docs/api.md) § Planned APIs:

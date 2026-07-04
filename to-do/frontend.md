@@ -92,7 +92,9 @@ API contract: [`docs/api.md`](../docs/api.md)
 - [ ] **TrustStrip** — optional live metrics or static help content page
 - [ ] Remove dead `demoDashboard.ts` demo exports if unreferenced
 
-### Phase 7 — Citizen portal expansion
+### Phase 7 — Citizen portal expansion (partial)
+
+- [x] **Citizen profile** — `GET /auth/me` + localStorage → `pages/portal/CitizenProfilePage.tsx` (edit until **Backend B-010**)
 
 Pages in `types/citizenNavigation.ts` still `available: false`:
 
@@ -100,7 +102,6 @@ Pages in `types/citizenNavigation.ts` still `available: false`:
 |---------|------------|--------|
 | `ward-updates` | Backend B-004 | [ ] Blocked |
 | `help` | Static content OK | [ ] Not started |
-| `profile` | `GET /auth/me` | [ ] Not started |
 
 ---
 
@@ -121,6 +122,7 @@ Pages in `types/citizenNavigation.ts` still `available: false`:
 | My complaints list | 9876543212 | [x] Phase 3 |
 | Staff to-do / commitments / digest | 9876543211 / 3210 | [ ] Manual QA |
 | Staff complaint queue + status actions | 9876543211 / 3210 | [ ] Manual QA (local save) |
+| Citizen profile edit | 9876543212 | [ ] Manual QA (local save) |
 | Ward dropdown matches DB ids | All citizens | [ ] Until B-002 |
 
 ---
