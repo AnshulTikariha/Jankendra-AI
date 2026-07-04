@@ -1,6 +1,17 @@
 from functools import lru_cache
+from typing import Annotated
 
+from pydantic import BeforeValidator, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+def parse_cors_origins(value: str | list[str]) -> list[str]:
+    if isinstance(value, str):
+        return [origin.strip() for origin in value.split(",") if origin.strip()]
+    return value
+
+
+CorsOrigins = Annotated[list[str], BeforeValidator(parse_cors_origins)]
 
 
 class Settings(BaseSettings):
@@ -23,6 +34,13 @@ class Settings(BaseSettings):
     jwt_secret_key: str = "change-me-in-production-use-a-long-secret"
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 60 * 24
+
+    cors_origins: CorsOrigins = Field(
+        default=[
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+        ],
+    )
 
 
 @lru_cache
