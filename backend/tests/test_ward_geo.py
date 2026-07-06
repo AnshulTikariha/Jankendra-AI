@@ -11,6 +11,22 @@ from app.api.v1.constituency import router as constituency_router
 from app.core.database import get_db_session
 from app.core.otp import DEV_OTP
 from app.models import Base, User, Ward
+from app.services.ward_geo import (
+    geometry_looks_like_lat_lng_swapped,
+    normalize_geojson_geometry,
+    resolve_ward_for_point,
+)
+
+
+def _swapped_square_geojson(lat: float, lng: float, delta: float = 0.01) -> str:
+    ring = [
+        [lat - delta, lng - delta],
+        [lat - delta, lng + delta],
+        [lat + delta, lng + delta],
+        [lat + delta, lng - delta],
+        [lat - delta, lng - delta],
+    ]
+    return json.dumps({"type": "Polygon", "coordinates": [ring]})
 
 
 def _square_geojson(lat: float, lng: float, delta: float = 0.01) -> str:
@@ -46,6 +62,7 @@ def api_client() -> TestClient:
                 Ward(
                     name="Ward 42",
                     code="W42",
+                    city="bhopal",
                     constituency_name="South Delhi",
                     population=50000,
                     registered_voters=33800,
@@ -61,6 +78,7 @@ def api_client() -> TestClient:
                 Ward(
                     name="Ward 43",
                     code="W43",
+                    city="bhopal",
                     constituency_name="South Delhi",
                     population=45000,
                     registered_voters=30400,
@@ -130,6 +148,7 @@ def test_resolve_ward_inside_polygon(api_client: TestClient) -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["code"] == "W42"
+    assert body["city"] == "bhopal"
     assert body["confidence"] == "inside"
     assert body["municipal_ward_number"] == "42"
 
@@ -160,3 +179,38 @@ def test_ward_boundaries_feature_collection(api_client: TestClient) -> None:
     assert body["type"] == "FeatureCollection"
     assert len(body["features"]) == 2
     assert body["features"][0]["properties"]["code"] == "W42"
+
+
+def test_normalize_swapped_bengaluru_coordinates() -> None:
+    geometry = json.loads(_swapped_square_geojson(12.91, 77.64))
+    assert geometry_looks_like_lat_lng_swapped(geometry) is True
+
+    normalized = normalize_geojson_geometry(geometry)
+    first = normalized["coordinates"][0][0]
+    assert first[0] == pytest.approx(77.63, abs=0.02)
+    assert first[1] == pytest.approx(12.90, abs=0.02)
+
+
+def test_resolve_prefers_nearest_city_not_global_outlier() -> None:
+    bhopal = Ward(
+        name="Ward 42",
+        code="W42",
+        city="bhopal",
+        constituency_name="Bhopal",
+        centroid_lat=23.268,
+        centroid_lng=77.425,
+        boundary_geojson=_square_geojson(23.268, 77.425),
+    )
+    bengaluru = Ward(
+        name="Ward 7",
+        code="BLR-007",
+        city="bengaluru",
+        constituency_name="Bengaluru",
+        centroid_lat=12.915,
+        centroid_lng=77.650,
+        boundary_geojson=_square_geojson(12.915, 77.650, delta=0.02),
+    )
+
+    result = resolve_ward_for_point(12.9116, 77.6473, [bhopal, bengaluru])
+    assert result is not None
+    assert result.ward.city == "bengaluru"

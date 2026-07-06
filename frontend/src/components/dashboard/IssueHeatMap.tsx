@@ -1,13 +1,12 @@
-import { Fragment, useEffect, useMemo, useState } from 'react'
-import L from 'leaflet'
-import { Circle, MapContainer, Polygon, TileLayer, Tooltip, useMap } from 'react-leaflet'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Map, useMap } from '@vis.gl/react-google-maps'
+import { GOOGLE_MAP_ID } from '../../config/googleMaps'
 import {
   CONSTITUENCY_MAP_VIEW,
   INDIA_MAP_VIEW,
   constituencyBoundary,
   getIntensityColor,
   getIntensityLabel,
-  getWardBounds,
   intensityLegend,
   type WardMapPoint,
   wardMapPoints,
@@ -36,7 +35,7 @@ function heatRadiusMeters(intensity: number): number {
 export function IssueHeatMap({ wards = wardMapPoints }: Props) {
   const [selectedId, setSelectedId] = useState<string>(wards[0]?.wardId ?? '')
   const [layer, setLayer] = useState<MapLayer>('combined')
-  const [map, setMap] = useState<L.Map | null>(null)
+  const [map, setMap] = useState<google.maps.Map | null>(null)
 
   const selected = useMemo(
     () => wards.find((w) => w.wardId === selectedId) ?? wards[0],
@@ -53,7 +52,7 @@ export function IssueHeatMap({ wards = wardMapPoints }: Props) {
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-cyan-300">Live constituency map</p>
             <h2 className="mt-1 text-xl font-extrabold">Issue intensity radar</h2>
             <p className="mt-1 text-sm text-slate-300">
-              OpenStreetMap of India — monsoon-style heat zones over ward locations
+              Google Maps — monsoon-style heat zones over ward locations
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -105,83 +104,23 @@ function IndianHeatMap({
   layer: MapLayer
   selectedId: string
   onSelect: (id: string) => void
-  onMapReady: (map: L.Map) => void
+  onMapReady: (map: google.maps.Map) => void
 }) {
   return (
     <div className="issue-heat-map relative z-0 h-[26rem] w-full overflow-hidden rounded-2xl border border-white/10 sm:h-[28rem]">
-      <MapContainer
-        center={CONSTITUENCY_MAP_VIEW.center}
+      <Map
         className="size-full"
-        maxZoom={18}
-        minZoom={4}
-        scrollWheelZoom
-        zoom={CONSTITUENCY_MAP_VIEW.zoom}
-        zoomControl={false}
+        defaultCenter={{ lat: CONSTITUENCY_MAP_VIEW.center[0], lng: CONSTITUENCY_MAP_VIEW.center[1] }}
+        defaultZoom={CONSTITUENCY_MAP_VIEW.zoom}
+        disableDefaultUI
+        gestureHandling="greedy"
+        mapId={GOOGLE_MAP_ID}
+        reuseMaps
       >
         <MapBridge onMapReady={onMapReady} />
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-
-        <Polygon
-          pathOptions={{
-            color: '#22d3ee',
-            dashArray: '6 8',
-            fillColor: '#0ea5e9',
-            fillOpacity: 0.06,
-            weight: 2,
-          }}
-          positions={constituencyBoundary}
-        />
-
-        {wards.map((ward) => {
-          const intensity = layerIntensity(ward, layer)
-          const color = getIntensityColor(intensity)
-          const baseRadius = heatRadiusMeters(intensity)
-          const isSelected = ward.wardId === selectedId
-          const center: [number, number] = [ward.lat, ward.lng]
-
-          return (
-            <Fragment key={ward.wardId}>
-              {[1.35, 1, 0.65].map((scale, index) => (
-                <Circle
-                  center={center}
-                  key={`${ward.wardId}-${scale}`}
-                  pathOptions={{
-                    color: 'transparent',
-                    fillColor: color,
-                    fillOpacity: index === 0 ? 0.14 : index === 1 ? 0.28 : 0.42,
-                    weight: 0,
-                  }}
-                  radius={baseRadius * scale}
-                />
-              ))}
-              <Circle
-                center={center}
-                eventHandlers={{
-                  click: () => onSelect(ward.wardId),
-                }}
-                pathOptions={{
-                  color: isSelected ? '#ffffff' : color,
-                  fillColor: isSelected ? color : '#0f172a',
-                  fillOpacity: isSelected ? 0.95 : 0.85,
-                  weight: isSelected ? 3 : 2,
-                }}
-                radius={isSelected ? 220 : 180}
-              >
-                <Tooltip direction="top" offset={[0, -8]} opacity={0.95} permanent={isSelected}>
-                  <span className="text-xs font-bold">
-                    {ward.wardName} · {getIntensityLabel(intensity)}
-                  </span>
-                </Tooltip>
-              </Circle>
-            </Fragment>
-          )
-        })}
-
+        <HeatMapOverlays layer={layer} onSelect={onSelect} selectedId={selectedId} wards={wards} />
         <FlyToWard selectedId={selectedId} wards={wards} />
-      </MapContainer>
+      </Map>
 
       <div className="pointer-events-none absolute left-3 top-3 z-[1000] rounded-lg bg-slate-900/80 px-2 py-1 text-[0.65rem] font-bold uppercase tracking-wide text-cyan-200 backdrop-blur-sm">
         India · Bhopal constituency (demo)
@@ -190,11 +129,95 @@ function IndianHeatMap({
   )
 }
 
-function MapBridge({ onMapReady }: { onMapReady: (map: L.Map) => void }) {
+function MapBridge({ onMapReady }: { onMapReady: (map: google.maps.Map) => void }) {
   const map = useMap()
   useEffect(() => {
-    onMapReady(map)
+    if (map) onMapReady(map)
   }, [map, onMapReady])
+  return null
+}
+
+function HeatMapOverlays({
+  wards,
+  layer,
+  selectedId,
+  onSelect,
+}: {
+  wards: WardMapPoint[]
+  layer: MapLayer
+  selectedId: string
+  onSelect: (id: string) => void
+}) {
+  const map = useMap()
+  const overlaysRef = useRef<Array<google.maps.MVCObject & { setMap: (map: google.maps.Map | null) => void }>>([])
+  const onSelectRef = useRef(onSelect)
+  onSelectRef.current = onSelect
+
+  useEffect(() => {
+    if (!map) return
+
+    overlaysRef.current.forEach((overlay) => overlay.setMap(null))
+    overlaysRef.current = []
+
+    const boundary = new google.maps.Polygon({
+      paths: constituencyBoundary.map(([lat, lng]) => ({ lat, lng })),
+      strokeColor: '#22d3ee',
+      strokeOpacity: 1,
+      strokeWeight: 2,
+      fillColor: '#0ea5e9',
+      fillOpacity: 0.06,
+      clickable: false,
+    })
+    boundary.setMap(map)
+    overlaysRef.current.push(boundary)
+
+    const listeners: google.maps.MapsEventListener[] = []
+
+    wards.forEach((ward) => {
+      const intensity = layerIntensity(ward, layer)
+      const color = getIntensityColor(intensity)
+      const baseRadius = heatRadiusMeters(intensity)
+      const isSelected = ward.wardId === selectedId
+      const center = { lat: ward.lat, lng: ward.lng }
+
+      ;[1.35, 1, 0.65].forEach((scale, index) => {
+        const circle = new google.maps.Circle({
+          center,
+          radius: baseRadius * scale,
+          strokeWeight: 0,
+          fillColor: color,
+          fillOpacity: index === 0 ? 0.14 : index === 1 ? 0.28 : 0.42,
+          clickable: false,
+          zIndex: 1,
+        })
+        circle.setMap(map)
+        overlaysRef.current.push(circle)
+      })
+
+      const marker = new google.maps.Circle({
+        center,
+        radius: isSelected ? 220 : 180,
+        strokeColor: isSelected ? '#ffffff' : color,
+        strokeWeight: isSelected ? 3 : 2,
+        fillColor: isSelected ? color : '#0f172a',
+        fillOpacity: isSelected ? 0.95 : 0.85,
+        clickable: true,
+        zIndex: 2,
+      })
+      marker.setMap(map)
+      overlaysRef.current.push(marker)
+
+      const listener = marker.addListener('click', () => onSelectRef.current(ward.wardId))
+      listeners.push(listener)
+    })
+
+    return () => {
+      listeners.forEach((listener) => listener.remove())
+      overlaysRef.current.forEach((overlay) => overlay.setMap(null))
+      overlaysRef.current = []
+    }
+  }, [map, wards, layer, selectedId])
+
   return null
 }
 
@@ -205,33 +228,36 @@ function FlyToWard({
   selectedId: string
   wards: WardMapPoint[]
 }) {
-  const leafletMap = useMap()
+  const map = useMap()
 
   useEffect(() => {
     const ward = wards.find((w) => w.wardId === selectedId)
-    if (!ward) return
-    leafletMap.flyTo([ward.lat, ward.lng], Math.max(leafletMap.getZoom(), 13), { duration: 0.6 })
-  }, [leafletMap, selectedId, wards])
+    if (!ward || !map) return
+    map.panTo({ lat: ward.lat, lng: ward.lng })
+    map.setZoom(Math.max(map.getZoom() ?? 12, 13))
+  }, [map, selectedId, wards])
 
   return null
 }
 
-function MapZoomToolbar({ map, wards }: { map: L.Map; wards: WardMapPoint[] }) {
-  const fitConstituency = () => {
-    const bounds = L.latLngBounds(getWardBounds(wards))
-    map.fitBounds(bounds.pad(0.35), { animate: true, maxZoom: 13 })
-  }
+function MapZoomToolbar({ map, wards }: { map: google.maps.Map; wards: WardMapPoint[] }) {
+  const fitConstituency = useCallback(() => {
+    const bounds = new google.maps.LatLngBounds()
+    wards.forEach((ward) => bounds.extend({ lat: ward.lat, lng: ward.lng }))
+    map.fitBounds(bounds, { top: 48, right: 48, bottom: 48, left: 48 })
+  }, [map, wards])
 
-  const viewIndia = () => {
-    map.flyTo(INDIA_MAP_VIEW.center, INDIA_MAP_VIEW.zoom, { animate: true, duration: 0.8 })
-  }
+  const viewIndia = useCallback(() => {
+    map.panTo({ lat: INDIA_MAP_VIEW.center[0], lng: INDIA_MAP_VIEW.center[1] })
+    map.setZoom(INDIA_MAP_VIEW.zoom)
+  }, [map])
 
   return (
     <div className="absolute right-3 top-3 z-[1000] flex flex-col gap-1.5">
-      <ZoomButton label="Zoom in" onClick={() => map.zoomIn()}>
+      <ZoomButton label="Zoom in" onClick={() => map.setZoom((map.getZoom() ?? 12) + 1)}>
         +
       </ZoomButton>
-      <ZoomButton label="Zoom out" onClick={() => map.zoomOut()}>
+      <ZoomButton label="Zoom out" onClick={() => map.setZoom((map.getZoom() ?? 12) - 1)}>
         −
       </ZoomButton>
       <div className="my-0.5 h-px bg-white/20" />

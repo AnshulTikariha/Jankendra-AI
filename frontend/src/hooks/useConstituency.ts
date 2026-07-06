@@ -7,6 +7,7 @@ import {
   resolveWard,
 } from '../api/constituency'
 import type { CityOption, WardOption } from '../api/types/constituency'
+import { FALLBACK_CITY_OPTIONS } from '../data/cityOptions'
 import { useAuthStore } from '../stores/useAuthStore'
 
 function mapWardOption(ward: {
@@ -44,17 +45,22 @@ export function useCities() {
     queryKey: ['cities'],
     queryFn: async () => {
       if (!token) throw new Error('Not authenticated')
-      const response = await fetchCities(token)
-      return response.cities.map(
-        (city): CityOption => ({
-          city: city.city,
-          displayName: city.display_name,
-          defaultLat: city.default_lat,
-          defaultLng: city.default_lng,
-          defaultZoom: city.default_zoom,
-          wardCount: city.ward_count,
-        }),
-      )
+      try {
+        const response = await fetchCities(token)
+        const cities = response.cities.map(
+          (city): CityOption => ({
+            city: city.city,
+            displayName: city.display_name,
+            defaultLat: city.default_lat,
+            defaultLng: city.default_lng,
+            defaultZoom: city.default_zoom,
+            wardCount: city.ward_count,
+          }),
+        )
+        return cities.length > 0 ? cities : FALLBACK_CITY_OPTIONS
+      } catch {
+        return FALLBACK_CITY_OPTIONS
+      }
     },
     enabled: Boolean(token),
     staleTime: 30 * 60 * 1000,
@@ -76,7 +82,7 @@ export function useWards(city?: string) {
         wards: response.wards.map(mapWardOption),
       }
     },
-    enabled: Boolean(token),
+    enabled: Boolean(token && city),
     staleTime: 5 * 60 * 1000,
   })
 }

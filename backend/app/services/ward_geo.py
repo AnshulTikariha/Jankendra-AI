@@ -1,6 +1,8 @@
+import copy
 import json
 import math
 from dataclasses import dataclass
+from typing import Any
 
 from shapely.geometry import Point, shape
 from shapely.geometry.base import BaseGeometry
@@ -13,6 +15,53 @@ class WardResolveResult:
     ward: Ward
     confidence: str
     distance_m: float | None = None
+
+
+def _first_position(geometry: dict) -> tuple[float, float] | None:
+    coords = geometry.get("coordinates")
+    if not coords:
+        return None
+
+    while isinstance(coords[0], (list, tuple)):
+        coords = coords[0]
+
+    if len(coords) < 2:
+        return None
+
+    return float(coords[0]), float(coords[1])
+
+
+def geometry_looks_like_lat_lng_swapped(geometry: dict) -> bool:
+    """Some Bharatlas layers store [lat, lng] instead of GeoJSON [lng, lat]."""
+    position = _first_position(geometry)
+    if position is None:
+        return False
+
+    first, second = position
+    return 8 <= first <= 37 and 68 <= second <= 97
+
+
+def _swap_position(position: list[Any]) -> list[Any]:
+    if len(position) < 2:
+        return position
+    return [position[1], position[0], *position[2:]]
+
+
+def _swap_coordinates_recursive(coords: Any) -> Any:
+    if not coords:
+        return coords
+    if isinstance(coords[0], (int, float)):
+        return _swap_position(list(coords))
+    return [_swap_coordinates_recursive(item) for item in coords]
+
+
+def normalize_geojson_geometry(geometry: dict) -> dict:
+    if not geometry_looks_like_lat_lng_swapped(geometry):
+        return geometry
+
+    normalized = copy.deepcopy(geometry)
+    normalized["coordinates"] = _swap_coordinates_recursive(normalized["coordinates"])
+    return normalized
 
 
 def _parse_geometry(geojson_text: str) -> BaseGeometry:
@@ -63,19 +112,22 @@ def resolve_ward_for_point(
         ward = sorted(containing, key=lambda item: item.code)[0]
         return WardResolveResult(ward=ward, confidence="inside", distance_m=0.0)
 
-    nearest: Ward | None = None
-    nearest_distance: float | None = None
+    nearest_by_city: dict[str, tuple[Ward, float]] = {}
 
     for ward in wards:
         if ward.centroid_lat is None or ward.centroid_lng is None:
             continue
+        city_key = ward.city or ""
         distance = haversine_m(latitude, longitude, ward.centroid_lat, ward.centroid_lng)
-        if nearest_distance is None or distance < nearest_distance:
-            nearest = ward
-            nearest_distance = distance
+        current = nearest_by_city.get(city_key)
+        if current is None or distance < current[1]:
+            nearest_by_city[city_key] = (ward, distance)
 
-    if nearest is None or nearest_distance is None:
+    if not nearest_by_city:
         return None
+
+    nearest_city = min(nearest_by_city.items(), key=lambda item: item[1][1])[0]
+    nearest, nearest_distance = nearest_by_city[nearest_city]
 
     return WardResolveResult(
         ward=nearest,

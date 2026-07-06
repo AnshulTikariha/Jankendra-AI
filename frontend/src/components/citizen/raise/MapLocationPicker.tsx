@@ -1,23 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import L from 'leaflet'
-import {
-  GeoJSON,
-  MapContainer,
-  Marker,
-  TileLayer,
-  useMap,
-  useMapEvents,
-} from 'react-leaflet'
+import { Map, useMap, useMapsLibrary } from '@vis.gl/react-google-maps'
 import { useTranslation } from 'react-i18next'
+import { GOOGLE_MAP_ID } from '../../../config/googleMaps'
+import { useGooglePlaceAutocomplete } from '../../../hooks/useGooglePlaceAutocomplete'
+import { boundsFromGeoJsonGeometry } from '../../../lib/googleMapGeo'
+import { fetchGooglePlaceDetails, reverseGeocodeWithGoogle } from '../../../lib/googleGeocoding'
 import { formatCoordinates } from '../../../lib/raiseComplaintFormat'
-import { reverseGeocode, searchPlaces, type GeocodingResult } from '../../../lib/geocoding'
-
-const pinIcon = L.divIcon({
-  className: '',
-  html: `<div style="width:28px;height:28px;border-radius:50% 50% 50% 0;background:#0d9488;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.35);transform:rotate(-45deg);margin-top:-14px;"></div>`,
-  iconSize: [28, 28],
-  iconAnchor: [14, 28],
-})
 
 export type MapLocationValue = {
   latitude: number | null
@@ -39,57 +27,97 @@ type Props = {
   searchBias?: { lat: number; lng: number; cityName?: string }
 }
 
-function MapClickHandler({ onPick }: { onPick: (lat: number, lng: number) => void }) {
-  useMapEvents({
-    click(event) {
-      onPick(event.latlng.lat, event.latlng.lng)
-    },
-  })
-  return null
-}
-
-function MapFlyTo({
+function MapCamera({
   position,
   zoom,
   fitBoundary,
 }: {
-  position: [number, number] | null
+  position: { lat: number; lng: number } | null
   zoom?: number
   fitBoundary?: Record<string, unknown> | null
 }) {
   const map = useMap()
 
   useEffect(() => {
+    if (!map) return
+
     if (fitBoundary) {
-      const layer = L.geoJSON(fitBoundary as unknown as GeoJSON.Geometry)
-      const bounds = layer.getBounds()
-      if (bounds.isValid()) {
-        map.fitBounds(bounds, { padding: [28, 28], maxZoom: 16, duration: 0.45 })
+      const bounds = boundsFromGeoJsonGeometry(fitBoundary)
+      if (bounds) {
+        map.fitBounds(bounds, { top: 28, right: 28, bottom: 28, left: 28 })
         return
       }
     }
 
     if (!position) return
-    map.flyTo(position, zoom ?? Math.max(map.getZoom(), 15), { duration: 0.45 })
+    map.panTo(position)
+    map.setZoom(zoom ?? Math.max(map.getZoom() ?? 15, 15))
   }, [map, position, zoom, fitBoundary])
 
   return null
 }
 
 function WardBoundaryLayer({ boundary }: { boundary: Record<string, unknown> | null }) {
-  if (!boundary) return null
+  const map = useMap()
 
-  return (
-    <GeoJSON
-      data={boundary as unknown as GeoJSON.GeoJsonObject}
-      pathOptions={{
-        color: '#0d9488',
-        weight: 2,
-        fillColor: '#14b8a6',
-        fillOpacity: 0.12,
-      }}
-    />
-  )
+  useEffect(() => {
+    if (!map || !boundary) return
+
+    const layer = new google.maps.Data()
+    layer.addGeoJson({ type: 'Feature', geometry: boundary })
+    layer.setStyle({
+      strokeColor: '#0d9488',
+      strokeWeight: 2,
+      fillColor: '#14b8a6',
+      fillOpacity: 0.12,
+    })
+    layer.setMap(map)
+
+    return () => layer.setMap(null)
+  }, [map, boundary])
+
+  return null
+}
+
+function DraggableMarker({
+  position,
+  onMove,
+}: {
+  position: { lat: number; lng: number }
+  onMove: (lat: number, lng: number) => void
+}) {
+  const map = useMap()
+  const markerRef = useRef<google.maps.Marker | null>(null)
+  const onMoveRef = useRef(onMove)
+  onMoveRef.current = onMove
+
+  useEffect(() => {
+    if (!map) return
+
+    const marker = new google.maps.Marker({
+      position,
+      map,
+      draggable: true,
+    })
+    markerRef.current = marker
+
+    const listener = marker.addListener('dragend', () => {
+      const next = marker.getPosition()
+      if (next) onMoveRef.current(next.lat(), next.lng())
+    })
+
+    return () => {
+      listener.remove()
+      marker.setMap(null)
+      markerRef.current = null
+    }
+  }, [map])
+
+  useEffect(() => {
+    markerRef.current?.setPosition(position)
+  }, [position])
+
+  return null
 }
 
 export function MapLocationPicker({
@@ -101,23 +129,26 @@ export function MapLocationPicker({
   searchBias,
 }: Props) {
   const { t } = useTranslation('complaints')
+  const placesLib = useMapsLibrary('places')
   const [searchQuery, setSearchQuery] = useState('')
-  const [searchResults, setSearchResults] = useState<GeocodingResult[]>([])
-  const [searchLoading, setSearchLoading] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [geoLoading, setGeoLoading] = useState(false)
   const [addressLoading, setAddressLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [flyTarget, setFlyTarget] = useState<[number, number] | null>(null)
+  const [flyTarget, setFlyTarget] = useState<{ lat: number; lng: number } | null>(null)
   const [flyZoom, setFlyZoom] = useState<number | undefined>(undefined)
   const [fitBoundary, setFitBoundary] = useState<Record<string, unknown> | null>(null)
-  const searchSeq = useRef(0)
   const wardFocusKey = useRef<string>('')
 
+  const { suggestions, loading: searchLoading, placesReady } = useGooglePlaceAutocomplete(
+    searchQuery,
+    searchBias,
+  )
+
   const hasPin = value.latitude != null && value.longitude != null
-  const markerPosition = useMemo<[number, number] | null>(() => {
+  const markerPosition = useMemo(() => {
     if (!hasPin) return null
-    return [value.latitude!, value.longitude!]
+    return { lat: value.latitude!, lng: value.longitude! }
   }, [hasPin, value.latitude, value.longitude])
 
   useEffect(() => {
@@ -134,7 +165,7 @@ export function MapLocationPicker({
     }
 
     setFitBoundary(null)
-    setFlyTarget([wardFocus.lat, wardFocus.lng])
+    setFlyTarget({ lat: wardFocus.lat, lng: wardFocus.lng })
     setFlyZoom(15)
   }, [wardFocus, wardBoundary])
 
@@ -146,7 +177,7 @@ export function MapLocationPicker({
     async (latitude: number, longitude: number, address?: string) => {
       setError(null)
       setFitBoundary(null)
-      setFlyTarget([latitude, longitude])
+      setFlyTarget({ lat: latitude, lng: longitude })
       setFlyZoom(16)
 
       if (address) {
@@ -156,7 +187,7 @@ export function MapLocationPicker({
 
       setAddressLoading(true)
       try {
-        const resolved = await reverseGeocode(latitude, longitude)
+        const resolved = await reverseGeocodeWithGoogle(latitude, longitude)
         onChange({
           latitude,
           longitude,
@@ -173,41 +204,29 @@ export function MapLocationPicker({
   )
 
   useEffect(() => {
-    const query = searchQuery.trim()
-    if (query.length < 2) {
-      setSearchResults([])
-      setSearchLoading(false)
+    if (suggestions.length > 0 && searchQuery.trim().length >= 2) {
+      setSearchOpen(true)
+    } else if (suggestions.length === 0 && !searchLoading) {
+      setSearchOpen(false)
+    }
+  }, [suggestions, searchQuery, searchLoading])
+
+  const handleSearchSelect = async (placeId: string, label: string) => {
+    if (!placesLib) {
+      setError(t('raise.where.map.searchError'))
       return
     }
 
-    const seq = ++searchSeq.current
-    setSearchLoading(true)
-
-    const timer = window.setTimeout(() => {
-      void searchPlaces(query, searchBias)
-        .then((results) => {
-          if (seq !== searchSeq.current) return
-          setSearchResults(results)
-          setSearchOpen(true)
-        })
-        .catch(() => {
-          if (seq !== searchSeq.current) return
-          setSearchResults([])
-          setError(t('raise.where.map.searchError'))
-        })
-        .finally(() => {
-          if (seq === searchSeq.current) setSearchLoading(false)
-        })
-    }, 450)
-
-    return () => window.clearTimeout(timer)
-  }, [searchQuery, searchBias, t])
-
-  const handleSearchSelect = (result: GeocodingResult) => {
-    setSearchQuery(result.label.split(',')[0] ?? result.label)
+    setSearchQuery(label.split(',')[0] ?? label)
     setSearchOpen(false)
-    setSearchResults([])
-    void applyPin(result.latitude, result.longitude, result.label)
+    setError(null)
+
+    try {
+      const place = await fetchGooglePlaceDetails(placesLib, placeId)
+      void applyPin(place.latitude, place.longitude, place.label)
+    } catch {
+      setError(t('raise.where.map.searchError'))
+    }
   }
 
   const captureCurrentLocation = () => {
@@ -234,7 +253,6 @@ export function MapLocationPicker({
 
   const clearLocation = () => {
     setSearchQuery('')
-    setSearchResults([])
     setSearchOpen(false)
     setFlyTarget(null)
     setFitBoundary(null)
@@ -245,7 +263,7 @@ export function MapLocationPicker({
   const mapsUrl =
     hasPin ? `https://www.google.com/maps?q=${value.latitude},${value.longitude}` : null
 
-  const mapCenter = markerPosition ?? mapView.center
+  const mapCenter = markerPosition ?? { lat: mapView.center[0], lng: mapView.center[1] }
   const mapZoom = markerPosition ? 16 : mapView.zoom
 
   return (
@@ -269,7 +287,7 @@ export function MapLocationPicker({
             setError(null)
           }}
           onFocus={() => {
-            if (searchResults.length > 0) setSearchOpen(true)
+            if (suggestions.length > 0) setSearchOpen(true)
           }}
           placeholder={t('raise.where.map.searchPlaceholder')}
           type="search"
@@ -281,13 +299,13 @@ export function MapLocationPicker({
           </span>
         )}
 
-        {searchOpen && searchResults.length > 0 && (
+        {searchOpen && suggestions.length > 0 && (
           <ul className="absolute z-20 mt-1 max-h-48 w-full overflow-auto rounded-xl border border-line bg-white py-1 shadow-lg">
-            {searchResults.map((result) => (
+            {suggestions.map((result) => (
               <li key={result.placeId}>
                 <button
                   className="w-full px-4 py-2.5 text-left text-xs font-medium text-ink hover:bg-teal-50"
-                  onClick={() => handleSearchSelect(result)}
+                  onClick={() => void handleSearchSelect(result.placeId, result.label)}
                   type="button"
                 >
                   {result.label}
@@ -296,39 +314,36 @@ export function MapLocationPicker({
             ))}
           </ul>
         )}
+        {!placesReady && searchQuery.trim().length >= 2 && (
+          <p className="mt-1 text-xs text-muted">{t('raise.where.map.searchLoading')}</p>
+        )}
       </div>
 
       <div className="map-location-picker relative z-0 mt-3 h-56 overflow-hidden rounded-xl border border-line/80 sm:h-64">
-        <MapContainer
-          center={mapCenter}
+        <Map
           className="size-full"
+          defaultCenter={mapCenter}
+          defaultZoom={mapZoom}
+          disableDefaultUI
+          gestureHandling="greedy"
           key={`${mapView.center[0]}-${mapView.center[1]}-${mapView.zoom}`}
-          maxZoom={18}
-          minZoom={9}
-          scrollWheelZoom
-          zoom={mapZoom}
+          mapId={GOOGLE_MAP_ID}
+          onClick={(event) => {
+            const latLng = event.detail.latLng
+            if (!latLng) return
+            void applyPin(latLng.lat, latLng.lng)
+          }}
+          reuseMaps
         >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
           <WardBoundaryLayer boundary={wardBoundary} />
-          <MapClickHandler onPick={(lat, lng) => void applyPin(lat, lng)} />
-          <MapFlyTo fitBoundary={fitBoundary} position={flyTarget} zoom={flyZoom} />
+          <MapCamera fitBoundary={fitBoundary} position={flyTarget} zoom={flyZoom} />
           {markerPosition && (
-            <Marker
-              draggable
-              eventHandlers={{
-                dragend: (event) => {
-                  const { lat, lng } = event.target.getLatLng()
-                  void applyPin(lat, lng)
-                },
-              }}
-              icon={pinIcon}
+            <DraggableMarker
+              onMove={(lat, lng) => void applyPin(lat, lng)}
               position={markerPosition}
             />
           )}
-        </MapContainer>
+        </Map>
       </div>
 
       <p className="mt-2 text-xs text-muted">{t('raise.where.map.tapHint')}</p>

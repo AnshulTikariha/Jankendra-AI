@@ -75,6 +75,7 @@ async def resolve_ward(
         ward_id=ward.id,
         name=ward.name,
         code=ward.code,
+        city=ward.city,
         municipal_ward_number=ward.municipal_ward_number,
         ward_area_name=ward.ward_area_name,
         confidence=result.confidence,  # type: ignore[arg-type]

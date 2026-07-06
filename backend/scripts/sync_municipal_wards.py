@@ -25,7 +25,7 @@ from sqlalchemy import select
 from app.core.database import AsyncSessionLocal
 from app.data.municipal_layers import MUNICIPAL_LAYERS, MunicipalLayerConfig
 from app.models import Ward
-from app.services.ward_geo import compute_centroid
+from app.services.ward_geo import compute_centroid, normalize_geojson_geometry
 
 USER_AGENT = "JankendraAI/1.0 (ward boundary sync)"
 
@@ -116,6 +116,7 @@ async def sync_city(
         if not number or not geometry:
             continue
 
+        geometry = normalize_geojson_geometry(geometry)
         code = ward_code(config, number)
         geometry_json = json.dumps(geometry, separators=(",", ":"))
         lat, lng = compute_centroid(geometry_json)
