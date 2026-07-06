@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Pull latest release branch code, build frontend, install Python deps, restart services.
-# Safe to run on every deploy (manual, GitHub Actions, or Cloud Build).
+# Safe to run on every deploy (manual or Cloud Build).
 set -euo pipefail
 
 APP_DIR="/opt/jankendra"

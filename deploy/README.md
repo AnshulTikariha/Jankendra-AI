@@ -48,20 +48,9 @@ On GCP VM, **do not** commit `google-credential.json`. The attached service acco
 
 ## 3. Auto-deploy on `release` branch
 
-### Option A — GitHub Actions (recommended for this repo)
+Use **GCP Cloud Build** — credentials stay in GCP Secret Manager (safe for a public GitHub repo).
 
-Add repository secrets:
-
-| Secret | Value |
-|--------|--------|
-| `VM_HOST` | VM external IP |
-| `VM_USER` | SSH user (e.g. your OS Login user) |
-| `VM_SSH_PRIVATE_KEY` | Private key for SSH |
-
-Workflow: `.github/workflows/deploy-release.yml`  
-Runs `deploy/scripts/deploy.sh` on every push/merge to **`release`**.
-
-### Option B — Google Cloud Build
+See `deploy/CICD-SETUP.md` and `deploy/gcp/setup-cloud-build.sh`.
 
 ```bash
 gcloud builds triggers create github \
@@ -73,7 +62,9 @@ gcloud builds triggers create github \
   --substitutions=_VM_NAME=jankendra-app,_ZONE=asia-south1-a
 ```
 
-Grant Cloud Build permission to SSH to the VM (OS Login or `roles/compute.instanceAdmin.v1`).
+Or connect the repo once in [Cloud Build → Triggers](https://console.cloud.google.com/cloud-build/triggers?project=project-d9125421-6cdc-4628-9f5).
+
+Manual deploy from Windows: `.\deploy\gcp\submit-build.ps1`
 
 ## 4. Manual redeploy
 

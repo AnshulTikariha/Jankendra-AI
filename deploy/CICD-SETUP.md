@@ -1,9 +1,7 @@
 # CI/CD — GCP Cloud Build (recommended)
 
 Auto-deploy runs in **GCP Cloud Build** when code is merged to `release`.  
-Google credentials are stored in **GCP Secret Manager** — not in GitHub.
-
-GitHub Actions deploy is **disabled** (manual fallback only).
+Google credentials are stored in **GCP Secret Manager** — not in GitHub (safe for a public repo).
 
 ---
 
@@ -91,15 +89,6 @@ gcloud builds triggers run jankendra-release-deploy \
 | JWT, Maps key, CORS | `/etc/jankendra/*.env` on VM (never in git) |
 
 **Do not** commit `ai_modules/credentials/google-credential.json` to git.
-
----
-
-## GitHub Actions (disabled)
-
-`.github/workflows/deploy-release.yml` no longer auto-deploys on push.  
-Use GCP Cloud Build instead so SSH keys and credentials stay in GCP.
-
-You may delete GitHub secrets `VM_HOST`, `VM_USER`, `VM_SSH_PRIVATE_KEY` if no longer needed.
 
 ---
 
