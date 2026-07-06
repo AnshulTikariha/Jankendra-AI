@@ -95,6 +95,7 @@ class WardResolveResponse(BaseModel):
     ward_id: int
     name: str
     code: str
+    city: str | None = None
     municipal_ward_number: str | None = None
     ward_area_name: str | None = None
     confidence: Literal["inside", "nearest"]

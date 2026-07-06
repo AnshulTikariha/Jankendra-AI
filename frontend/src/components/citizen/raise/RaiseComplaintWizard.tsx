@@ -80,9 +80,9 @@ export function RaiseComplaintWizard() {
   const setLastComplaintId = useUiStore((s) => s.setLastComplaintId)
 
   const saveAttachments = useComplaintAttachmentsStore((s) => s.saveAttachments)
-  const { data: citiesData, isLoading: citiesLoading } = useCities()
-  const [city, setCity] = useState('bengaluru')
-  const { data: wardsData, isLoading: wardsLoading } = useWards(city)
+  const { data: citiesData, isLoading: citiesLoading, isFetched: citiesFetched } = useCities()
+  const [city, setCity] = useState('')
+  const { data: wardsData, isLoading: wardsLoading } = useWards(city || undefined)
   const resolveWardMutation = useResolveWard()
 
   const profileWardId = preferredWardId(profile?.wardId)
@@ -104,6 +104,12 @@ export function RaiseComplaintWizard() {
   const [initialized, setInitialized] = useState(false)
   const resolveTimerRef = useRef<number | null>(null)
   const skipResolveRef = useRef(false)
+  const mapResolvedWardRef = useRef<{
+    city: string
+    wardId: number
+    label: string
+    confidence: 'inside' | 'nearest'
+  } | null>(null)
 
   const { data: wardBoundaryData } = useWardBoundary(form.wardId)
 
@@ -129,7 +135,12 @@ export function RaiseComplaintWizard() {
   const { restoreDraft, clearDraft } = useRaiseComplaintDraft(form, step, defaultWardId)
 
   useEffect(() => {
-    if (!citiesData?.length) return
+    if (!citiesData?.length || city) return
+    setCity(citiesData[0].city)
+  }, [citiesData, city])
+
+  useEffect(() => {
+    if (!citiesData?.length || !city) return
     if (citiesData.some((item) => item.city === city)) return
     setCity(citiesData[0].city)
   }, [citiesData, city])
@@ -150,6 +161,22 @@ export function RaiseComplaintWizard() {
 
   useEffect(() => {
     if (wardOptions.length === 0) return
+
+    const pending = mapResolvedWardRef.current
+    if (pending && city === pending.city) {
+      if (wardOptions.some((ward) => ward.id === pending.wardId)) {
+        mapResolvedWardRef.current = null
+        skipResolveRef.current = true
+        setForm((current) => ({ ...current, wardId: pending.wardId }))
+        setWardPrefilled(false)
+        setWardDetected({
+          label: pending.label,
+          confidence: pending.confidence,
+        })
+      }
+      return
+    }
+
     setForm((current) => {
       if (wardOptions.some((ward) => ward.id === current.wardId)) return current
       skipResolveRef.current = true
@@ -174,17 +201,32 @@ export function RaiseComplaintWizard() {
 
     resolveTimerRef.current = window.setTimeout(() => {
       resolveWardMutation.mutate(
-        { latitude: form.latitude!, longitude: form.longitude!, city },
+        { latitude: form.latitude!, longitude: form.longitude! },
         {
           onSuccess: (result) => {
-            setForm((current) => ({ ...current, wardId: result.ward_id }))
+            const label = result.ward_area_name
+              ? `${result.name} — ${result.ward_area_name}`
+              : result.name
+
+            skipResolveRef.current = true
             setWardPrefilled(false)
             setWardDetected({
-              label: result.ward_area_name
-                ? `${result.name} — ${result.ward_area_name}`
-                : result.name,
+              label,
               confidence: result.confidence,
             })
+
+            if (result.city && result.city !== city) {
+              mapResolvedWardRef.current = {
+                city: result.city,
+                wardId: result.ward_id,
+                label,
+                confidence: result.confidence,
+              }
+              setCity(result.city)
+              return
+            }
+
+            setForm((current) => ({ ...current, wardId: result.ward_id }))
           },
           onError: () => setWardDetected(null),
         },
@@ -196,7 +238,7 @@ export function RaiseComplaintWizard() {
         window.clearTimeout(resolveTimerRef.current)
       }
     }
-  }, [form.latitude, form.longitude, city, resolveWardMutation])
+  }, [form.latitude, form.longitude, resolveWardMutation])
 
   const primaryCategory = getPrimaryCategory(form.categories)
 
@@ -416,6 +458,7 @@ export function RaiseComplaintWizard() {
                     className="mt-2 w-full rounded-xl border border-line bg-white px-4 py-3 font-semibold outline-none focus:ring-4 focus:ring-teal-200/40 disabled:opacity-60"
                     disabled={citiesLoading || !citiesData?.length}
                     onChange={(event) => {
+                      mapResolvedWardRef.current = null
                       setCity(event.target.value)
                       setWardPrefilled(false)
                       setWardDetected(null)
@@ -423,12 +466,27 @@ export function RaiseComplaintWizard() {
                     }}
                     value={city}
                   >
+                    {!city && (
+                      <option disabled value="">
+                        {citiesLoading ? t('raise.where.cityLoading') : t('raise.where.citySelect')}
+                      </option>
+                    )}
                     {(citiesData ?? []).map((item) => (
                       <option key={item.city} value={item.city}>
-                        {item.displayName} ({item.wardCount})
+                        {item.wardCount > 0
+                          ? `${item.displayName} (${item.wardCount})`
+                          : item.displayName}
                       </option>
                     ))}
                   </select>
+                  {citiesLoading && (
+                    <p className="mt-1 text-xs text-muted">{t('raise.where.cityLoading')}</p>
+                  )}
+                  {citiesFetched && citiesData?.every((item) => item.wardCount === 0) && (
+                    <p className="mt-1 text-xs font-semibold text-amber-700">
+                      {t('raise.where.cityApiHint')}
+                    </p>
+                  )}
                 </label>
 
                 <label className="block">

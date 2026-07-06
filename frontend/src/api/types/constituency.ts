@@ -23,6 +23,7 @@ export type ApiWardResolveResponse = {
   ward_id: number
   name: string
   code: string
+  city: string | null
   municipal_ward_number: string | null
   ward_area_name: string | null
   confidence: 'inside' | 'nearest'
