@@ -19,7 +19,7 @@ jobs:
 
       - name: Package application
         run: |
-          tar -czf /tmp/jankendra-deploy.tgz \
+          tar -czf jankendra-deploy.tgz \
             --exclude=.git \
             --exclude=node_modules \
             --exclude=frontend/node_modules \
@@ -27,6 +27,7 @@ jobs:
             --exclude=.venv \
             --exclude=backend/data/*.db \
             --exclude=ai_modules/credentials \
+            --exclude=jankendra-deploy.tgz \
             .
 
       - name: Upload archive to VM
@@ -36,7 +37,7 @@ jobs:
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.VM_SSH_PRIVATE_KEY }}
           port: ${{ secrets.VM_SSH_PORT || 22 }}
-          source: "/tmp/jankendra-deploy.tgz"
+          source: "jankendra-deploy.tgz"
           target: "/tmp/"
 
       - name: Extract and deploy on VM
