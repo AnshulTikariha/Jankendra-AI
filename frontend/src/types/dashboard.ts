@@ -33,6 +33,7 @@ export type WardRow = {
   wardId: string
   wardName: string
   openClusters: number
+  openComplaints: number
   overdueCommitments: number
   infraAlerts: string[]
 }

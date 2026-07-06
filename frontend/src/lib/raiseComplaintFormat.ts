@@ -11,7 +11,6 @@ export type ComplaintSubmitMeta = {
   duration: Record<ComplaintDuration, string>
   impact: Record<ComplaintImpact, string>
   priority: Record<ComplaintPriority, string>
-  subCategoryLabel?: string
   categoryLabels?: string[]
 }
 
@@ -79,9 +78,6 @@ export function buildComplaintDescription(
     details.push(`Category: ${form.customCategory.trim()}`)
   }
 
-  if (meta.subCategoryLabel) {
-    details.push(`Sub-category: ${meta.subCategoryLabel}`)
-  }
   details.push(`Priority: ${meta.priority[form.priority]}`)
   if (form.duration) {
     details.push(`When: ${meta.duration[form.duration]}`)

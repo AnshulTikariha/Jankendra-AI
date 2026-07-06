@@ -11,15 +11,15 @@ type SavedDraft = {
   savedAt: string
 }
 
-type LegacyDraftForm = RaiseComplaintForm & { category?: ComplaintCategory }
+type LegacyDraftForm = RaiseComplaintForm & { category?: ComplaintCategory; subCategory?: string }
 
 function normalizeDraftForm(form: LegacyDraftForm): RaiseComplaintForm {
-  if (form.categories?.length) return form
-  if (form.category) {
-    const { category, ...rest } = form
+  const { subCategory: _subCategory, category, ...rest } = form
+  if (rest.categories?.length) return rest
+  if (category) {
     return { ...rest, categories: [category] }
   }
-  return { ...form, categories: ['water'] }
+  return { ...rest, categories: ['water'] }
 }
 
 function readAllDrafts(): Record<string, SavedDraft> {
@@ -58,7 +58,6 @@ function isDraftEmpty(form: RaiseComplaintForm): boolean {
     !form.description.trim() &&
     !form.locationDetail.trim() &&
     !form.customCategory.trim() &&
-    !form.subCategory &&
     form.latitude == null &&
     !form.duration &&
     !form.impact &&

@@ -1,11 +1,8 @@
 import type { WardOption } from '../api/types/constituency'
 import type { WardRow } from '../types/dashboard'
 import type { WardPrioritySummary } from '../types/staff'
-import {
-  CONSTITUENCY_MAP_VIEW,
-  type WardMapPoint,
-  wardMapPoints,
-} from '../data/wardMapData'
+import { FALLBACK_CITY_OPTIONS } from '../data/cityOptions'
+import { type WardMapPoint } from '../data/wardMapData'
 
 function computeIntensity(
   openClusters: number,
@@ -30,11 +27,13 @@ function findGeoWard(
   )
 }
 
-function findMapTemplate(wardName: string): WardMapPoint | undefined {
-  return (
-    wardMapPoints.find((w) => w.wardName === wardName) ??
-    wardMapPoints.find((w) => wardName.includes(w.wardId))
-  )
+function cityDefaultCoords(city: string | null | undefined): { lat: number; lng: number } {
+  const match = FALLBACK_CITY_OPTIONS.find((option) => option.city === city)
+  if (match) {
+    return { lat: match.defaultLat, lng: match.defaultLng }
+  }
+
+  return { lat: FALLBACK_CITY_OPTIONS[0].defaultLat, lng: FALLBACK_CITY_OPTIONS[0].defaultLng }
 }
 
 function resolveCoordinates(
@@ -43,19 +42,27 @@ function resolveCoordinates(
   index: number,
 ): { lat: number; lng: number } {
   const geo = findGeoWard(row, geoWards)
-  if (geo?.centroidLat != null && geo.centroidLng != null) {
+  if (geo?.centroidLat != null && geo?.centroidLng != null) {
     return { lat: geo.centroidLat, lng: geo.centroidLng }
   }
 
-  const template = findMapTemplate(row.wardName)
-  if (template) {
-    return { lat: template.lat, lng: template.lng }
-  }
-
+  const cityCenter = cityDefaultCoords(geo?.city)
+  const wardNum = Number.parseInt(row.wardId, 10)
+  const offsetSeed = Number.isFinite(wardNum) ? wardNum : index
   return {
-    lat: CONSTITUENCY_MAP_VIEW.center[0] + (index % 3) * 0.008,
-    lng: CONSTITUENCY_MAP_VIEW.center[1] + Math.floor(index / 3) * 0.008,
+    lat: cityCenter.lat + ((offsetSeed % 5) - 2) * 0.004,
+    lng: cityCenter.lng + (Math.floor(offsetSeed / 5) % 5 - 2) * 0.004,
   }
+}
+
+export function filterActiveWardRows(rows: WardRow[]): WardRow[] {
+  return rows.filter(
+    (row) =>
+      row.openComplaints > 0 ||
+      row.openClusters > 0 ||
+      row.overdueCommitments > 0 ||
+      row.infraAlerts.length > 0,
+  )
 }
 
 export function mapWardRowsToMapPoints(
@@ -63,13 +70,12 @@ export function mapWardRowsToMapPoints(
   geoWards?: WardOption[],
 ): WardMapPoint[] {
   const scores = rows.map(
-    (r) => r.openClusters * 12 + r.openClusters * 2 + r.overdueCommitments * 8,
+    (row) => row.openClusters * 12 + row.openComplaints * 2 + row.overdueCommitments * 8,
   )
   const maxScore = Math.max(...scores, 1)
 
   return rows.map((row, index) => {
     const { lat, lng } = resolveCoordinates(row, geoWards, index)
-    const openComplaints = row.openClusters
     const geo = findGeoWard(row, geoWards)
 
     return {
@@ -78,14 +84,19 @@ export function mapWardRowsToMapPoints(
       lat,
       lng,
       openClusters: row.openClusters,
-      openComplaints,
+      openComplaints: row.openComplaints,
       overdueCommitments: row.overdueCommitments,
       resolvedThisWeek: 0,
-      intensity: computeIntensity(row.openClusters, openComplaints, row.overdueCommitments, maxScore),
+      intensity: computeIntensity(
+        row.openClusters,
+        row.openComplaints,
+        row.overdueCommitments,
+        maxScore,
+      ),
       topIssues: row.infraAlerts,
       categories: row.infraAlerts.map((label) => ({ label, count: 1 })),
       infraAlerts: row.infraAlerts,
-      recentSummary: `${row.openClusters} open clusters · ${row.overdueCommitments} overdue commitments`,
+      recentSummary: `${row.openComplaints} open complaints · ${row.openClusters} clusters · ${row.overdueCommitments} overdue commitments`,
     }
   })
 }
@@ -95,7 +106,7 @@ export function mapPriorityWardsToMapPoints(
   geoWards?: WardOption[],
 ): WardMapPoint[] {
   const scores = rows.map(
-    (r) => r.openClusters * 12 + r.openComplaints * 2 + r.overdueCommitments * 8,
+    (row) => row.openClusters * 12 + row.openComplaints * 2 + row.overdueCommitments * 8,
   )
   const maxScore = Math.max(...scores, 1)
 

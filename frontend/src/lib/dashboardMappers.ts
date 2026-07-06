@@ -75,6 +75,7 @@ export function mapDashboardResponse(response: ApiDashboardResponse): DashboardD
         wardId: item.ward_id,
         wardName: item.ward_name,
         openClusters: item.open_clusters,
+        openComplaints: item.open_complaints,
         overdueCommitments: item.overdue_commitments,
         infraAlerts: item.infra_alerts,
       }),
