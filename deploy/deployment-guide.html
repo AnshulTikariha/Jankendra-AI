@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jankendra-AI — GCP Deployment Guide</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --surface: #1a2332;
+      --surface2: #243044;
+      --text: #e7ecf3;
+      --muted: #9aa8bc;
+      --accent: #3b82f6;
+      --accent2: #22c55e;
+      --warn: #f59e0b;
+      --border: #2d3a4f;
+      --code-bg: #0d1117;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+    header {
+      background: linear-gradient(135deg, #1e3a5f 0%, #0f1419 60%);
+      border-bottom: 1px solid var(--border);
+      padding: 2.5rem 2rem;
+    }
+    header h1 { margin: 0 0 0.5rem; font-size: 2rem; }
+    header p { margin: 0; color: var(--muted); max-width: 720px; }
+    .badge {
+      display: inline-block;
+      background: var(--accent2);
+      color: #052e16;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      margin-bottom: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    main {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    nav.toc {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 2rem;
+    }
+    nav.toc h2 { margin: 0 0 0.75rem; font-size: 1rem; color: var(--muted); }
+    nav.toc ol { margin: 0; padding-left: 1.25rem; }
+    nav.toc a { color: var(--accent); text-decoration: none; }
+    nav.toc a:hover { text-decoration: underline; }
+    section {
+      margin-bottom: 2.5rem;
+      scroll-margin-top: 1rem;
+    }
+    h2 {
+      font-size: 1.4rem;
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 0.4rem;
+      margin: 0 0 1rem;
+    }
+    h3 { font-size: 1.05rem; margin: 1.25rem 0 0.5rem; color: #cbd5e1; }
+    p, li { color: #d1dae6; }
+    li { margin-bottom: 0.35rem; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.92rem;
+      margin: 1rem 0;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 0.6rem 0.75rem;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { background: var(--surface2); color: var(--text); }
+    td code { font-size: 0.85em; }
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem 1.1rem;
+      overflow-x: auto;
+      font-size: 0.85rem;
+      line-height: 1.5;
+    }
+    code {
+      font-family: Consolas, "Cascadia Code", monospace;
+      background: var(--code-bg);
+      padding: 0.1rem 0.35rem;
+      border-radius: 4px;
+      font-size: 0.88em;
+    }
+    pre code { background: none; padding: 0; }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+      margin: 1rem 0;
+    }
+    .card.warn { border-color: #92400e; background: #1c1408; }
+    .card.ok { border-color: #166534; background: #0a1a10; }
+    .arch {
+      font-family: Consolas, monospace;
+      font-size: 0.82rem;
+      white-space: pre;
+      color: #94a3b8;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+    @media (max-width: 700px) {
+      .grid-2 { grid-template-columns: 1fr; }
+      main { padding: 1rem; }
+    }
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 1.5rem 2rem;
+      color: var(--muted);
+      font-size: 0.85rem;
+      text-align: center;
+    }
+    a { color: var(--accent); }
+  </style>
+</head>
+<body>
+
+<header>
+  <span class="badge">Production reference</span>
+  <h1>Jankendra-AI — GCP Single-VM Deployment</h1>
+  <p>Complete record of what was built, configured, and deployed. Use this document for future redeploys, debugging, and onboarding.</p>
+</header>
+
+<main>
+
+  <nav class="toc">
+    <h2>Contents</h2>
+    <ol>
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#architecture">Architecture</a></li>
+      <li><a href="#what-we-built">What We Built</a></li>
+      <li><a href="#gcp-infra">GCP Infrastructure</a></li>
+      <li><a href="#repo-layout">Repository &amp; Deploy Files</a></li>
+      <li><a href="#deployment-steps">Deployment Steps (What We Did)</a></li>
+      <li><a href="#config">Configuration &amp; Secrets</a></li>
+      <li><a href="#urls">Live URLs &amp; Endpoints</a></li>
+      <li><a href="#demo-data">Demo Database &amp; Login</a></li>
+      <li><a href="#operations">Day-to-Day Operations</a></li>
+      <li><a href="#cicd">CI/CD (Future)</a></li>
+      <li><a href="#troubleshooting">Troubleshooting</a></li>
+      <li><a href="#issues-fixed">Issues We Hit &amp; Fixed</a></li>
+      <li><a href="#redeploy-scripts">Redeploy Scripts (copy-paste)</a></li>
+    </ol>
+  </nav>
+
+  <!-- 1. Overview -->
+  <section id="overview">
+    <h2>1. Overview</h2>
+    <p>Jankendra-AI runs as a <strong>monorepo</strong> with three components on a <strong>single GCP Compute Engine VM</strong>, fronted by <strong>nginx</strong> on port 80:</p>
+    <table>
+      <thead>
+        <tr><th>Component</th><th>Stack</th><th>Internal port</th><th>Role</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Frontend</td><td>React + Vite (static build)</td><td>—</td><td>Citizen &amp; staff UI, Google Maps</td></tr>
+        <tr><td>Backend</td><td>FastAPI + SQLite</td><td>8000</td><td>Auth, wards, complaints, dashboard</td></tr>
+        <tr><td>AI Modules</td><td>FastAPI (separate service)</td><td>8001</td><td>Vertex AI text analysis</td></tr>
+      </tbody>
+    </table>
+    <div class="card ok">
+      <strong>Design decision:</strong> AI modules run on a <em>separate</em> FastAPI process (port 8001), not inside the main backend. nginx routes <code>/api/v1/analyze-text</code> to the AI service.
+    </div>
+  </section>
+
+  <!-- 2. Architecture -->
+  <section id="architecture">
+    <h2>2. Architecture</h2>
+    <pre class="arch">Internet :80
+    │
+    ▼
+  nginx (/etc/nginx/sites-available/jankendra)
+    ├── /                        → /opt/jankendra/frontend/dist  (React SPA)
+    ├── /api/v1/analyze-text     → AI service :8001
+    ├── /ai/*                    → AI service :8001 (docs, health)
+    ├── /api/*                   → Backend :8000
+    ├── /docs, /redoc, /health   → Backend :8000
+    └── try_files → index.html   (client-side routing)
+
+systemd services:
+  jankendra-backend.service  → uvicorn app.main:app --port 8000
+  jankendra-ai.service       → uvicorn ai_modules.api.main:app --port 8001
+
+Data:
+  SQLite DB  → /opt/jankendra/backend/data/jankendra.db
+  Env files  → /etc/jankendra/{backend,ai,frontend}.env
+  GCP creds  → /etc/jankendra/google-credential.json</pre>
+  </section>
+
+  <!-- 3. What we built -->
+  <section id="what-we-built">
+    <h2>3. What We Built</h2>
+
+    <h3>AI Text Analysis</h3>
+    <ul>
+      <li><code>ai_modules/analysis/text_analyzer.py</code> — classifies complaint text</li>
+      <li><code>ai_modules/core/providers/vertex_gemini.py</code> — Vertex AI Gemini provider</li>
+      <li><code>ai_modules/api/main.py</code> — standalone FastAPI app</li>
+      <li><code>ai_modules/api/routes/analysis.py</code> — <code>POST /api/v1/analyze-text</code> (no auth)</li>
+    </ul>
+    <p>Model: <code>gemini-2.5-flash</code> in <code>asia-south1</code> (Mumbai). <code>gemini-2.5-pro</code> is not available in that region.</p>
+    <p>Analysis returns: <code>sentiment</code>, <code>severity</code>, <code>location</code>, <code>summary</code>, <code>keywords</code>.</p>
+
+    <h3>Deployment Infrastructure</h3>
+    <ul>
+      <li><code>deploy/scripts/install-vm.sh</code> — one-time VM bootstrap (packages, nginx, systemd)</li>
+      <li><code>deploy/scripts/deploy.sh</code> — repeatable deploy (pip, migrations, seed, frontend build)</li>
+      <li><code>deploy/scripts/deploy-from-windows.ps1</code> — one-click deploy from Windows</li>
+      <li><code>deploy/nginx/jankendra.conf</code> — reverse proxy rules</li>
+      <li><code>deploy/systemd/*.service</code> — backend &amp; AI systemd units</li>
+      <li><code>deploy/env/*.env.example</code> — production env templates</li>
+      <li><code>.github/workflows/deploy-release.yml</code> — auto-deploy on <code>release</code> branch (needs secrets)</li>
+      <li><code>deploy/gcp/cloudbuild.yaml</code> — optional Cloud Build trigger</li>
+    </ul>
+  </section>
+
+  <!-- 4. GCP -->
+  <section id="gcp-infra">
+    <h2>4. GCP Infrastructure (Current)</h2>
+    <table>
+      <thead>
+        <tr><th>Setting</th><th>Value</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Project ID</td><td><code>project-d9125421-6cdc-4628-9f5</code></td></tr>
+        <tr><td>VM name</td><td><code>jankendra-app</code></td></tr>
+        <tr><td>Zone</td><td><code>asia-south1-a</code></td></tr>
+        <tr><td>External IP</td><td><code>34.180.31.35</code></td></tr>
+        <tr><td>Machine type</td><td><code>e2-standard-2</code></td></tr>
+        <tr><td>OS</td><td>Ubuntu 22.04 LTS</td></tr>
+        <tr><td>Firewall rule</td><td><code>jankendra-allow-http</code> (tcp 80, 443)</td></tr>
+        <tr><td>Network tag</td><td><code>jankendra-app</code></td></tr>
+        <tr><td>OS Login</td><td><strong>Disabled</strong> (<code>enable-oslogin=FALSE</code>) for SSH key auth</td></tr>
+        <tr><td>App directory</td><td><code>/opt/jankendra</code></td></tr>
+        <tr><td>App user</td><td><code>jankendra</code> (system user)</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 5. Repo layout -->
+  <section id="repo-layout">
+    <h2>5. Repository &amp; Deploy Files</h2>
+    <pre><code>Jankendra-AI/
+├── frontend/                  # React + Vite
+├── backend/                   # Main FastAPI + SQLite + Alembic
+│   ├── scripts/seed_demo_data.py
+│   └── data/jankendra.db      # created on VM (not in git)
+├── ai_modules/                # Separate AI FastAPI service
+│   ├── api/main.py
+│   ├── analysis/text_analyzer.py
+│   └── credentials/           # gitignored — local only
+│       └── google-credential.json
+├── deploy/
+│   ├── deployment-guide.html  # this document
+│   ├── README.md
+│   ├── nginx/jankendra.conf
+│   ├── systemd/
+│   ├── scripts/
+│   │   ├── install-vm.sh
+│   │   ├── deploy.sh
+│   │   └── deploy-from-windows.ps1
+│   ├── env/
+│   └── gcp/
+└── .github/workflows/deploy-release.yml</code></pre>
+  </section>
+
+  <!-- 6. Deployment steps -->
+  <section id="deployment-steps">
+    <h2>6. Deployment Steps (What We Did)</h2>
+
+    <h3>6.1 Local prerequisites (Windows)</h3>
+    <ol>
+      <li>Installed Google Cloud SDK (<code>gcloud</code>) via winget</li>
+      <li>Placed service account key at <code>ai_modules/credentials/google-credential.json</code></li>
+      <li>Ran <code>gcloud auth activate-service-account --key-file=...</code></li>
+      <li>Ran <code>gcloud compute config-ssh</code> for SSH/SCP access</li>
+    </ol>
+
+    <h3>6.2 Create VM &amp; firewall</h3>
+    <pre><code>gcloud compute instances create jankendra-app \
+  --project=project-d9125421-6cdc-4628-9f5 \
+  --zone=asia-south1-a \
+  --machine-type=e2-standard-2 \
+  --tags=jankendra-app \
+  --scopes=cloud-platform \
+  --image-family=ubuntu-2204-lts \
+  --image-project=ubuntu-os-cloud \
+  --boot-disk-size=30GB \
+  --metadata=enable-oslogin=FALSE
+
+gcloud compute firewall-rules create jankendra-allow-http \
+  --allow=tcp:80,tcp:443 \
+  --target-tags=jankendra-app</code></pre>
+
+    <h3>6.3 Deploy from Windows (recommended script)</h3>
+    <p>From repo root in PowerShell:</p>
+    <pre><code>.\deploy\scripts\deploy-from-windows.ps1</code></pre>
+    <p>This script:</p>
+    <ol>
+      <li>Authenticates with the service account key</li>
+      <li>Creates VM + firewall if missing</li>
+      <li>Packages repo into <code>jankendra-deploy.tgz</code> (excludes <code>.git</code>, <code>node_modules</code>, venvs, credentials)</li>
+      <li>Uploads archive to <code>/tmp/jankendra-deploy.tgz</code></li>
+      <li>Uploads credentials to <code>~/google-credential.json</code> (home dir — avoids <code>/tmp</code> permission issues)</li>
+      <li>Strips Windows CRLF from shell scripts on the VM</li>
+      <li>Runs <code>install-vm.sh</code> which calls <code>deploy.sh</code></li>
+      <li>Replaces <code>YOUR_VM_EXTERNAL_IP</code> in env files with actual IP</li>
+    </ol>
+
+    <h3>6.4 Manual steps we performed after first deploy</h3>
+    <ul>
+      <li>Installed Python 3.11 via deadsnakes PPA (Ubuntu 22.04 ships 3.10; project requires &gt;=3.11)</li>
+      <li>Set <code>VITE_GOOGLE_MAPS_API_KEY</code> in <code>/etc/jankendra/frontend.env</code> and rebuilt frontend</li>
+      <li>Ran <code>seed_demo_data.py</code> to populate SQLite with demo users, wards, complaints, commitments</li>
+    </ul>
+  </section>
+
+  <!-- 7. Config -->
+  <section id="config">
+    <h2>7. Configuration &amp; Secrets</h2>
+
+    <h3>Production env files (on VM)</h3>
+    <table>
+      <thead>
+        <tr><th>File</th><th>Purpose</th><th>Key variables</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>/etc/jankendra/backend.env</code></td>
+          <td>Main API</td>
+          <td><code>JWT_SECRET_KEY</code>, <code>CORS_ORIGINS</code>, <code>DATABASE_URL</code></td>
+        </tr>
+        <tr>
+          <td><code>/etc/jankendra/ai.env</code></td>
+          <td>AI service</td>
+          <td><code>GOOGLE_CLOUD_PROJECT</code>, <code>GOOGLE_CLOUD_LOCATION</code>, <code>VERTEX_GEMINI_MODEL</code>, <code>GOOGLE_APPLICATION_CREDENTIALS</code></td>
+        </tr>
+        <tr>
+          <td><code>/etc/jankendra/frontend.env</code></td>
+          <td>Vite build-time vars</td>
+          <td><code>VITE_API_BASE_URL</code>, <code>VITE_GOOGLE_MAPS_API_KEY</code></td>
+        </tr>
+        <tr>
+          <td><code>/etc/jankendra/google-credential.json</code></td>
+          <td>Vertex AI service account</td>
+          <td>chmod 640, owned by root:jankendra</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="card warn">
+      <strong>Security:</strong> Never commit <code>google-credential.json</code> or API keys to git. Rotate keys if they were exposed. Restrict the Maps API key to your VM IP / domain in Google Cloud Console.
+    </div>
+
+    <h3>Local development</h3>
+    <pre><code># Backend (port 8000)
+cd backend
+.venv\Scripts\python.exe -m uvicorn app.main:app --reload
+
+# AI service (port 8001)
+python -m uvicorn ai_modules.api.main:app --reload --port 8001
+
+# Frontend
+cd frontend
+# create frontend/.env with VITE_GOOGLE_MAPS_API_KEY and VITE_API_BASE_URL
+npm run dev</code></pre>
+  </section>
+
+  <!-- 8. URLs -->
+  <section id="urls">
+    <h2>8. Live URLs &amp; Endpoints</h2>
+    <table>
+      <thead>
+        <tr><th>URL</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><a href="http://34.180.31.35/">http://34.180.31.35/</a></td><td>Frontend (React app)</td></tr>
+        <tr><td><a href="http://34.180.31.35/docs">http://34.180.31.35/docs</a></td><td>Backend Swagger UI</td></tr>
+        <tr><td><a href="http://34.180.31.35/ai/docs">http://34.180.31.35/ai/docs</a></td><td>AI service Swagger UI</td></tr>
+        <tr><td><code>POST /api/v1/analyze-text</code></td><td>AI text analysis (public, no auth)</td></tr>
+        <tr><td><code>GET /health</code></td><td>Backend health check</td></tr>
+        <tr><td><code>GET /ai/health</code></td><td>AI service health check</td></tr>
+        <tr><td><code>POST /api/v1/auth/otp/request</code></td><td>Request OTP (demo)</td></tr>
+        <tr><td><code>POST /api/v1/auth/otp/verify</code></td><td>Verify OTP &amp; get JWT</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Example: analyze text</h3>
+    <pre><code>curl -X POST http://34.180.31.35/api/v1/analyze-text \
+  -H "Content-Type: application/json" \
+  -d "{\"text\": \"No water supply in Ward 12 for 3 days\"}"</code></pre>
+  </section>
+
+  <!-- 9. Demo data -->
+  <section id="demo-data">
+    <h2>9. Demo Database &amp; Login</h2>
+    <p>Seed script: <code>backend/scripts/seed_demo_data.py</code> (idempotent — skips tables that already have rows).</p>
+    <p><code>deploy.sh</code> runs migrations + seed on every deploy.</p>
+
+    <h3>Seeded content</h3>
+    <ul>
+      <li>3 demo users (leader, staff, citizen)</li>
+      <li>6 wards (W42–W47) — South Delhi constituency</li>
+      <li>Demographics, infrastructure, schemes per ward</li>
+      <li>3 sample complaints</li>
+      <li>3 sample commitments</li>
+    </ul>
+
+    <h3>Demo login credentials</h3>
+    <table>
+      <thead>
+        <tr><th>Role</th><th>Phone</th><th>OTP</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Leader (MLA)</td><td><code>9876543210</code></td><td><code>246810</code></td></tr>
+        <tr><td>Staff</td><td><code>9876543211</code></td><td><code>246810</code></td></tr>
+        <tr><td>Citizen</td><td><code>9876543212</code></td><td><code>246810</code></td></tr>
+      </tbody>
+    </table>
+
+    <h3>Manually re-seed on VM</h3>
+    <pre><code>gcloud compute ssh jankendra-app --zone=asia-south1-a --project=project-d9125421-6cdc-4628-9f5
+
+sudo -u jankendra bash -c \
+  'cd /opt/jankendra/backend && /opt/jankendra/.venv/bin/python scripts/seed_demo_data.py'</code></pre>
+    <p>To fully reset: delete <code>/opt/jankendra/backend/data/jankendra.db</code>, run <code>alembic upgrade head</code>, then seed again.</p>
+  </section>
+
+  <!-- 10. Operations -->
+  <section id="operations">
+    <h2>10. Day-to-Day Operations</h2>
+
+    <h3>SSH into VM</h3>
+    <pre><code>gcloud compute ssh jankendra-app \
+  --zone=asia-south1-a \
+  --project=project-d9125421-6cdc-4628-9f5</code></pre>
+
+    <h3>Check service status</h3>
+    <pre><code>sudo systemctl status nginx jankendra-backend jankendra-ai
+curl http://127.0.0.1:8000/health
+curl http://127.0.0.1:8001/health</code></pre>
+
+    <h3>View logs</h3>
+    <pre><code>sudo journalctl -u jankendra-backend -f
+sudo journalctl -u jankendra-ai -f
+sudo tail -f /var/log/nginx/error.log</code></pre>
+
+    <h3>Redeploy (on VM)</h3>
+    <pre><code>sudo bash /opt/jankendra/deploy/scripts/deploy.sh</code></pre>
+
+    <h3>Redeploy from Windows (upload local code)</h3>
+    <pre><code>.\deploy\scripts\deploy-from-windows.ps1</code></pre>
+
+    <h3>Update Google Maps key &amp; rebuild frontend</h3>
+    <pre><code>sudo nano /etc/jankendra/frontend.env
+# set VITE_GOOGLE_MAPS_API_KEY=your-key
+
+sudo -u jankendra env \
+  VITE_API_BASE_URL=/api/v1 \
+  VITE_GOOGLE_MAPS_API_KEY=your-key \
+  bash -c 'cd /opt/jankendra/frontend && npm run build'</code></pre>
+
+    <h3>Restart services after env change</h3>
+    <pre><code>sudo systemctl restart jankendra-backend jankendra-ai
+sudo systemctl reload nginx</code></pre>
+  </section>
+
+  <!-- 11. CI/CD -->
+  <section id="cicd">
+    <h2>11. CI/CD — Status &amp; Setup</h2>
+
+    <div class="card warn">
+      <strong>Not active yet.</strong> The workflow file exists in the repo, but auto-deploy on <code>release</code> merges is
+      <strong>not running</strong> until you complete the steps below. All deploys so far were done manually from Windows.
+    </div>
+
+    <h3>What exists in the repo</h3>
+    <table>
+      <thead>
+        <tr><th>File</th><th>Purpose</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>.github/workflows/deploy-release.yml</code></td>
+          <td>GitHub Actions — SSH to VM, run <code>deploy.sh</code> on push to <code>release</code></td>
+          <td>File committed; secrets not configured</td>
+        </tr>
+        <tr>
+          <td><code>deploy/gcp/cloudbuild.yaml</code></td>
+          <td>Google Cloud Build — SSH to VM on <code>release</code> push</td>
+          <td>File committed; trigger not created</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Why auto-deploy does not work yet</h3>
+    <ol>
+      <li><strong>GitHub secrets missing</strong> — <code>VM_HOST</code>, <code>VM_USER</code>, <code>VM_SSH_PRIVATE_KEY</code> are not set in the repository.</li>
+      <li><strong>VM has no git clone</strong> — code was deployed via tarball to <code>/opt/jankendra</code> (no <code>.git</code> folder). The workflow only runs <code>deploy.sh</code>; it does not upload new code unless the VM can <code>git pull</code>.</li>
+    </ol>
+
+    <h3>Enable GitHub Actions auto-deploy (recommended)</h3>
+    <p><strong>Step 1 — One-time: clone repo on the VM</strong></p>
+    <pre><code>gcloud compute ssh jankendra-app --zone=asia-south1-a --project=project-d9125421-6cdc-4628-9f5
+
+# on the VM — back up current app, then clone release branch
+sudo systemctl stop jankendra-backend jankendra-ai
+sudo mv /opt/jankendra /opt/jankendra.bak.$(date +%Y%m%d)
+sudo mkdir -p /opt/jankendra
+sudo chown jankendra:jankendra /opt/jankendra
+sudo -u jankendra git clone -b release https://github.com/AnshulTikariha/Jankendra-AI.git /opt/jankendra
+
+# restore secrets (not in git) from backup
+sudo cp /etc/jankendra/backend.env /etc/jankendra/ai.env /etc/jankendra/frontend.env /tmp/
+# re-copy google-credential.json from backup if needed
+
+sudo bash /opt/jankendra/deploy/scripts/deploy.sh
+sudo systemctl start jankendra-backend jankendra-ai</code></pre>
+
+    <p><strong>Step 2 — Add GitHub repository secrets</strong> (Settings → Secrets and variables → Actions):</p>
+    <table>
+      <thead>
+        <tr><th>Secret</th><th>Value</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>VM_HOST</code></td><td><code>34.180.31.35</code></td></tr>
+        <tr><td><code>VM_USER</code></td><td>Your Linux username on the VM (from <code>whoami</code> after SSH)</td></tr>
+        <tr><td><code>VM_SSH_PRIVATE_KEY</code></td><td>Contents of your private SSH key used by <code>gcloud compute ssh</code></td></tr>
+        <tr><td><code>VM_SSH_PORT</code></td><td><code>22</code> (optional)</td></tr>
+      </tbody>
+    </table>
+
+    <p><strong>Step 3 — Push to <code>release</code></strong></p>
+    <pre><code>git checkout release
+git merge main
+git push origin release</code></pre>
+    <p>GitHub Actions will SSH to the VM and run <code>sudo bash /opt/jankendra/deploy/scripts/deploy.sh</code>, which pulls latest <code>release</code> code, rebuilds, and restarts services.</p>
+
+    <h3>Alternative: Google Cloud Build</h3>
+    <pre><code>gcloud builds triggers create github \
+  --name=jankendra-release-deploy \
+  --repo-name=Jankendra-AI \
+  --repo-owner=AnshulTikariha \
+  --branch-pattern=^release$ \
+  --build-config=deploy/gcp/cloudbuild.yaml \
+  --substitutions=_VM_NAME=jankendra-app,_ZONE=asia-south1-a</code></pre>
+    <p>Requires Cloud Build ↔ GitHub connection and permission to SSH to the VM.</p>
+  </section>
+
+  <!-- 12. Troubleshooting -->
+  <section id="troubleshooting">
+    <h2>12. Troubleshooting</h2>
+    <div class="grid-2">
+      <div class="card">
+        <strong>Frontend shows blank / Maps error</strong>
+        <p>Set <code>VITE_GOOGLE_MAPS_API_KEY</code> in frontend.env and rebuild. Hard-refresh browser (Ctrl+Shift+R).</p>
+      </div>
+      <div class="card">
+        <strong>AI returns 502</strong>
+        <p>Check Vertex AI credentials, project ID, and that <code>gemini-2.5-flash</code> is available in <code>asia-south1</code>.</p>
+      </div>
+      <div class="card">
+        <strong>Empty dashboard</strong>
+        <p>Run <code>seed_demo_data.py</code>. Log in with demo phone + OTP <code>246810</code>.</p>
+      </div>
+      <div class="card">
+        <strong>SSH / SCP fails</strong>
+        <p>Ensure OS Login is disabled. Run <code>gcloud compute config-ssh</code>. Upload creds to home dir, not <code>/tmp</code>.</p>
+      </div>
+      <div class="card">
+        <strong>install-vm.sh: pipefail invalid</strong>
+        <p>Windows CRLF line endings. Run: <code>sed -i 's/\r$//' deploy/scripts/*.sh</code> on VM before install.</p>
+      </div>
+      <div class="card">
+        <strong>Python version error</strong>
+        <p>Ubuntu 22.04 has Python 3.10. Install 3.11 via deadsnakes PPA (handled in install-vm.sh).</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 13. Issues fixed -->
+  <section id="issues-fixed">
+    <h2>13. Issues We Hit &amp; Fixed</h2>
+    <table>
+      <thead>
+        <tr><th>Issue</th><th>Fix</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>uvicorn</code> not found locally</td><td>Use backend venv: <code>backend/.venv/Scripts/python.exe -m uvicorn</code></td></tr>
+        <tr><td>CORS <code>.env</code> parse error</td><td>Added <code>NoDecode</code> in <code>backend/app/core/config.py</code></td></tr>
+        <tr><td>Gemini JSON parse errors</td><td>Robust JSON parsing + retry + <code>response_schema</code></td></tr>
+        <tr><td><code>gemini-2.5-pro</code> 502 in asia-south1</td><td>Switched to <code>gemini-2.5-flash</code></td></tr>
+        <tr><td>AI merged into backend caused conflicts</td><td>Split to separate FastAPI on port 8001</td></tr>
+        <tr><td><code>gcloud</code> not installed on Windows</td><td>Installed via winget</td></tr>
+        <tr><td>OS Login SSH failures</td><td>Disabled OS Login; ran <code>gcloud compute config-ssh</code></td></tr>
+        <tr><td>SCP to <code>/tmp/google-credential.json</code> permission denied</td><td>Upload to <code>~/google-credential.json</code> then <code>sudo mv</code></td></tr>
+        <tr><td>CRLF in shell scripts from Windows</td><td>Strip <code>\r</code> on VM before running install</td></tr>
+        <tr><td>Python 3.10 on Ubuntu 22.04</td><td>Install Python 3.11 via deadsnakes PPA</td></tr>
+        <tr><td>Database not seeded after deploy</td><td>Always run <code>seed_demo_data.py</code> in deploy.sh (was gated on missing .db file)</td></tr>
+        <tr><td>Google Maps key missing in production</td><td>Set in frontend.env + rebuild with env vars inline</td></tr>
+        <tr><td><code>/ai/docs</code> showed backend APIs</td><td>Set <code>ROOT_PATH=/ai</code> on AI service so Swagger loads <code>/ai/api/v1/openapi.json</code></td></tr>
+        <tr><td><code>vite.config.ts</code> proxy pointed to 8001</td><td>Changed to 8000 for local dev (wards/backend). Production uses nginx, not Vite proxy.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 14. Redeploy scripts -->
+  <section id="redeploy-scripts">
+    <h2>14. Redeploy Scripts (when you change code)</h2>
+    <p>Use these after any code change. Pick the option that matches how you work.</p>
+
+    <div class="card ok">
+      <strong>Production URL:</strong> <a href="http://34.180.31.35">http://34.180.31.35</a><br>
+      <strong>VM:</strong> <code>jankendra-app</code> · <strong>Zone:</strong> <code>asia-south1-a</code> · <strong>Project:</strong> <code>project-d9125421-6cdc-4628-9f5</code>
+    </div>
+
+    <h3>Option A — Redeploy from Windows (upload local code)</h3>
+    <p>Best when you edited code locally and want the VM to match your machine.</p>
+    <pre><code># PowerShell — run from repo root (Jankendra-AI/)
+.\deploy\scripts\deploy-from-windows.ps1</code></pre>
+    <p>If the script fails on the remote install step, use <strong>Option A2</strong> below (manual commands that always work).</p>
+
+    <h3>Option A2 — Manual redeploy from Windows (reliable)</h3>
+    <pre><code># PowerShell — run from repo root
+$gcloud = "$env:LOCALAPPDATA\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd"
+$proj   = "project-d9125421-6cdc-4628-9f5"
+$zone   = "asia-south1-a"
+$repo   = "C:\Users\bharath.g\Desktop\Janakendra\Jankendra-AI"
+$archive = "$env:TEMP\jankendra-deploy.tgz"
+
+# 1. Package repo
+Push-Location $repo
+tar -czf $archive --exclude=.git --exclude=node_modules --exclude=frontend/node_modules `
+  --exclude=backend/.venv --exclude=.venv --exclude=backend/data/*.db `
+  --exclude=ai_modules/credentials .
+Pop-Location
+
+# 2. Upload
+& $gcloud compute scp $archive "jankendra-app:/tmp/jankendra-deploy.tgz" --zone=$zone --project=$proj
+
+# 3. Extract + deploy on VM
+& $gcloud compute ssh jankendra-app --zone=$zone --project=$proj --command=@"
+sudo tar -xzf /tmp/jankendra-deploy.tgz -C /opt/jankendra
+sudo find /opt/jankendra/deploy -type f \( -name '*.sh' -o -name '*.service' -o -name '*.conf' \) -exec sed -i 's/\r$//' {} +
+sudo chown -R jankendra:jankendra /opt/jankendra
+sudo bash /opt/jankendra/deploy/scripts/deploy.sh
+"@
+
+# 4. Rebuild frontend with Google Maps key (deploy.sh may miss env permissions)
+& $gcloud compute ssh jankendra-app --zone=$zone --project=$proj --command="sudo -u jankendra env VITE_API_BASE_URL=/api/v1 VITE_GOOGLE_MAPS_API_KEY=YOUR_MAPS_KEY bash -c 'cd /opt/jankendra/frontend && npm run build'"
+
+Write-Host "Done — hard-refresh http://34.180.31.35"</code></pre>
+    <p>Replace <code>YOUR_MAPS_KEY</code> with your Google Maps API key.</p>
+
+    <h3>Option B — Redeploy on VM (git-based, for CI/CD)</h3>
+    <p>Use after the VM has a <code>git clone</code> of the <code>release</code> branch (see Section 11).</p>
+    <pre><code>gcloud compute ssh jankendra-app --zone=asia-south1-a --project=project-d9125421-6cdc-4628-9f5
+
+# on the VM
+sudo bash /opt/jankendra/deploy/scripts/deploy.sh</code></pre>
+    <p>This runs: <code>git pull</code> → pip install → migrations → seed → <code>npm run build</code> → restart services.</p>
+
+    <h3>Option C — Frontend-only rebuild (env / Maps key change)</h3>
+    <pre><code>gcloud compute ssh jankendra-app --zone=asia-south1-a --project=project-d9125421-6cdc-4628-9f5
+
+sudo nano /etc/jankendra/frontend.env   # edit VITE_GOOGLE_MAPS_API_KEY
+
+sudo -u jankendra env \
+  VITE_API_BASE_URL=/api/v1 \
+  VITE_GOOGLE_MAPS_API_KEY=your-key \
+  bash -c 'cd /opt/jankendra/frontend && npm run build'</code></pre>
+
+    <h3>Option D — Restart services only (no code change)</h3>
+    <pre><code>gcloud compute ssh jankendra-app --zone=asia-south1-a --project=project-d9125421-6cdc-4628-9f5 \
+  --command="sudo systemctl restart jankendra-backend jankendra-ai && sudo systemctl reload nginx"</code></pre>
+
+    <h3>Verify after redeploy</h3>
+    <pre><code># From your machine
+curl.exe http://34.180.31.35/health
+curl.exe http://34.180.31.35/ai/health
+
+# On the VM
+sudo systemctl status nginx jankendra-backend jankendra-ai
+sudo journalctl -u jankendra-backend -n 30 --no-pager
+sudo journalctl -u jankendra-ai -n 30 --no-pager</code></pre>
+
+    <h3>What each deploy step does</h3>
+    <table>
+      <thead>
+        <tr><th>Step</th><th>Script</th><th>Action</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Upload code</td><td><code>deploy-from-windows.ps1</code> or tar+scp</td><td>Copies latest files to <code>/opt/jankendra</code></td></tr>
+        <tr><td>Install deps</td><td><code>deploy.sh</code></td><td><code>pip install -e</code> root + backend packages</td></tr>
+        <tr><td>Database</td><td><code>deploy.sh</code></td><td><code>alembic upgrade head</code> + <code>seed_demo_data.py</code></td></tr>
+        <tr><td>Frontend</td><td><code>deploy.sh</code></td><td><code>npm ci && npm run build</code> → <code>frontend/dist</code></td></tr>
+        <tr><td>Restart</td><td><code>deploy.sh</code></td><td>Restart backend + AI systemd units, reload nginx</td></tr>
+      </tbody>
+    </table>
+
+    <div class="card warn">
+      <strong>Note:</strong> <code>frontend/vite.config.ts</code> proxy settings only affect <code>npm run dev</code> on your laptop.
+      They are <em>not</em> used in production. Production routing is handled by nginx.
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  Jankendra-AI Deployment Guide &mdash; generated July 2026 &mdash;
+  <code>deploy/deployment-guide.html</code>
+</footer>
+
+</body>
+</html>

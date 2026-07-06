@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     app_name: str = "Jankendra-AI Modules"
     app_version: str = "0.1.0"
     environment: str = "development"
+    # Set to /ai on the VM so Swagger at /ai/docs loads /ai/api/v1/openapi.json (not backend).
+    root_path: str = ""
     api_v1_prefix: str = "/api/v1"
     host: str = "127.0.0.1"
     port: int = 8012
