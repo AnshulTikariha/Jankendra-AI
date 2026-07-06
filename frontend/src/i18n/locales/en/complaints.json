@@ -52,7 +52,7 @@
       "cityHint": "Select the city where the issue is located.",
       "cityLoading": "Loading cities…",
       "citySelect": "Select a city",
-      "cityApiHint": "Ward list could not be loaded from the server. Start the Jankendra backend (port 8001).",
+      "cityApiHint": "Ward list could not be loaded from the server. Start the Jankendra backend (port 8000).",
       "ward": "Ward",
       "wardHint": "Choose the ward where the issue is located. Pinning on the map can auto-select the ward.",
       "wardPrefilled": "Pre-filled from your profile — you can change it.",
