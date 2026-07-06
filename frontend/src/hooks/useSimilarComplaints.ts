@@ -2,11 +2,11 @@ import { useMemo } from 'react'
 import { useComplaints } from './useComplaints'
 import type { ComplaintCategory } from '../types/complaint'
 
-export function useSimilarComplaints(wardId: number, category: ComplaintCategory) {
+export function useSimilarComplaints(wardId: number | '', category: ComplaintCategory) {
   const { data, isLoading } = useComplaints()
 
   const similar = useMemo(() => {
-    if (!data?.complaints) return []
+    if (wardId === '' || !data?.complaints) return []
     return data.complaints.filter(
       (c) => c.wardId === String(wardId) && c.category === category,
     )

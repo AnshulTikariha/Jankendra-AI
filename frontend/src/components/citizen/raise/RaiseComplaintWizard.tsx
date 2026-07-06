@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useCitizenProfile } from '../../../hooks/useCitizenProfile'
 import { useCities, useResolveWard, useWardBoundary, useWards } from '../../../hooks/useConstituency'
 import { useCreateComplaint } from '../../../hooks/useComplaints'
 import { useRaiseComplaintDraft } from '../../../hooks/useRaiseComplaintDraft'
@@ -68,14 +67,9 @@ function formatDraftTime(iso: string) {
   })
 }
 
-function preferredWardId(wardId: number | '' | undefined): number | null {
-  return wardId !== undefined && wardId !== '' ? wardId : null
-}
-
 export function RaiseComplaintWizard() {
   const { t } = useTranslation('complaints')
   const session = useAuthStore((s) => s.session)
-  const { profile } = useCitizenProfile()
   const createComplaint = useCreateComplaint()
   const setCitizenView = useUiStore((s) => s.setCitizenView)
   const setLastComplaintRef = useUiStore((s) => s.setLastComplaintRef)
@@ -87,13 +81,9 @@ export function RaiseComplaintWizard() {
   const { data: wardsData, isLoading: wardsLoading } = useWards(city || undefined)
   const resolveWardMutation = useResolveWard()
 
-  const profileWardId = preferredWardId(profile?.wardId)
   const wardOptions = wardsData?.wards ?? []
-  const defaultWardId = profileWardId ?? wardOptions[0]?.id ?? 1
 
-  const [form, setForm] = useState<RaiseComplaintForm>(() =>
-    defaultRaiseComplaintForm(defaultWardId),
-  )
+  const [form, setForm] = useState<RaiseComplaintForm>(() => defaultRaiseComplaintForm())
   const [photos, setPhotos] = useState<ComplaintPhoto[]>([])
   const [step, setStep] = useState<RaiseComplaintStep>('where')
   const [error, setError] = useState('')
@@ -105,6 +95,8 @@ export function RaiseComplaintWizard() {
   } | null>(null)
   const [initialized, setInitialized] = useState(false)
   const [mapSearchSeed, setMapSearchSeed] = useState<string | null>(null)
+  const [deviceLocateRequest, setDeviceLocateRequest] = useState(0)
+  const [locationFallbackError, setLocationFallbackError] = useState<string | null>(null)
   const resolveTimerRef = useRef<number | null>(null)
   const skipResolveRef = useRef(false)
   const mapResolvedWardRef = useRef<{
@@ -114,13 +106,12 @@ export function RaiseComplaintWizard() {
     confidence: 'inside' | 'nearest'
   } | null>(null)
 
-  const { data: wardBoundaryData } = useWardBoundary(form.wardId)
+  const { data: wardBoundaryData } = useWardBoundary(
+    form.wardId === '' ? null : form.wardId,
+  )
 
   const selectedWard = wardOptions.find((ward) => ward.id === form.wardId)
-  const activeCity =
-    citiesData?.find((item) => item.city === city) ??
-    citiesData?.[0] ??
-    null
+  const activeCity = citiesData?.find((item) => item.city === city) ?? null
   const mapView = activeCity
     ? {
         center: [activeCity.defaultLat, activeCity.defaultLng] as [number, number],
@@ -135,7 +126,7 @@ export function RaiseComplaintWizard() {
       ? { lat: selectedWard.centroidLat, lng: selectedWard.centroidLng }
       : null
 
-  const { restoreDraft, clearDraft } = useRaiseComplaintDraft(form, step, defaultWardId)
+  const { restoreDraft, clearDraft } = useRaiseComplaintDraft(form, step)
 
   const {
     isAnalyzing,
@@ -159,18 +150,11 @@ export function RaiseComplaintWizard() {
       setError('')
     },
     onMapSearchSeed: setMapSearchSeed,
+    onRequestDeviceLocation: () => setDeviceLocateRequest((count) => count + 1),
+    onDeviceLocationFailed: () => {
+      setLocationFallbackError(t('raise.analysis.deviceLocationFailed'))
+    },
   })
-
-  useEffect(() => {
-    if (!citiesData?.length || city) return
-    setCity(citiesData[0].city)
-  }, [citiesData, city])
-
-  useEffect(() => {
-    if (!citiesData?.length || !city) return
-    if (citiesData.some((item) => item.city === city)) return
-    setCity(citiesData[0].city)
-  }, [citiesData, city])
 
   useEffect(() => {
     if (initialized) return
@@ -178,13 +162,10 @@ export function RaiseComplaintWizard() {
     const draft = restoreDraft()
     if (draft) {
       setDraftPrompt({ savedAt: formatDraftTime(draft.savedAt) })
-    } else if (profileWardId !== null) {
-      setForm((f) => ({ ...f, wardId: profileWardId }))
-      setWardPrefilled(true)
     }
 
     setInitialized(true)
-  }, [initialized, profileWardId, restoreDraft])
+  }, [initialized, restoreDraft])
 
   useEffect(() => {
     if (wardOptions.length === 0) return
@@ -204,12 +185,11 @@ export function RaiseComplaintWizard() {
       return
     }
 
-    setForm((current) => {
-      if (wardOptions.some((ward) => ward.id === current.wardId)) return current
+    if (form.wardId !== '' && !wardOptions.some((ward) => ward.id === form.wardId)) {
       skipResolveRef.current = true
-      return { ...current, wardId: wardOptions[0].id }
-    })
-  }, [city, wardOptions])
+      setForm((current) => ({ ...current, wardId: '' }))
+    }
+  }, [city, wardOptions, form.wardId])
 
   useEffect(() => {
     if (form.latitude == null || form.longitude == null) {
@@ -303,6 +283,9 @@ export function RaiseComplaintWizard() {
     markTouched(key)
     setForm((prev) => ({ ...prev, [key]: value }))
     setError('')
+    if (key === 'latitude' || key === 'longitude' || key === 'locationDetail') {
+      setLocationFallbackError(null)
+    }
   }
 
   const handleResumeDraft = () => {
@@ -317,17 +300,24 @@ export function RaiseComplaintWizard() {
   const handleDiscardDraft = () => {
     clearDraft()
     setDraftPrompt(null)
-    setForm(defaultRaiseComplaintForm(defaultWardId))
+    setForm(defaultRaiseComplaintForm())
     setPhotos([])
     setStep('where')
-    if (profileWardId !== null) {
-      setForm((f) => ({ ...f, wardId: profileWardId }))
-      setWardPrefilled(true)
-    }
+    setCity('')
+    setWardPrefilled(false)
+    setWardDetected(null)
   }
 
   const validateStep = (targetStep: RaiseComplaintStep): boolean => {
     if (targetStep === 'what' || targetStep === 'details' || targetStep === 'review') {
+      if (!city) {
+        setError(t('raise.errors.cityRequired'))
+        return false
+      }
+      if (form.wardId === '') {
+        setError(t('raise.errors.wardRequired'))
+        return false
+      }
       if (form.description.trim().length < DESCRIPTION_MIN) {
         setError(t('raise.errors.descriptionMin', { min: DESCRIPTION_MIN }))
         return false
@@ -531,6 +521,9 @@ export function RaiseComplaintWizard() {
                   {analysisError && (
                     <p className="mt-1 text-xs font-semibold text-amber-700">{analysisError}</p>
                   )}
+                  {locationFallbackError && (
+                    <p className="mt-1 text-xs font-semibold text-amber-700">{locationFallbackError}</p>
+                  )}
                   <textarea
                     className="mt-2 w-full rounded-xl border border-line bg-white px-4 py-3 font-medium outline-none focus:ring-4 focus:ring-teal-200/40"
                     maxLength={DESCRIPTION_MAX}
@@ -569,6 +562,7 @@ export function RaiseComplaintWizard() {
                     onChange={(event) => {
                       mapResolvedWardRef.current = null
                       setCity(event.target.value)
+                      setForm((current) => ({ ...current, wardId: '' }))
                       setWardPrefilled(false)
                       setWardDetected(null)
                       skipResolveRef.current = true
@@ -615,15 +609,23 @@ export function RaiseComplaintWizard() {
                   )}
                   <select
                     className="mt-2 w-full rounded-xl border border-line bg-white px-4 py-3 font-semibold outline-none focus:ring-4 focus:ring-teal-200/40 disabled:opacity-60"
-                    disabled={wardsLoading || wardOptions.length === 0}
+                    disabled={!city || wardsLoading || wardOptions.length === 0}
                     onChange={(e) => {
                       skipResolveRef.current = true
-                      updateForm('wardId', Number(e.target.value))
+                      const value = e.target.value
+                      updateForm('wardId', value === '' ? '' : Number(value))
                       setWardPrefilled(false)
                       setWardDetected(null)
                     }}
-                    value={form.wardId}
+                    value={form.wardId === '' ? '' : form.wardId}
                   >
+                    <option disabled value="">
+                      {!city
+                        ? t('raise.where.wardSelectCityFirst')
+                        : wardsLoading
+                          ? t('raise.where.wardLoading')
+                          : t('raise.where.wardSelect')}
+                    </option>
                     {wardOptions.map((ward) => (
                       <option key={ward.id} value={ward.id}>
                         {ward.wardAreaName ? `${ward.name} — ${ward.wardAreaName}` : ward.name}
@@ -654,6 +656,9 @@ export function RaiseComplaintWizard() {
                       }
                       return { ...prev, latitude, longitude, locationDetail }
                     })
+                    if (latitude != null && longitude != null) {
+                      setLocationFallbackError(null)
+                    }
                     setError('')
                   }}
                   searchBias={
@@ -666,6 +671,10 @@ export function RaiseComplaintWizard() {
                       : undefined
                   }
                   searchSeed={mapSearchSeed}
+                  deviceLocateRequest={deviceLocateRequest}
+                  onDeviceLocateFailed={() => {
+                    setLocationFallbackError(t('raise.analysis.deviceLocationFailed'))
+                  }}
                   value={{
                     latitude: form.latitude,
                     longitude: form.longitude,

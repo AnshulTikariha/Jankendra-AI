@@ -22,6 +22,12 @@ type UseComplaintTextAnalysisOptions = {
   geocodeBias?: GeocodeBias | null
   onApplyPatches: (patch: Partial<RaiseComplaintForm>) => void
   onMapSearchSeed?: (query: string) => void
+  onRequestDeviceLocation?: () => void
+  onDeviceLocationFailed?: () => void
+}
+
+function hasMapPin(form: RaiseComplaintForm): boolean {
+  return form.latitude != null && form.longitude != null
 }
 
 export function useComplaintTextAnalysis({
@@ -32,6 +38,8 @@ export function useComplaintTextAnalysis({
   geocodeBias,
   onApplyPatches,
   onMapSearchSeed,
+  onRequestDeviceLocation,
+  onDeviceLocationFailed,
 }: UseComplaintTextAnalysisOptions) {
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [analysisError, setAnalysisError] = useState<string | null>(null)
@@ -47,6 +55,14 @@ export function useComplaintTextAnalysis({
   const markTouched = useCallback((field: ComplaintFieldTouchKey) => {
     touchedRef.current.add(field)
   }, [])
+
+  const requestDeviceLocationIfNeeded = useCallback(() => {
+    if (touchedRef.current.has('map') || hasMapPin(formRef.current)) {
+      return false
+    }
+    onRequestDeviceLocation?.()
+    return true
+  }, [onRequestDeviceLocation])
 
   const runAnalysis = useCallback(
     async (text: string) => {
@@ -79,25 +95,33 @@ export function useComplaintTextAnalysis({
           onApplyPatches(patch)
         }
 
-        if (
-          suggestions.geocodeQuery &&
-          !touchedRef.current.has('map') &&
-          currentForm.latitude == null &&
-          currentForm.longitude == null
-        ) {
-          onMapSearchSeed?.(suggestions.geocodeQuery)
-          const geocoded = await geocodePlaceByText(
-            suggestions.geocodeQuery,
-            geocodeBias ?? undefined,
-          )
+        if (touchedRef.current.has('map') || hasMapPin(formRef.current)) {
+          return
+        }
+
+        const geocodeQuery = suggestions.geocodeQuery?.trim()
+        let placed = false
+
+        if (geocodeQuery) {
+          const geocoded = await geocodePlaceByText(geocodeQuery, geocodeBias ?? undefined)
           if (geocoded) {
             onApplyPatches({
               latitude: geocoded.latitude,
               longitude: geocoded.longitude,
               locationDetail:
-                currentForm.locationDetail.trim() || patch.locationDetail || geocoded.label,
+                formRef.current.locationDetail.trim() ||
+                patch.locationDetail ||
+                geocoded.label,
             })
             onMapSearchSeed?.(geocoded.label)
+            placed = true
+          }
+        }
+
+        if (!placed && !hasMapPin(formRef.current)) {
+          const requested = requestDeviceLocationIfNeeded()
+          if (!requested) {
+            onDeviceLocationFailed?.()
           }
         }
       } catch (err) {
@@ -113,7 +137,15 @@ export function useComplaintTextAnalysis({
         setIsAnalyzing(false)
       }
     },
-    [enabled, geocodeBias, onApplyPatches, onMapSearchSeed, token],
+    [
+      enabled,
+      geocodeBias,
+      onApplyPatches,
+      onDeviceLocationFailed,
+      onMapSearchSeed,
+      requestDeviceLocationIfNeeded,
+      token,
+    ],
   )
 
   useEffect(() => {
