@@ -21,10 +21,12 @@ export function PortalHeader({ role, constituencyName, phone, onLogout }: Props)
   const Graphic = copy.Graphic
 
   return (
-    <header className="relative overflow-hidden border-b border-white/10 shadow-lg shadow-slate-900/10">
-      <div className={`absolute inset-0 bg-gradient-to-br ${theme.headerGradient}`} />
-      <div className="absolute -left-20 top-0 size-64 rounded-full bg-white/10 blur-3xl" />
-      <div className="absolute -right-16 bottom-0 size-72 rounded-full bg-white/5 blur-3xl" />
+    <header className="relative z-30 border-b border-white/10 shadow-lg shadow-slate-900/10">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+        <div className={`absolute inset-0 bg-gradient-to-br ${theme.headerGradient}`} />
+        <div className="absolute -left-20 top-0 size-64 rounded-full bg-white/10 blur-3xl" />
+        <div className="absolute -right-16 bottom-0 size-72 rounded-full bg-white/5 blur-3xl" />
+      </div>
 
       <div className="absolute right-4 top-1/2 hidden -translate-y-1/2 opacity-20 lg:block xl:right-8">
         <Graphic />
@@ -59,7 +61,7 @@ export function PortalHeader({ role, constituencyName, phone, onLogout }: Props)
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <div className="relative z-20 flex flex-wrap items-center gap-2 sm:gap-3">
             <LanguageSwitcher variant="light" />
             <span className={`hidden rounded-full border px-3 py-2 text-xs font-bold sm:inline-flex ${theme.headerBadgeBorder} ${theme.headerBadgeBg} ${theme.headerBadgeText}`}>
               Built for public service

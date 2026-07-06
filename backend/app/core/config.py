@@ -42,6 +42,10 @@ class Settings(BaseSettings):
         ],
     )
 
+    gcp_project_id: str | None = None
+    gcp_service_account_json_path: str | None = None
+    dialogflow_language_code: str = "en-IN"
+
 
 @lru_cache
 def get_settings() -> Settings:
