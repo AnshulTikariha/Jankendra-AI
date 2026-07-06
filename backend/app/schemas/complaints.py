@@ -25,6 +25,7 @@ class ComplaintResponse(BaseModel):
     public_reference: str
     ward_id: int
     ward_name: str
+    ward_code: str | None = None
     category: str
     description: str
     location_detail: str | None

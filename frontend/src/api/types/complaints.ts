@@ -3,6 +3,7 @@ export type ApiComplaint = {
   public_reference: string
   ward_id: number
   ward_name: string
+  ward_code: string | null
   category: string
   description: string
   location_detail: string | null

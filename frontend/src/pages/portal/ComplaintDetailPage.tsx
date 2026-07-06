@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { PhotoGallery } from '../../components/citizen/raise/PhotoGallery'
 import { useComplaint } from '../../hooks/useComplaints'
-import { parseComplaintMetadata } from '../../lib/raiseComplaintFormat'
+import { useExploreComplaint } from '../../hooks/useExploreComplaints'
+import { parseComplaintMetadata, getComplaintDisplayTitle, formatComplaintWardLabel } from '../../lib/raiseComplaintFormat'
 import { useComplaintAttachmentsStore } from '../../stores/useComplaintAttachmentsStore'
 import { useUiStore } from '../../stores/useUiStore'
 import { ApiError } from '../../api/errors'
@@ -66,9 +67,18 @@ function StatusStepper({ status }: { status: CitizenComplaintStatus }) {
 export function ComplaintDetailPage() {
   const { t } = useTranslation('complaints')
   const viewingComplaintId = useUiStore((s) => s.viewingComplaintId)
+  const complaintDetailSource = useUiStore((s) => s.complaintDetailSource)
+  const exploreLocation = useUiStore((s) => s.exploreLocation)
   const setCitizenView = useUiStore((s) => s.setCitizenView)
   const setViewingComplaintId = useUiStore((s) => s.setViewingComplaintId)
-  const { data: complaint, isLoading, isError, error } = useComplaint(viewingComplaintId)
+  const isExploreReadOnly = complaintDetailSource === 'ward-updates'
+  const ownComplaintQuery = useComplaint(isExploreReadOnly ? null : viewingComplaintId)
+  const exploreComplaintQuery = useExploreComplaint(
+    isExploreReadOnly ? viewingComplaintId : null,
+    exploreLocation,
+  )
+  const complaintQuery = isExploreReadOnly ? exploreComplaintQuery : ownComplaintQuery
+  const { data: complaint, isLoading, isError, error } = complaintQuery
   const attachments = useComplaintAttachmentsStore((s) =>
     viewingComplaintId ? s.getAttachments(viewingComplaintId) : [],
   )
@@ -76,8 +86,10 @@ export function ComplaintDetailPage() {
 
   const handleBack = () => {
     setViewingComplaintId(null)
-    setCitizenView('my-complaints')
+    setCitizenView(isExploreReadOnly ? 'ward-updates' : 'my-complaints')
   }
+
+  const backLabel = isExploreReadOnly ? t('wardUpdates.backToGrid') : t('detail.backToList')
 
   const handleCopy = async () => {
     if (!complaint?.publicReference) return
@@ -99,7 +111,7 @@ export function ComplaintDetailPage() {
           onClick={handleBack}
           type="button"
         >
-          {t('detail.backToList')}
+          {backLabel}
         </button>
       </section>
     )
@@ -126,17 +138,22 @@ export function ComplaintDetailPage() {
           onClick={handleBack}
           type="button"
         >
-          {t('detail.backToList')}
+          {backLabel}
         </button>
       </section>
     )
   }
 
   const metadata = parseComplaintMetadata(complaint.description)
+  const displayTitle = getComplaintDisplayTitle(
+    complaint,
+    complaintCategoryLabels[complaint.category],
+  )
 
   const detailRows = [
     { label: t('detail.fields.reference'), value: complaint.publicReference },
     { label: t('detail.fields.status'), value: citizenStatusLabels[complaint.status] },
+    { label: t('detail.fields.title'), value: displayTitle },
     { label: t('detail.fields.category'), value: complaintCategoryLabels[complaint.category] },
     ...(metadata.subCategory
       ? [{ label: t('detail.fields.subCategory'), value: metadata.subCategory }]
@@ -144,19 +161,16 @@ export function ComplaintDetailPage() {
     ...(metadata.priority
       ? [{ label: t('detail.fields.priority'), value: metadata.priority }]
       : []),
-    { label: t('detail.fields.ward'), value: complaint.wardName },
+    { label: t('detail.fields.ward'), value: formatComplaintWardLabel(complaint) },
     {
       label: t('detail.fields.location'),
       value: complaint.locationDetail ?? t('raise.review.notProvided'),
       muted: !complaint.locationDetail,
     },
     { label: t('detail.fields.submitted'), value: formatDateTime(complaint.submittedAt) },
-    { label: t('detail.fields.contact'), value: `+91 ${complaint.reporterPhone}` },
-    {
-      label: t('detail.fields.department'),
-      value: complaint.departmentSuggestion ?? t('raise.review.notProvided'),
-      muted: !complaint.departmentSuggestion,
-    },
+    ...(!isExploreReadOnly && complaint.reporterPhone
+      ? [{ label: t('detail.fields.contact'), value: `+91 ${complaint.reporterPhone}` }]
+      : []),
     {
       label: t('detail.fields.cluster'),
       value:
@@ -175,8 +189,13 @@ export function ComplaintDetailPage() {
             onClick={handleBack}
             type="button"
           >
-            ← {t('detail.backToList')}
+            ← {backLabel}
           </button>
+          {isExploreReadOnly && (
+            <span className="mt-2 inline-flex rounded-full bg-amber-100 px-3 py-1 text-[0.65rem] font-bold uppercase tracking-wide text-amber-800">
+              {t('wardUpdates.readOnly')}
+            </span>
+          )}
           <p className="mt-3 text-xs font-bold uppercase tracking-[0.18em] text-accent">
             {t('detail.eyebrow')}
           </p>

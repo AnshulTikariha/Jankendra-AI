@@ -3,6 +3,11 @@ import { useComplaints } from '../../hooks/useComplaints'
 import { useUiStore } from '../../stores/useUiStore'
 import { ApiError } from '../../api/errors'
 import {
+  formatComplaintWardLabel,
+  getComplaintDisplayTitle,
+  parseComplaintSummary,
+} from '../../lib/raiseComplaintFormat'
+import {
   citizenStatusLabels,
   complaintCategoryLabels,
   type CitizenComplaintStatus,
@@ -55,9 +60,11 @@ export function MyComplaintsPage() {
   const { data, isLoading, isError, error, refetch } = useComplaints()
   const setCitizenView = useUiStore((s) => s.setCitizenView)
   const setViewingComplaintId = useUiStore((s) => s.setViewingComplaintId)
+  const setComplaintDetailSource = useUiStore((s) => s.setComplaintDetailSource)
   const complaints = data?.complaints ?? []
 
   const openDetail = (id: string) => {
+    setComplaintDetailSource('my-complaints')
     setViewingComplaintId(id)
     setCitizenView('complaint-detail')
   }
@@ -129,9 +136,15 @@ export function MyComplaintsPage() {
             </div>
           </div>
           <div className="p-5">
-            <h2 className="text-lg font-extrabold">{complaintCategoryLabels[complaint.category]}</h2>
-            <p className="mt-1 text-sm text-muted">{complaint.wardName} · {formatDate(complaint.submittedAt)}</p>
-            <p className="mt-3 line-clamp-3 text-sm leading-6 text-ink">{complaint.description}</p>
+            <h2 className="text-lg font-extrabold">
+              {getComplaintDisplayTitle(complaint, complaintCategoryLabels[complaint.category])}
+            </h2>
+            <p className="mt-1 text-sm text-muted">
+              {formatComplaintWardLabel(complaint)} · {formatDate(complaint.submittedAt)}
+            </p>
+            <p className="mt-3 line-clamp-3 text-sm leading-6 text-ink">
+              {parseComplaintSummary(complaint.description)}
+            </p>
             <StatusStepper status={complaint.status} />
             <div className="mt-3 flex flex-wrap gap-2">
               {statusOrder.map((step) => (
@@ -143,11 +156,6 @@ export function MyComplaintsPage() {
             {complaint.clusterCount > 1 && (
               <p className="mt-4 rounded-xl bg-teal-50 px-3 py-2 text-xs font-semibold text-teal-800">
                 {complaint.clusterCount} residents reported similar issues in your ward
-              </p>
-            )}
-            {complaint.departmentSuggestion && (
-              <p className="mt-3 rounded-xl bg-slate-50 px-3 py-2 text-xs font-semibold text-muted">
-                Suggested department: {complaint.departmentSuggestion}
               </p>
             )}
             <button

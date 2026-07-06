@@ -8,6 +8,11 @@ import {
 import { useWards } from '../../hooks/useStaffApi'
 import { useComplaintOverridesStore } from '../../stores/useComplaintOverridesStore'
 import {
+  formatComplaintWardLabel,
+  getComplaintDisplayTitle,
+  parseComplaintSummary,
+} from '../../lib/raiseComplaintFormat'
+import {
   citizenStatusLabels,
   complaintCategoryLabels,
   type CitizenComplaintStatus,
@@ -219,12 +224,16 @@ export function ComplaintsQueuePage() {
                   </div>
                 </div>
                 <div className="p-4">
-                  <p className="font-extrabold text-ink">{complaintCategoryLabels[complaint.category]}</p>
+                  <p className="font-extrabold text-ink">
+                    {getComplaintDisplayTitle(complaint, complaintCategoryLabels[complaint.category])}
+                  </p>
                   <p className="mt-1 text-xs text-muted">
-                    {complaint.wardName} · {complaint.source === 'citizen' ? 'Citizen' : 'Staff'}
+                    {formatComplaintWardLabel(complaint)} · {complaint.source === 'citizen' ? 'Citizen' : 'Staff'}
                     {complaint.reporterPhone ? ` · +91 ${complaint.reporterPhone}` : ''}
                   </p>
-                  <p className="mt-2 line-clamp-2 text-sm text-muted">{complaint.description}</p>
+                  <p className="mt-2 line-clamp-2 text-sm text-muted">
+                    {parseComplaintSummary(complaint.description)}
+                  </p>
                   <p className="mt-2 text-xs font-semibold text-muted">{formatDate(complaint.submittedAt)}</p>
                 </div>
               </button>
@@ -237,8 +246,12 @@ export function ComplaintsQueuePage() {
             <div className="space-y-4 rounded-3xl border border-line/80 bg-white p-5 shadow-md">
               <div>
                 <p className="font-mono text-sm font-bold text-primary">{selected.publicReference}</p>
-                <h2 className="mt-1 text-lg font-extrabold">{complaintCategoryLabels[selected.category]}</h2>
-                <p className="mt-1 text-xs text-muted">{selected.wardName} · {formatDate(selected.submittedAt)}</p>
+                <h2 className="mt-1 text-lg font-extrabold">
+                  {getComplaintDisplayTitle(selected, complaintCategoryLabels[selected.category])}
+                </h2>
+                <p className="mt-1 text-xs text-muted">
+                  {formatComplaintWardLabel(selected)} · {formatDate(selected.submittedAt)}
+                </p>
               </div>
 
               <p className="text-sm leading-6 text-ink">{selected.description}</p>

@@ -4,6 +4,7 @@ import { useComplaint } from '../../hooks/useComplaints'
 import { useComplaintAttachmentsStore } from '../../stores/useComplaintAttachmentsStore'
 import { useUiStore } from '../../stores/useUiStore'
 import { complaintCategoryLabels } from '../../types/complaint'
+import { getComplaintDisplayTitle, formatComplaintWardLabel } from '../../lib/raiseComplaintFormat'
 
 export function ComplaintConfirmationPage() {
   const { t } = useTranslation('complaints')
@@ -68,15 +69,12 @@ export function ComplaintConfirmationPage() {
         )}
         {complaint && (
           <div className="mx-auto mt-5 max-w-md rounded-2xl border border-emerald-100 bg-white/80 px-4 py-3 text-left text-sm">
-            <p className="font-bold text-ink">{complaintCategoryLabels[complaint.category]}</p>
-            <p className="mt-1 text-muted">{complaint.wardName}</p>
+            <p className="font-bold text-ink">
+              {getComplaintDisplayTitle(complaint, complaintCategoryLabels[complaint.category])}
+            </p>
+            <p className="mt-1 text-muted">{formatComplaintWardLabel(complaint)}</p>
             {complaint.locationDetail && (
               <p className="mt-1 text-xs text-muted">{complaint.locationDetail}</p>
-            )}
-            {complaint.departmentSuggestion && (
-              <p className="mt-2 text-xs font-semibold text-teal-800">
-                {t('confirmation.routedTo', { department: complaint.departmentSuggestion })}
-              </p>
             )}
             {attachmentCount > 0 && (
               <p className="mt-2 text-xs font-semibold text-muted">
