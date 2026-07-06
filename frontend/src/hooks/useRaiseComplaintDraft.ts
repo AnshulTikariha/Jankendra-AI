@@ -69,7 +69,6 @@ function isDraftEmpty(form: RaiseComplaintForm): boolean {
 export function useRaiseComplaintDraft(
   form: RaiseComplaintForm,
   step: RaiseComplaintStep,
-  defaultWardId: number,
 ) {
   const userId = useAuthStore((s) => s.session?.userId ?? '')
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -123,7 +122,7 @@ export function useRaiseComplaintDraft(
     }
   }, [form, step, userId])
 
-  const initialForm = defaultRaiseComplaintForm(defaultWardId)
+  const initialForm = defaultRaiseComplaintForm()
 
   return {
     initialForm,

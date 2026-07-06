@@ -38,13 +38,28 @@ export function mapAnalysisToSuggestions(
     ALLOWED_CATEGORIES.includes(item as ComplaintCategory),
   )
 
+  const location = normalizeAnalysisLocation(analysis.location)
+
   return {
     title: analysis.summary.trim() || undefined,
-    locationDetail: analysis.location?.trim() || undefined,
+    locationDetail: location,
     categories: categories.length > 0 ? categories : undefined,
     priority: SEVERITY_TO_PRIORITY[analysis.severity] ?? undefined,
-    geocodeQuery: analysis.location?.trim() || undefined,
+    geocodeQuery: location,
   }
+}
+
+function normalizeAnalysisLocation(value: string | null | undefined): string | undefined {
+  if (!value?.trim()) {
+    return undefined
+  }
+
+  const trimmed = value.trim()
+  if (/^(null|none|n\/a|na|unknown|not mentioned|not specified)$/i.test(trimmed)) {
+    return undefined
+  }
+
+  return trimmed
 }
 
 export type ApplySuggestionsOptions = {

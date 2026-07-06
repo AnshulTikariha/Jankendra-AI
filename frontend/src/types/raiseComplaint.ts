@@ -23,7 +23,7 @@ export type ComplaintPhoto = {
 }
 
 export type RaiseComplaintForm = {
-  wardId: number
+  wardId: number | ''
   categories: ComplaintCategory[]
   subCategory: string
   customCategory: string
@@ -38,7 +38,7 @@ export type RaiseComplaintForm = {
 }
 
 export const defaultRaiseComplaintForm = (
-  wardId = 1,
+  wardId: number | '' = '',
 ): RaiseComplaintForm => ({
   wardId,
   categories: ['water'],

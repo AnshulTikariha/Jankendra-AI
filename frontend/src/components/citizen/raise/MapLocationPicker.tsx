@@ -5,6 +5,7 @@ import { GOOGLE_MAP_ID } from '../../../config/googleMaps'
 import { useGooglePlaceAutocomplete } from '../../../hooks/useGooglePlaceAutocomplete'
 import { boundsFromGeoJsonGeometry } from '../../../lib/googleMapGeo'
 import { fetchGooglePlaceDetails, reverseGeocodeWithGoogle } from '../../../lib/googleGeocoding'
+import { resolveUserPosition, type DevicePositionErrorCode } from '../../../lib/deviceGeolocation'
 import { formatCoordinates } from '../../../lib/raiseComplaintFormat'
 
 export type MapLocationValue = {
@@ -26,6 +27,8 @@ type Props = {
   wardBoundary?: Record<string, unknown> | null
   searchBias?: { lat: number; lng: number; cityName?: string }
   searchSeed?: string | null
+  deviceLocateRequest?: number
+  onDeviceLocateFailed?: (code: DevicePositionErrorCode) => void
 }
 
 function MapCamera({
@@ -129,6 +132,8 @@ export function MapLocationPicker({
   wardBoundary = null,
   searchBias,
   searchSeed = null,
+  deviceLocateRequest = 0,
+  onDeviceLocateFailed,
 }: Props) {
   const { t } = useTranslation('complaints')
   const placesLib = useMapsLibrary('places')
@@ -137,26 +142,48 @@ export function MapLocationPicker({
   const [geoLoading, setGeoLoading] = useState(false)
   const [addressLoading, setAddressLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [locationHint, setLocationHint] = useState<string | null>(null)
   const [flyTarget, setFlyTarget] = useState<{ lat: number; lng: number } | null>(null)
   const [flyZoom, setFlyZoom] = useState<number | undefined>(undefined)
   const [fitBoundary, setFitBoundary] = useState<Record<string, unknown> | null>(null)
   const wardFocusKey = useRef<string>('')
-  const suppressSearchOpenRef = useRef(false)
+  const lockSearchSuggestionsRef = useRef(false)
+  const searchInputRef = useRef<HTMLInputElement>(null)
+  const deviceLocateRequestRef = useRef(0)
+
+  const geoErrorMessage = useCallback(
+    (code: DevicePositionErrorCode) => {
+      switch (code) {
+        case 'unsupported':
+          return t('raise.where.geo.unsupported')
+        case 'permission-denied':
+          return t('raise.where.geo.denied')
+        case 'timeout':
+        case 'unavailable':
+        default:
+          return t('raise.where.geo.unavailable')
+      }
+    },
+    [t],
+  )
 
   useEffect(() => {
     if (searchSeed?.trim()) {
-      suppressSearchOpenRef.current = true
+      lockSearchSuggestionsRef.current = true
       setSearchQuery(searchSeed.trim())
       setSearchOpen(false)
+      searchInputRef.current?.blur()
     }
   }, [searchSeed])
 
   useEffect(() => {
     if (value.latitude != null && value.longitude != null) {
+      lockSearchSuggestionsRef.current = true
       setFitBoundary(null)
       setFlyTarget({ lat: value.latitude, lng: value.longitude })
       setFlyZoom(16)
       setSearchOpen(false)
+      searchInputRef.current?.blur()
     }
   }, [value.latitude, value.longitude])
 
@@ -224,13 +251,48 @@ export function MapLocationPicker({
     [onChange, t, value.locationDetail],
   )
 
+  const captureCurrentLocation = useCallback(async () => {
+    setGeoLoading(true)
+    setError(null)
+    setLocationHint(null)
+
+    const result = await resolveUserPosition()
+    if (!result.ok) {
+      const message = geoErrorMessage(result.code)
+      setError(message)
+      onDeviceLocateFailed?.(result.code)
+      setGeoLoading(false)
+      return false
+    }
+
+    if (result.source === 'ip') {
+      setLocationHint(t('raise.where.geo.approximate'))
+    }
+
+    lockSearchSuggestionsRef.current = true
+    await applyPin(result.position.latitude, result.position.longitude)
+    setGeoLoading(false)
+    return true
+  }, [applyPin, geoErrorMessage, onDeviceLocateFailed, t])
+
   useEffect(() => {
+    if (!deviceLocateRequest || deviceLocateRequestRef.current === deviceLocateRequest) {
+      return
+    }
+    deviceLocateRequestRef.current = deviceLocateRequest
+    if (value.latitude != null && value.longitude != null) {
+      return
+    }
+    void captureCurrentLocation()
+  }, [captureCurrentLocation, deviceLocateRequest, value.latitude, value.longitude])
+
+  useEffect(() => {
+    if (lockSearchSuggestionsRef.current) {
+      setSearchOpen(false)
+      return
+    }
+
     if (suggestions.length > 0 && searchQuery.trim().length >= 2) {
-      if (suppressSearchOpenRef.current) {
-        suppressSearchOpenRef.current = false
-        setSearchOpen(false)
-        return
-      }
       setSearchOpen(true)
     } else if (suggestions.length === 0 && !searchLoading) {
       setSearchOpen(false)
@@ -243,6 +305,7 @@ export function MapLocationPicker({
       return
     }
 
+    lockSearchSuggestionsRef.current = true
     setSearchQuery(label.split(',')[0] ?? label)
     setSearchOpen(false)
     setError(null)
@@ -255,35 +318,15 @@ export function MapLocationPicker({
     }
   }
 
-  const captureCurrentLocation = () => {
-    if (!navigator.geolocation) {
-      setError(t('raise.where.geo.unsupported'))
-      return
-    }
-
-    setGeoLoading(true)
-    setError(null)
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        void applyPin(position.coords.latitude, position.coords.longitude)
-        setGeoLoading(false)
-      },
-      () => {
-        setError(t('raise.where.geo.denied'))
-        setGeoLoading(false)
-      },
-      { enableHighAccuracy: true, timeout: 15000 },
-    )
-  }
-
   const clearLocation = () => {
+    lockSearchSuggestionsRef.current = false
     setSearchQuery('')
     setSearchOpen(false)
     setFlyTarget(null)
     setFitBoundary(null)
     setError(null)
     onChange({ latitude: null, longitude: null, locationDetail: '' })
+    setLocationHint(null)
   }
 
   const mapsUrl =
@@ -308,13 +351,16 @@ export function MapLocationPicker({
         <input
           className="w-full rounded-xl border border-line bg-white px-4 py-3 pr-10 text-sm font-medium outline-none focus:ring-4 focus:ring-teal-200/40"
           id="map-location-search"
+          ref={searchInputRef}
           onChange={(event) => {
-            suppressSearchOpenRef.current = false
+            lockSearchSuggestionsRef.current = false
             setSearchQuery(event.target.value)
             setError(null)
           }}
           onFocus={() => {
-            if (suggestions.length > 0) setSearchOpen(true)
+            if (!lockSearchSuggestionsRef.current && suggestions.length > 0) {
+              setSearchOpen(true)
+            }
           }}
           placeholder={t('raise.where.map.searchPlaceholder')}
           type="search"
@@ -437,6 +483,9 @@ export function MapLocationPicker({
       )}
 
       {error && <p className="mt-2 text-xs font-semibold text-red-600">{error}</p>}
+      {locationHint && !error && (
+        <p className="mt-2 text-xs font-semibold text-teal-800">{locationHint}</p>
+      )}
     </div>
   )
 }
