@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useAuthStore } from '../stores/useAuthStore'
 import { useDashboard } from '../hooks/useDashboard'
-import { useWards } from '../hooks/useConstituency'
+import { useCities, useWards } from '../hooks/useConstituency'
 import { CommitmentsAtRisk } from '../components/dashboard/CommitmentsAtRisk'
 import { DashboardHero } from '../components/dashboard/DashboardHero'
 import { KpiStrip } from '../components/dashboard/KpiStrip'
@@ -11,7 +11,7 @@ import { RecentActivityList } from '../components/dashboard/RecentActivityList'
 import { IssueHeatMap } from '../components/dashboard/IssueHeatMap'
 import { WardComparisonTable } from '../components/dashboard/WardComparisonTable'
 import { ApiError } from '../api/errors'
-import { mapWardRowsToMapPoints } from '../lib/wardMapMappers'
+import { filterActiveWardRows, mapWardRowsToMapPoints } from '../lib/wardMapMappers'
 
 function DashboardLoading() {
   return (
@@ -45,10 +45,39 @@ export function DashboardPage() {
   const isStaff = role === 'staff'
   const { data, isLoading, isError, error, refetch } = useDashboard()
   const { data: wardGeo } = useWards()
-  const mapWards = useMemo(
-    () => (data ? mapWardRowsToMapPoints(data.wardComparison, wardGeo?.wards) : undefined),
-    [data, wardGeo?.wards],
-  )
+  const { data: cityOptions } = useCities()
+  const mapWards = useMemo(() => {
+    if (!data) return undefined
+    const activeRows = filterActiveWardRows(data.wardComparison)
+    if (activeRows.length === 0) return []
+    return mapWardRowsToMapPoints(activeRows, wardGeo?.wards)
+  }, [data, wardGeo?.wards])
+
+  const mapLabel = useMemo(() => {
+    if (!mapWards?.length || !wardGeo?.wards) {
+      return 'India · Active wards'
+    }
+
+    const activeIds = new Set(mapWards.map((ward) => ward.wardId))
+    const activeCities = [
+      ...new Set(
+        wardGeo.wards
+          .filter((ward) => activeIds.has(String(ward.id)))
+          .map((ward) => ward.city)
+          .filter((city): city is string => Boolean(city)),
+      ),
+    ]
+
+    if (activeCities.length === 0) return data?.constituencyName ?? 'Active wards'
+    if (activeCities.length === 1) {
+      const city = activeCities[0]
+      return cityOptions?.find((option) => option.city === city)?.displayName ?? city
+    }
+
+    return activeCities
+      .map((city) => cityOptions?.find((option) => option.city === city)?.displayName ?? city)
+      .join(' · ')
+  }, [data?.constituencyName, mapWards, wardGeo?.wards, cityOptions])
 
   if (role === 'citizen') return null
 
@@ -90,7 +119,7 @@ export function DashboardPage() {
 
       <KpiStrip kpis={data.kpis} showCitizenMetric />
 
-      <IssueHeatMap wards={mapWards} />
+      <IssueHeatMap mapLabel={mapLabel} wards={mapWards} />
 
       <div className="grid gap-6 xl:grid-cols-3">
         <div className="xl:col-span-2">

@@ -8,7 +8,6 @@ import {
 } from '../../../lib/raiseComplaintFormat'
 import type { ComplaintPhoto, RaiseComplaintForm } from '../../../types/raiseComplaint'
 import type { ComplaintSubmitMeta } from '../../../lib/raiseComplaintFormat'
-import { getSubCategoryLabel } from './SubCategoryPicker'
 import { PhotoGallery } from './PhotoGallery'
 import { SimilarComplaintsBanner } from './SimilarComplaintsBanner'
 
@@ -40,11 +39,7 @@ export function RaiseComplaintReviewPanel({
   const categoryLabel = getCategoriesDisplayLabel(form, (category) =>
     t(`raise.categories.${category}`),
   )
-  const subCategoryLabel = getSubCategoryLabel(primaryCategory, form.subCategory, t)
-  const formattedSubmission = buildComplaintDescription(form, {
-    ...submitMeta,
-    subCategoryLabel,
-  })
+  const formattedSubmission = buildComplaintDescription(form, submitMeta)
   const locationDisplay = buildLocationDetail(form) ?? t('raise.review.notProvided')
 
   const rows: Array<{
@@ -77,12 +72,6 @@ export function RaiseComplaintReviewPanel({
       value: phone ? `+91 ${phone}` : t('raise.review.notProvided'),
     },
     { section: 'what', label: t('raise.review.fields.categories'), value: categoryLabel },
-    {
-      section: 'what',
-      label: t('raise.review.fields.subCategory'),
-      value: subCategoryLabel ?? t('raise.review.notProvided'),
-      optional: !subCategoryLabel,
-    },
     {
       section: 'details',
       label: t('raise.review.fields.priority'),

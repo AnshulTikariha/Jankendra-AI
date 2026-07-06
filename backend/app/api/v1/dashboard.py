@@ -162,6 +162,7 @@ async def get_dashboard(
                 ward_id=str(ward.id),
                 ward_name=ward.name,
                 open_clusters=cluster_counts.get(ward.id, 0),
+                open_complaints=complaint_counts.get(ward.id, 0),
                 overdue_commitments=ward_overdue,
                 infra_alerts=infra_alerts,
             )
