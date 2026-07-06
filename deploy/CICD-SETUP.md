@@ -1,150 +1,113 @@
-# CI/CD Setup — Auto-deploy on `release` branch
+# CI/CD — GCP Cloud Build (recommended)
 
-When complete, every **push or merge to `release`** triggers GitHub Actions to deploy to the GCP VM at `http://34.180.31.35`.
+Auto-deploy runs in **GCP Cloud Build** when code is merged to `release`.  
+Google credentials are stored in **GCP Secret Manager** — not in GitHub.
 
-## How it works
-
-```
-merge to release → GitHub Actions
-    → tar codebase
-    → SCP to VM /tmp/jankendra-deploy.tgz
-    → extract to /opt/jankendra
-    → run deploy/scripts/deploy.sh
-    → restart backend + AI + nginx
-```
-
-Workflow file: `.github/workflows/deploy-release.yml`
+GitHub Actions deploy is **disabled** (manual fallback only).
 
 ---
 
-## Step 1 — Push the workflow to GitHub
+## Architecture
 
-From your machine (on `release` branch):
-
-```powershell
-cd C:\Users\bharath.g\Desktop\Janakendra\Jankendra-AI
-git add .github/workflows/deploy-release.yml deploy/scripts/deploy.sh
-git commit -m "Enable auto-deploy on release branch"
-git push origin release
+```
+merge to release (GitHub)
+        ↓
+GCP Cloud Build trigger
+        ↓
+1. Package code
+2. Load google-credential from Secret Manager
+3. SCP code + credential → VM
+4. deploy.sh → restart services
+        ↓
+http://34.180.31.35
 ```
 
 ---
 
-## Step 2 — Get your SSH private key
+## One-time setup
 
-`gcloud compute ssh` uses a key pair on your PC. The **private** key must go into GitHub secrets.
+### 1. Run the setup script
 
-**Windows — typical path:**
+**Git Bash or WSL** (from repo root):
 
-```
-C:\Users\bharath.g\.ssh\google_compute_engine
-```
-
-Open that file in Notepad and copy the **entire** contents, including:
-
-```
------BEGIN OPENSSH PRIVATE KEY-----
-...
------END OPENSSH PRIVATE KEY-----
+```bash
+export GCP_PROJECT_ID=project-d9125421-6cdc-4628-9f5
+export GCP_ZONE=asia-south1-a
+export GOOGLE_CREDENTIAL_FILE=ai_modules/credentials/google-credential.json
+bash deploy/gcp/setup-cloud-build.sh
 ```
 
-If the file does not exist, run once:
+**Or PowerShell** (uses gcloud from Windows):
 
 ```powershell
-gcloud compute config-ssh --project=project-d9125421-6cdc-4628-9f5
-gcloud compute ssh jankendra-app --zone=asia-south1-a --project=project-d9125421-6cdc-4628-9f5
+$env:GCP_PROJECT_ID = "project-d9125421-6cdc-4628-9f5"
+$env:GCP_ZONE = "asia-south1-a"
+$env:GOOGLE_CREDENTIAL_FILE = "C:\Users\bharath.g\Desktop\Janakendra\Jankendra-AI\ai_modules\credentials\google-credential.json"
+bash deploy/gcp/setup-cloud-build.sh
 ```
+
+The script will:
+- Enable Cloud Build, Compute, Secret Manager APIs
+- Grant Cloud Build SA permission to SSH to the VM
+- Upload your service account JSON to **Secret Manager** (`jankendra-google-credential`)
+- Create Cloud Build trigger on `release` branch
+
+### 2. Connect GitHub (if script prompts)
+
+If the trigger fails, connect the repo once in GCP Console:
+
+1. https://console.cloud.google.com/cloud-build/triggers?project=project-d9125421-6cdc-4628-9f5
+2. **Connect repository** → GitHub → authorize → select `AnshulTikariha/Jankendra-AI`
+3. Re-run `setup-cloud-build.sh`
 
 ---
 
-## Step 3 — Add GitHub repository secrets
+## Day-to-day deploy
 
-1. Open: **https://github.com/AnshulTikariha/Jankendra-AI/settings/secrets/actions**
-2. Click **New repository secret** for each:
-
-| Secret name | Value |
-|-------------|--------|
-| `VM_HOST` | `34.180.31.35` |
-| `VM_USER` | `bharath.g` |
-| `VM_SSH_PRIVATE_KEY` | Full contents of `google_compute_engine` private key |
-| `VM_SSH_PORT` | `22` (optional) |
-
-> **VM_USER** is your Linux username on the VM (run `whoami` after SSH to confirm).
-
----
-
-## Step 4 — Allow GitHub to SSH to the VM
-
-Your public key must be on the VM. If `gcloud compute ssh` already works from your PC, the public key is usually in project metadata.
-
-Verify from your machine:
-
-```powershell
-gcloud compute ssh jankendra-app --zone=asia-south1-a --project=project-d9125421-6cdc-4628-9f5 --command="echo ssh_ok"
-```
-
-GitHub Actions uses the **same private key** you added as `VM_SSH_PRIVATE_KEY`. The matching public key must be authorized on the VM (via GCP project SSH metadata).
-
-If GitHub deploy fails with "permission denied", add your public key to instance metadata:
-
-```powershell
-# Show your public key
-type $env:USERPROFILE\.ssh\google_compute_engine.pub
-
-# Or re-run
-gcloud compute config-ssh --project=project-d9125421-6cdc-4628-9f5
-```
-
----
-
-## Step 5 — Test the pipeline
-
-**Option A — merge to release:**
-
-```powershell
+```bash
 git checkout release
-git merge main
+git merge your-feature-branch
 git push origin release
 ```
 
-**Option B — manual trigger:**
+Watch builds: https://console.cloud.google.com/cloud-build/builds?project=project-d9125421-6cdc-4628-9f5
 
-GitHub → **Actions** → **Deploy release to GCP VM** → **Run workflow**
+Manual trigger:
 
-Watch the run at: **https://github.com/AnshulTikariha/Jankendra-AI/actions**
-
-Success = green check + `http://34.180.31.35/health` returns OK.
+```bash
+gcloud builds triggers run jankendra-release-deploy \
+  --branch=release \
+  --project=project-d9125421-6cdc-4628-9f5
+```
 
 ---
 
-## What is preserved on deploy
+## Where credentials live
 
-| Item | Location | Preserved? |
-|------|----------|------------|
-| SQLite database | `/opt/jankendra/backend/data/jankendra.db` | Yes (excluded from tar overwrite of data dir) |
-| Secrets / env | `/etc/jankendra/*.env` | Yes (not in git) |
-| Google credentials | `/etc/jankendra/google-credential.json` | Yes (not in git) |
-| Municipal ward sync | In database | Yes |
+| Secret | Location |
+|--------|----------|
+| Google service account (Vertex AI) | Secret Manager: `jankendra-google-credential` |
+| On VM at runtime | `/etc/jankendra/google-credential.json` (refreshed each deploy) |
+| JWT, Maps key, CORS | `/etc/jankendra/*.env` on VM (never in git) |
 
-After deploy, `deploy.sh` runs migrations + idempotent seed (skips if data exists).
+**Do not** commit `ai_modules/credentials/google-credential.json` to git.
+
+---
+
+## GitHub Actions (disabled)
+
+`.github/workflows/deploy-release.yml` no longer auto-deploys on push.  
+Use GCP Cloud Build instead so SSH keys and credentials stay in GCP.
+
+You may delete GitHub secrets `VM_HOST`, `VM_USER`, `VM_SSH_PRIVATE_KEY` if no longer needed.
 
 ---
 
 ## Troubleshooting
 
-| Problem | Fix |
-|---------|-----|
-| `permission denied (publickey)` | Check `VM_USER`, `VM_SSH_PRIVATE_KEY`, and GCP SSH metadata |
-| `secret VM_HOST not found` | Add all secrets in Step 3 |
-| Frontend Maps broken after deploy | Ensure `VITE_GOOGLE_MAPS_API_KEY` is in `/etc/jankendra/frontend.env` on VM |
-| Workflow not triggering | Confirm push was to `release` branch, not `main` |
-
----
-
-## Manual deploy (fallback)
-
-```powershell
-.\deploy\scripts\deploy-from-windows.ps1
-```
-
-Or see `deploy/deployment-guide.html` Section 14.
+| Issue | Fix |
+|-------|-----|
+| Cloud Build SSH permission denied | Re-run `setup-cloud-build.sh` (grants `compute.osAdminLogin`) |
+| Secret not found | `gcloud secrets versions add jankendra-google-credential --data-file=google-credential.json` |
+| Trigger not firing | Confirm push was to `release`, not `main` |
+| Build logs | Cloud Console → Cloud Build → History |

@@ -1,33 +1,76 @@
-# Cloud Build — deploy to single Compute Engine VM on release branch merges.
-#
-# Prerequisites:
-# 1. VM exists and install-vm.sh has been run once.
-# 2. Cloud Build service account can SSH to the VM (OS Login or metadata SSH keys).
-# 3. Create trigger:
-#    gcloud builds triggers create github \
-#      --name=jankendra-release-deploy \
-#      --repo-name=Jankendra-AI \
-#      --repo-owner=AnshulTikariha \
-#      --branch-pattern=^release$ \
-#      --build-config=deploy/gcp/cloudbuild.yaml \
-#      --substitutions=_VM_NAME=jankendra-app,_ZONE=asia-south1-a
+# Cloud Build — deploy Jankendra-AI to GCE VM (release branch).
+# Secrets stay in GCP Secret Manager — not GitHub.
 
 substitutions:
   _VM_NAME: jankendra-app
   _ZONE: asia-south1-a
+  _SECRET_NAME: jankendra-google-credential
+  _SSH_SECRET: jankendra-deploy-ssh-key
+  _DEPLOY_USER: jankendra-deploy
 
 options:
   logging: CLOUD_LOGGING_ONLY
 
 steps:
-  - id: deploy-to-vm
+  - id: deploy
     name: gcr.io/cloud-builders/gcloud
     entrypoint: bash
+    timeout: 1200s
     args:
       - -ceu
       - |
-        gcloud compute ssh "${_VM_NAME}" \
-          --zone="${_ZONE}" \
-          --project="${PROJECT_ID}" \
-          --quiet \
-          --command="sudo bash /opt/jankendra/deploy/scripts/deploy.sh"
+        echo "==> Package"
+        tar -czf /workspace/jankendra-deploy.tgz \
+          --exclude=.git \
+          --exclude=node_modules \
+          --exclude=frontend/node_modules \
+          --exclude=backend/.venv \
+          --exclude=.venv \
+          --exclude=backend/data/*.db \
+          --exclude=ai_modules/credentials \
+          -C /workspace .
+        ls -lh /workspace/jankendra-deploy.tgz
+
+        echo "==> Secrets"
+        gcloud secrets versions access latest \
+          --secret="${_SSH_SECRET}" --project="${PROJECT_ID}" > /workspace/deploy_key
+        chmod 600 /workspace/deploy_key
+        if gcloud secrets describe "${_SECRET_NAME}" --project="${PROJECT_ID}" >/dev/null 2>&1; then
+          gcloud secrets versions access latest \
+            --secret="${_SECRET_NAME}" --project="${PROJECT_ID}" > /workspace/google-credential.json
+        fi
+        VM_IP="$$(gcloud compute instances describe "${_VM_NAME}" \
+          --zone="${_ZONE}" --project="${PROJECT_ID}" \
+          --format='get(networkInterfaces[0].accessConfigs[0].natIP)')"
+        echo "VM IP: $${VM_IP}"
+
+        echo "==> Upload"
+        scp -i /workspace/deploy_key -o StrictHostKeyChecking=no \
+          /workspace/jankendra-deploy.tgz \
+          "${_DEPLOY_USER}@$${VM_IP}:jankendra-deploy.tgz"
+        if [[ -s /workspace/google-credential.json ]]; then
+          scp -i /workspace/deploy_key -o StrictHostKeyChecking=no \
+            /workspace/google-credential.json \
+            "${_DEPLOY_USER}@$${VM_IP}:google-credential.json"
+        fi
+
+        echo "==> Deploy on VM"
+        ssh -i /workspace/deploy_key -o StrictHostKeyChecking=no \
+          "${_DEPLOY_USER}@$${VM_IP}" \
+          "set -euo pipefail
+        sudo mv ~/jankendra-deploy.tgz /tmp/jankendra-deploy.tgz
+        if [ -f ~/google-credential.json ]; then sudo mv ~/google-credential.json /tmp/google-credential.json; fi
+        sudo tar -xzf /tmp/jankendra-deploy.tgz -C /opt/jankendra
+        sudo find /opt/jankendra/deploy -type f \( -name '*.sh' -o -name '*.service' -o -name '*.conf' \) -exec sed -i 's/\r$//' {} +
+        sudo chown -R jankendra:jankendra /opt/jankendra
+        if [ -f /tmp/google-credential.json ]; then
+          sudo mkdir -p /etc/jankendra
+          sudo mv /tmp/google-credential.json /etc/jankendra/google-credential.json
+          sudo chmod 640 /etc/jankendra/google-credential.json
+          sudo chown root:jankendra /etc/jankendra/google-credential.json
+        fi
+        sudo bash /opt/jankendra/deploy/scripts/deploy.sh
+        sleep 5
+        curl -sf http://127.0.0.1:8000/health || curl -sf http://127.0.0.1:8000/api/v1/health
+        curl -sf http://127.0.0.1:8001/health
+        echo Deploy OK"
