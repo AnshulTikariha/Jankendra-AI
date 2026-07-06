@@ -15,6 +15,15 @@ from app.schemas.complaints import (
     ComplaintListResponse,
     ComplaintResponse,
 )
+from app.schemas.complaint_analysis import (
+    ComplaintTextAnalysisRequest,
+    ComplaintTextAnalysisResponse,
+)
+from app.services.complaint_text_analysis import (
+    ComplaintAnalysisError,
+    analyze_complaint_text,
+    complaint_analysis_configured,
+)
 
 router = APIRouter(prefix="/complaints", tags=["complaints"])
 
@@ -161,6 +170,50 @@ async def create_complaint(
         ward_name=ward.name,
         cluster_count=cluster.citizen_count,
         department_suggestion=cluster.department_suggestion,
+    )
+
+
+@router.post("/analyze-text", response_model=ComplaintTextAnalysisResponse)
+async def analyze_complaint_text_route(
+    payload: ComplaintTextAnalysisRequest,
+    current_user: User = Depends(require_roles("citizen", "staff", "leader")),
+) -> ComplaintTextAnalysisResponse:
+    if not complaint_analysis_configured():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Complaint text analysis is not configured on the server",
+        )
+
+    try:
+        result = await analyze_complaint_text(payload.text)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+    except FileNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Google credentials are not configured for text analysis",
+        ) from exc
+    except ComplaintAnalysisError as exc:
+        raise HTTPException(
+            status_code=exc.status_code or status.HTTP_502_BAD_GATEWAY,
+            detail=str(exc),
+        ) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Text analysis failed: {exc}",
+        ) from exc
+
+    return ComplaintTextAnalysisResponse(
+        categories=list(result.categories),
+        sentiment=result.sentiment,
+        severity=result.severity,
+        location=result.location,
+        summary=result.summary,
+        keywords=result.keywords,
     )
 
 

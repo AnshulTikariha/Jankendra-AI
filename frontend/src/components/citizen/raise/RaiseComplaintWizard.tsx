@@ -4,6 +4,7 @@ import { useCitizenProfile } from '../../../hooks/useCitizenProfile'
 import { useCities, useResolveWard, useWardBoundary, useWards } from '../../../hooks/useConstituency'
 import { useCreateComplaint } from '../../../hooks/useComplaints'
 import { useRaiseComplaintDraft } from '../../../hooks/useRaiseComplaintDraft'
+import { useComplaintTextAnalysis } from '../../../hooks/useComplaintTextAnalysis'
 import { useSimilarComplaints } from '../../../hooks/useSimilarComplaints'
 import {
   descriptionQuality,
@@ -103,6 +104,7 @@ export function RaiseComplaintWizard() {
     confidence: 'inside' | 'nearest'
   } | null>(null)
   const [initialized, setInitialized] = useState(false)
+  const [mapSearchSeed, setMapSearchSeed] = useState<string | null>(null)
   const resolveTimerRef = useRef<number | null>(null)
   const skipResolveRef = useRef(false)
   const mapResolvedWardRef = useRef<{
@@ -134,6 +136,30 @@ export function RaiseComplaintWizard() {
       : null
 
   const { restoreDraft, clearDraft } = useRaiseComplaintDraft(form, step, defaultWardId)
+
+  const {
+    isAnalyzing,
+    analysisError,
+    markTouched,
+    analyzeNow,
+  } = useComplaintTextAnalysis({
+    description: form.description,
+    form,
+    token: session?.accessToken ?? null,
+    enabled: step === 'where',
+    geocodeBias: activeCity
+      ? {
+          lat: activeCity.defaultLat,
+          lng: activeCity.defaultLng,
+          cityName: activeCity.displayName,
+        }
+      : null,
+    onApplyPatches: (patch) => {
+      setForm((prev) => ({ ...prev, ...patch }))
+      setError('')
+    },
+    onMapSearchSeed: setMapSearchSeed,
+  })
 
   useEffect(() => {
     if (!citiesData?.length || city) return
@@ -274,6 +300,7 @@ export function RaiseComplaintWizard() {
   const wardName = wardOptions.find((w) => w.id === form.wardId)?.name ?? ''
 
   const updateForm = <K extends keyof RaiseComplaintForm>(key: K, value: RaiseComplaintForm[K]) => {
+    markTouched(key)
     setForm((prev) => ({ ...prev, [key]: value }))
     setError('')
   }
@@ -332,6 +359,7 @@ export function RaiseComplaintWizard() {
   }
 
   const handleCategoriesChange = (categories: typeof form.categories) => {
+    markTouched('categories')
     const prevPrimary = getPrimaryCategory(form.categories)
     const nextPrimary = getPrimaryCategory(categories)
     setForm((prev) => ({
@@ -436,10 +464,9 @@ export function RaiseComplaintWizard() {
                     return
                   }
                   const existing = form.description.trim()
-                  updateForm(
-                    'description',
-                    existing ? `${existing}\n\n${trimmed}` : trimmed,
-                  )
+                  const nextDescription = existing ? `${existing}\n\n${trimmed}` : trimmed
+                  updateForm('description', nextDescription)
+                  analyzeNow(nextDescription)
                 }}
               />
             )}
@@ -496,6 +523,14 @@ export function RaiseComplaintWizard() {
                 <label className="block">
                   <span className="text-sm font-bold">{t('raise.details.description')}</span>
                   <p className="mt-0.5 text-xs text-muted">{t('raise.details.descriptionHint')}</p>
+                  {isAnalyzing && (
+                    <p className="mt-1 text-xs font-semibold text-teal-700">
+                      {t('raise.analysis.analyzing')}
+                    </p>
+                  )}
+                  {analysisError && (
+                    <p className="mt-1 text-xs font-semibold text-amber-700">{analysisError}</p>
+                  )}
                   <textarea
                     className="mt-2 w-full rounded-xl border border-line bg-white px-4 py-3 font-medium outline-none focus:ring-4 focus:ring-teal-200/40"
                     maxLength={DESCRIPTION_MAX}
@@ -603,7 +638,22 @@ export function RaiseComplaintWizard() {
                 <MapLocationPicker
                   mapView={mapView}
                   onChange={({ latitude, longitude, locationDetail }) => {
-                    setForm((prev) => ({ ...prev, latitude, longitude, locationDetail }))
+                    setForm((prev) => {
+                      if (
+                        latitude !== prev.latitude ||
+                        longitude !== prev.longitude
+                      ) {
+                        markTouched('map')
+                      }
+                      if (
+                        locationDetail !== prev.locationDetail &&
+                        latitude === prev.latitude &&
+                        longitude === prev.longitude
+                      ) {
+                        markTouched('locationDetail')
+                      }
+                      return { ...prev, latitude, longitude, locationDetail }
+                    })
                     setError('')
                   }}
                   searchBias={
@@ -615,6 +665,7 @@ export function RaiseComplaintWizard() {
                         }
                       : undefined
                   }
+                  searchSeed={mapSearchSeed}
                   value={{
                     latitude: form.latitude,
                     longitude: form.longitude,

@@ -45,6 +45,9 @@ class Settings(BaseSettings):
     gcp_project_id: str | None = None
     gcp_service_account_json_path: str | None = None
     dialogflow_language_code: str = "en-IN"
+    google_cloud_location: str = "asia-south1"
+    vertex_gemini_model: str = "gemini-2.5-flash"
+    ai_modules_api_url: str = "http://127.0.0.1:8012"
 
 
 @lru_cache
