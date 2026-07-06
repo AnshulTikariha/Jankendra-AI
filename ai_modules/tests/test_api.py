@@ -9,6 +9,7 @@ from ai_modules.api.services.text_analysis import get_text_analyzer
 class FakeTextAnalyzer:
     def analyze(self, text: str) -> TextAnalysisResult:
         return TextAnalysisResult(
+            categories=["drainage", "health"],
             sentiment="negative",
             severity="high",
             location="Malviya Nagar",
@@ -36,6 +37,7 @@ def test_analyze_text_without_auth() -> None:
 
     assert response.status_code == 200
     body = response.json()
+    assert body["categories"] == ["drainage", "health"]
     assert body["sentiment"] == "negative"
     assert body["severity"] == "high"
     assert body["location"] == "Malviya Nagar"

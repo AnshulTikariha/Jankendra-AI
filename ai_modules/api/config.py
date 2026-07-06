@@ -34,7 +34,7 @@ class Settings(BaseSettings):
     google_application_credentials: str | None = None
     google_cloud_project: str | None = None
     google_cloud_location: str = "asia-south1"
-    vertex_gemini_model: str = "gemini-2.5-pro"
+    vertex_gemini_model: str = "gemini-2.5-flash"
 
     cors_origins: Annotated[CorsOrigins, NoDecode] = Field(
         default=[
