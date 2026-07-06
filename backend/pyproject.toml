@@ -17,6 +17,7 @@ dependencies = [
     "shapely",
     "google-cloud-dialogflow",
     "google-cloud-speech",
+    "httpx",
     "uvicorn[standard]",
 ]
 

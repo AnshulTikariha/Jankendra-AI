@@ -78,8 +78,8 @@ def _sample_rate_for_mime(normalized_mime: str) -> int:
 def resolve_voice_languages(language_code: str | None) -> tuple[str, list[str]]:
     """Pick primary + alternative BCP-47 tags for Speech-to-Text."""
     if language_code and language_code in SUPPORTED_VOICE_LANGUAGE_CODES:
-        alternative = "hi-IN" if language_code == "en-IN" else "en-IN"
-        return language_code, [alternative]
+        # When the client sends an explicit language, stick to it (no bilingual fallback).
+        return language_code, []
     # Auto-detect between Hindi and English (India).
     return "en-IN", ["hi-IN"]
 

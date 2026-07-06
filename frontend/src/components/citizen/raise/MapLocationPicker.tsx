@@ -25,6 +25,7 @@ type Props = {
   wardFocus?: { lat: number; lng: number } | null
   wardBoundary?: Record<string, unknown> | null
   searchBias?: { lat: number; lng: number; cityName?: string }
+  searchSeed?: string | null
 }
 
 function MapCamera({
@@ -127,6 +128,7 @@ export function MapLocationPicker({
   wardFocus = null,
   wardBoundary = null,
   searchBias,
+  searchSeed = null,
 }: Props) {
   const { t } = useTranslation('complaints')
   const placesLib = useMapsLibrary('places')
@@ -139,6 +141,24 @@ export function MapLocationPicker({
   const [flyZoom, setFlyZoom] = useState<number | undefined>(undefined)
   const [fitBoundary, setFitBoundary] = useState<Record<string, unknown> | null>(null)
   const wardFocusKey = useRef<string>('')
+  const suppressSearchOpenRef = useRef(false)
+
+  useEffect(() => {
+    if (searchSeed?.trim()) {
+      suppressSearchOpenRef.current = true
+      setSearchQuery(searchSeed.trim())
+      setSearchOpen(false)
+    }
+  }, [searchSeed])
+
+  useEffect(() => {
+    if (value.latitude != null && value.longitude != null) {
+      setFitBoundary(null)
+      setFlyTarget({ lat: value.latitude, lng: value.longitude })
+      setFlyZoom(16)
+      setSearchOpen(false)
+    }
+  }, [value.latitude, value.longitude])
 
   const { suggestions, loading: searchLoading, placesReady } = useGooglePlaceAutocomplete(
     searchQuery,
@@ -181,6 +201,7 @@ export function MapLocationPicker({
       setFlyZoom(16)
 
       if (address) {
+        setSearchOpen(false)
         onChange({ latitude, longitude, locationDetail: address })
         return
       }
@@ -205,6 +226,11 @@ export function MapLocationPicker({
 
   useEffect(() => {
     if (suggestions.length > 0 && searchQuery.trim().length >= 2) {
+      if (suppressSearchOpenRef.current) {
+        suppressSearchOpenRef.current = false
+        setSearchOpen(false)
+        return
+      }
       setSearchOpen(true)
     } else if (suggestions.length === 0 && !searchLoading) {
       setSearchOpen(false)
@@ -283,6 +309,7 @@ export function MapLocationPicker({
           className="w-full rounded-xl border border-line bg-white px-4 py-3 pr-10 text-sm font-medium outline-none focus:ring-4 focus:ring-teal-200/40"
           id="map-location-search"
           onChange={(event) => {
+            suppressSearchOpenRef.current = false
             setSearchQuery(event.target.value)
             setError(null)
           }}

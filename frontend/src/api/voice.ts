@@ -10,10 +10,11 @@ export type VoiceTranscribeResponse = {
 export async function transcribeVoice(
   token: string,
   audio: Blob,
+  languageCode: 'en-IN' | 'hi-IN' | 'auto' = 'auto',
 ): Promise<VoiceTranscribeResponse> {
   const form = new FormData()
   form.append('file', audio, 'recording.webm')
-  form.append('language_code', 'auto')
+  form.append('language_code', languageCode)
 
   const response = await fetch(`${apiBaseUrl}/voice/transcribe`, {
     method: 'POST',

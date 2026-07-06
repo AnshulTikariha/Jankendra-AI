@@ -47,6 +47,10 @@
       "unsupported": "Voice input is not supported in this browser.",
       "notSignedIn": "Sign in to use voice input."
     },
+    "analysis": {
+      "analyzing": "Analyzing your description and suggesting details…",
+      "error": "Could not analyze description. You can still fill the form manually."
+    },
     "where": {
       "city": "City",
       "cityHint": "Select the city where the issue is located.",

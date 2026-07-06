@@ -5,7 +5,7 @@ import { ApiError } from '../../../api/errors'
 import { useBrowserSpeechRecognition } from '../../../hooks/useBrowserSpeechRecognition'
 import { useVoiceAnalyser } from '../../../hooks/useVoiceAnalyser'
 import { useLocale } from '../../../hooks/useLocale'
-import { getBrowserSpeechRecognitionCtor, shouldUseBrowserBackup, defaultBrowserSpeechLang, localeFromSpeechCode, storeSpeechLang, looksLikeHindi } from '../../../lib/browserSpeech'
+import { getBrowserSpeechRecognitionCtor, shouldUseBrowserBackup, speechRecognitionLang, looksLikeHindi } from '../../../lib/browserSpeech'
 import { friendlyVoiceError } from '../../../lib/voiceErrors'
 import { useAuthStore } from '../../../stores/useAuthStore'
 import { VoiceLevelBars } from './VoiceLevelBars'
@@ -55,7 +55,7 @@ function MicIcon({ className }: { className?: string }) {
 
 export function VoiceComplaintButton({ onTranscript }: VoiceComplaintButtonProps) {
   const { t } = useTranslation('complaints')
-  const { locale, setLocale } = useLocale()
+  const { locale } = useLocale()
   const token = useAuthStore((state) => state.session?.accessToken)
   const [state, setState] = useState<VoiceState>('idle')
   const [strategy, setStrategy] = useState<RecordingStrategy>('hybrid')
@@ -69,8 +69,12 @@ export function VoiceComplaintButton({ onTranscript }: VoiceComplaintButtonProps
   const browserTranscriptRef = useRef('')
   const liveTranscriptRef = useRef('')
   const strategyRef = useRef<RecordingStrategy>('hybrid')
-  const [browserSpeechLang, setBrowserSpeechLang] = useState(defaultBrowserSpeechLang)
+  const [browserSpeechLang, setBrowserSpeechLang] = useState(() => speechRecognitionLang(locale))
   const [analyserStream, setAnalyserStream] = useState<MediaStream | null>(null)
+
+  useEffect(() => {
+    setBrowserSpeechLang(speechRecognitionLang(locale))
+  }, [locale])
 
   const isRecording = state === 'recording'
   const isProcessing = state === 'processing'
@@ -151,26 +155,40 @@ export function VoiceComplaintButton({ onTranscript }: VoiceComplaintButtonProps
   )
 
   const applyTranscript = useCallback(
-    (transcript: string, detectedLanguage?: string | null) => {
-      const resolvedLanguage =
-        detectedLanguage ??
-        (looksLikeHindi(transcript) ? 'hi-IN' : null)
-
-      if (resolvedLanguage) {
-        storeSpeechLang(resolvedLanguage)
-        setBrowserSpeechLang(resolvedLanguage)
-        const nextLocale = localeFromSpeechCode(resolvedLanguage)
-        if (nextLocale && nextLocale !== locale) {
-          setLocale(nextLocale)
-        }
-      }
-
+    (transcript: string) => {
       onTranscript(transcript)
       setErrorMessage(null)
       setState('idle')
       clearTranscriptRefs()
     },
-    [clearTranscriptRefs, locale, onTranscript, setLocale],
+    [clearTranscriptRefs, onTranscript],
+  )
+
+  const pickTranscript = useCallback(
+    (cloudTranscript: string, backupTranscript: string): string => {
+      const cloud = cloudTranscript.trim()
+      const backup = backupTranscript.trim()
+      const wantsEnglish = locale === 'en'
+
+      if (wantsEnglish) {
+        if (cloud && !looksLikeHindi(cloud)) {
+          return cloud
+        }
+        if (backup && !looksLikeHindi(backup)) {
+          return backup
+        }
+      } else {
+        if (cloud && looksLikeHindi(cloud)) {
+          return cloud
+        }
+        if (backup && looksLikeHindi(backup)) {
+          return backup
+        }
+      }
+
+      return cloud || backup
+    },
+    [locale],
   )
 
   const finishBrowserRecording = useCallback(() => {
@@ -180,7 +198,7 @@ export function VoiceComplaintButton({ onTranscript }: VoiceComplaintButtonProps
     clearTranscriptRefs()
 
     if (transcript) {
-      applyTranscript(transcript, looksLikeHindi(transcript) ? 'hi-IN' : 'en-IN')
+      applyTranscript(transcript)
       return
     }
 
@@ -193,10 +211,7 @@ export function VoiceComplaintButton({ onTranscript }: VoiceComplaintButtonProps
       if (!token) {
         const backup = getBrowserBackupTranscript()
         if (shouldUseBrowserBackup(backup, strategyRef.current, locale)) {
-          applyTranscript(
-            backup,
-            looksLikeHindi(backup) ? 'hi-IN' : 'en-IN',
-          )
+          applyTranscript(backup)
           return
         }
         setErrorMessage(t('raise.voice.notSignedIn'))
@@ -206,15 +221,17 @@ export function VoiceComplaintButton({ onTranscript }: VoiceComplaintButtonProps
 
       setState('processing')
       try {
-        const result = await transcribeVoice(token, blob)
-        applyTranscript(result.transcript, result.detected_language)
+        const result = await transcribeVoice(
+          token,
+          blob,
+          speechRecognitionLang(locale) as 'en-IN' | 'hi-IN',
+        )
+        const backup = getBrowserBackupTranscript()
+        applyTranscript(pickTranscript(result.transcript, backup))
       } catch (err) {
         const backup = getBrowserBackupTranscript()
         if (shouldUseBrowserBackup(backup, strategyRef.current, locale)) {
-          applyTranscript(
-            backup,
-            looksLikeHindi(backup) ? 'hi-IN' : 'en-IN',
-          )
+          applyTranscript(backup)
           return
         }
 
@@ -227,7 +244,7 @@ export function VoiceComplaintButton({ onTranscript }: VoiceComplaintButtonProps
         setState('error')
       }
     },
-    [applyTranscript, getBrowserBackupTranscript, locale, setFriendlyError, t, token],
+    [applyTranscript, getBrowserBackupTranscript, locale, pickTranscript, setFriendlyError, t, token],
   )
 
   const startCloudRecorder = useCallback((stream: MediaStream, mimeType: string) => {
@@ -255,10 +272,7 @@ export function VoiceComplaintButton({ onTranscript }: VoiceComplaintButtonProps
         const backup = getBrowserBackupTranscript()
         clearTranscriptRefs()
         if (shouldUseBrowserBackup(backup, strategyRef.current, locale)) {
-          applyTranscript(
-            backup,
-            looksLikeHindi(backup) ? 'hi-IN' : 'en-IN',
-          )
+          applyTranscript(backup)
         } else {
           setState('idle')
         }

@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     environment: str = "development"
     api_v1_prefix: str = "/api/v1"
     host: str = "127.0.0.1"
-    port: int = 8001
+    port: int = 8002
 
     google_application_credentials: str | None = None
     google_cloud_project: str | None = None
