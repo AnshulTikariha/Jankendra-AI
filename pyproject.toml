@@ -8,10 +8,16 @@ version = "0.1.0"
 description = "AI-powered constituency intelligence platform"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "fastapi",
+    "google-auth>=2.29.0",
+    "google-cloud-aiplatform>=1.60.0",
+    "pydantic-settings",
+    "uvicorn[standard]",
+]
 
 [project.optional-dependencies]
-test = ["pytest"]
+test = ["httpx", "pytest"]
 
 [tool.setuptools.packages.find]
 include = ["ai_modules*"]
