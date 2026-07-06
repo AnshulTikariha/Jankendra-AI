@@ -1,0 +1,16 @@
+[Unit]
+Description=Jankendra-AI Backend (FastAPI)
+After=network.target
+
+[Service]
+Type=simple
+User=jankendra
+Group=jankendra
+WorkingDirectory=/opt/jankendra/backend
+EnvironmentFile=-/etc/jankendra/backend.env
+ExecStart=/opt/jankendra/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

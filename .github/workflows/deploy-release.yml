@@ -1,0 +1,58 @@
+name: Deploy release to GCP VM
+
+on:
+  push:
+    branches:
+      - release
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-release
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout release branch
+        uses: actions/checkout@v4
+
+      - name: Package application
+        run: |
+          tar -czf /tmp/jankendra-deploy.tgz \
+            --exclude=.git \
+            --exclude=node_modules \
+            --exclude=frontend/node_modules \
+            --exclude=backend/.venv \
+            --exclude=.venv \
+            --exclude=backend/data/*.db \
+            --exclude=ai_modules/credentials \
+            .
+
+      - name: Upload archive to VM
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_PRIVATE_KEY }}
+          port: ${{ secrets.VM_SSH_PORT || 22 }}
+          source: "/tmp/jankendra-deploy.tgz"
+          target: "/tmp/"
+
+      - name: Extract and deploy on VM
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_PRIVATE_KEY }}
+          port: ${{ secrets.VM_SSH_PORT || 22 }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+            sudo tar -xzf /tmp/jankendra-deploy.tgz -C /opt/jankendra
+            sudo find /opt/jankendra/deploy -type f \( -name '*.sh' -o -name '*.service' -o -name '*.conf' \) -exec sed -i 's/\r$//' {} +
+            sudo chown -R jankendra:jankendra /opt/jankendra
+            sudo bash /opt/jankendra/deploy/scripts/deploy.sh
+            curl -sf http://127.0.0.1:8000/health
+            curl -sf http://127.0.0.1:8001/health
+            echo "Deploy OK"

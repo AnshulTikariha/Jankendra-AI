@@ -202,6 +202,7 @@ async def seed_wards(session) -> dict[str, int]:
         ward = Ward(
             name=ward_data["name"],
             code=ward_data["code"],
+            city=ward_data.get("city", "bhopal"),
             constituency_name=CONSTITUENCY_NAME,
             population=ward_data["population"],
             registered_voters=ward_data["registered_voters"],

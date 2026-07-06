@@ -9,6 +9,7 @@ from threading import Lock
 from typing import Any
 
 import vertexai
+import google.auth
 from google.oauth2 import service_account
 from vertexai.generative_models import GenerationConfig, GenerativeModel, HarmBlockThreshold, HarmCategory
 
@@ -24,14 +25,15 @@ def _ensure_vertex_initialized(settings: GoogleAISettings) -> None:
     with _VERTEX_INIT_LOCK:
         if _VERTEX_INITIALIZED:
             return
-        if not settings.credentials_path.is_file():
-            raise FileNotFoundError(
-                f"Google credentials file not found: {settings.credentials_path}"
+        if settings.credentials_path.is_file():
+            credentials = service_account.Credentials.from_service_account_file(
+                str(settings.credentials_path),
+                scopes=["https://www.googleapis.com/auth/cloud-platform"],
             )
-        credentials = service_account.Credentials.from_service_account_file(
-            str(settings.credentials_path),
-            scopes=["https://www.googleapis.com/auth/cloud-platform"],
-        )
+        else:
+            credentials, _ = google.auth.default(
+                scopes=["https://www.googleapis.com/auth/cloud-platform"],
+            )
         vertexai.init(
             project=settings.project_id,
             location=settings.location,

@@ -45,5 +45,5 @@ def get_google_ai_settings() -> GoogleAISettings:
         credentials_path=credentials_path,
         project_id=project_id,
         location=os.environ.get("GOOGLE_CLOUD_LOCATION", "asia-south1"),
-        model=os.environ.get("VERTEX_GEMINI_MODEL", "gemini-2.5-pro"),
+        model=os.environ.get("VERTEX_GEMINI_MODEL", "gemini-2.5-flash"),
     )

@@ -1,0 +1,16 @@
+[Unit]
+Description=Jankendra-AI Modules API (FastAPI)
+After=network.target
+
+[Service]
+Type=simple
+User=jankendra
+Group=jankendra
+WorkingDirectory=/opt/jankendra
+EnvironmentFile=-/etc/jankendra/ai.env
+ExecStart=/opt/jankendra/.venv/bin/uvicorn ai_modules.api.main:app --host 127.0.0.1 --port 8001
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

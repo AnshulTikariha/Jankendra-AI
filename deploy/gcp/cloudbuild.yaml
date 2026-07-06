@@ -1,0 +1,33 @@
+# Cloud Build — deploy to single Compute Engine VM on release branch merges.
+#
+# Prerequisites:
+# 1. VM exists and install-vm.sh has been run once.
+# 2. Cloud Build service account can SSH to the VM (OS Login or metadata SSH keys).
+# 3. Create trigger:
+#    gcloud builds triggers create github \
+#      --name=jankendra-release-deploy \
+#      --repo-name=Jankendra-AI \
+#      --repo-owner=AnshulTikariha \
+#      --branch-pattern=^release$ \
+#      --build-config=deploy/gcp/cloudbuild.yaml \
+#      --substitutions=_VM_NAME=jankendra-app,_ZONE=asia-south1-a
+
+substitutions:
+  _VM_NAME: jankendra-app
+  _ZONE: asia-south1-a
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+steps:
+  - id: deploy-to-vm
+    name: gcr.io/cloud-builders/gcloud
+    entrypoint: bash
+    args:
+      - -ceu
+      - |
+        gcloud compute ssh "${_VM_NAME}" \
+          --zone="${_ZONE}" \
+          --project="${PROJECT_ID}" \
+          --quiet \
+          --command="sudo bash /opt/jankendra/deploy/scripts/deploy.sh"

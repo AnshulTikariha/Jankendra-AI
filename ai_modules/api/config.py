@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     app_name: str = "Jankendra-AI Modules"
     app_version: str = "0.1.0"
     environment: str = "development"
+    # Set to /ai on the VM so Swagger at /ai/docs loads /ai/api/v1/openapi.json (not backend).
+    root_path: str = ""
     api_v1_prefix: str = "/api/v1"
     host: str = "127.0.0.1"
     port: int = 8001
@@ -34,7 +36,7 @@ class Settings(BaseSettings):
     google_application_credentials: str | None = None
     google_cloud_project: str | None = None
     google_cloud_location: str = "asia-south1"
-    vertex_gemini_model: str = "gemini-2.5-pro"
+    vertex_gemini_model: str = "gemini-2.5-flash"
 
     cors_origins: Annotated[CorsOrigins, NoDecode] = Field(
         default=[

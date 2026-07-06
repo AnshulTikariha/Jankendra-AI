@@ -43,7 +43,6 @@ async def list_cities(
             ward_count=int(counts.get(layer.city, 0)),
         )
         for layer in MUNICIPAL_LAYERS
-        if counts.get(layer.city, 0) > 0
     ]
     return CityListResponse(cities=cities)
 
