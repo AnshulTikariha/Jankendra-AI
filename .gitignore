@@ -14,6 +14,7 @@ venv/
 !.env.example
 
 # Google service account credentials (never commit)
+google-credential.json
 ai_modules/credentials/
 !ai_modules/credentials/.gitkeep
 
