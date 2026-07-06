@@ -56,6 +56,7 @@ jobs:
             sudo find /opt/jankendra/deploy -type f \( -name '*.sh' -o -name '*.service' -o -name '*.conf' \) -exec sed -i 's/\r$//' {} +
             sudo chown -R jankendra:jankendra /opt/jankendra
             sudo bash /opt/jankendra/deploy/scripts/deploy.sh
-            curl -sf http://127.0.0.1:8000/health
+            sleep 5
+            curl -sf http://127.0.0.1:8000/health || curl -sf http://127.0.0.1:8000/api/v1/health
             curl -sf http://127.0.0.1:8001/health
             echo "Deploy OK"
