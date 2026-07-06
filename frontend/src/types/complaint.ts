@@ -18,7 +18,9 @@ export type Complaint = {
   publicReference: string
   wardId: string
   wardName: string
+  wardCode?: string
   category: ComplaintCategory
+  title?: string
   description: string
   locationDetail?: string
   status: CitizenComplaintStatus

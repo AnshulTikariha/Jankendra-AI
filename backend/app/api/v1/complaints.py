@@ -19,6 +19,10 @@ from app.schemas.complaint_analysis import (
     ComplaintTextAnalysisRequest,
     ComplaintTextAnalysisResponse,
 )
+from app.services.complaint_explore import (
+    query_explore_complaints,
+    resolve_explore_wards,
+)
 from app.services.complaint_text_analysis import (
     ComplaintAnalysisError,
     analyze_complaint_text,
@@ -41,8 +45,11 @@ DEPARTMENT_BY_CATEGORY = {
 def build_complaint_response(
     complaint: Complaint,
     ward_name: str,
+    ward_code: str | None,
     cluster_count: int,
     department_suggestion: str | None,
+    *,
+    redact_contact: bool = False,
 ) -> ComplaintResponse:
     submitted_at = complaint.created_at
     if submitted_at is not None and submitted_at.tzinfo is None:
@@ -53,6 +60,7 @@ def build_complaint_response(
         public_reference=complaint.public_reference,
         ward_id=complaint.ward_id,
         ward_name=ward_name,
+        ward_code=ward_code,
         category=complaint.category,
         description=complaint.description,
         location_detail=complaint.location_detail,
@@ -60,8 +68,27 @@ def build_complaint_response(
         cluster_count=cluster_count,
         source=complaint.source,
         submitted_at=submitted_at.isoformat() if submitted_at else datetime.now(timezone.utc).isoformat(),
-        reporter_phone=complaint.citizen_contact,
+        reporter_phone=None if redact_contact else complaint.citizen_contact,
         department_suggestion=department_suggestion,
+    )
+
+
+async def load_ward_map(session: AsyncSession, ward_ids: set[int]) -> dict[int, Ward]:
+    if not ward_ids:
+        return {}
+    ward_rows = (await session.scalars(select(Ward).where(Ward.id.in_(ward_ids)))).all()
+    return {ward.id: ward for ward in ward_rows}
+
+
+def complaint_to_response(complaint: Complaint, wards: dict[int, Ward], *, redact_contact: bool = False) -> ComplaintResponse:
+    ward = wards.get(complaint.ward_id)
+    return build_complaint_response(
+        complaint=complaint,
+        ward_name=ward.name if ward else "Unknown",
+        ward_code=ward.code if ward else None,
+        cluster_count=complaint.cluster.citizen_count if complaint.cluster else 1,
+        department_suggestion=complaint.cluster.department_suggestion if complaint.cluster else None,
+        redact_contact=redact_contact,
     )
 
 
@@ -168,6 +195,7 @@ async def create_complaint(
     return build_complaint_response(
         complaint=complaint,
         ward_name=ward.name,
+        ward_code=ward.code,
         cluster_count=cluster.citizen_count,
         department_suggestion=cluster.department_suggestion,
     )
@@ -236,21 +264,105 @@ async def list_complaints(
 
     complaints = list((await session.scalars(query)).all())
     ward_ids = {item.ward_id for item in complaints}
-    wards = {}
+    wards: dict[int, Ward] = {}
     if ward_ids:
         ward_rows = (await session.scalars(select(Ward).where(Ward.id.in_(ward_ids)))).all()
-        wards = {ward.id: ward.name for ward in ward_rows}
+        wards = {ward.id: ward for ward in ward_rows}
 
     items = [
         build_complaint_response(
             complaint=item,
-            ward_name=wards.get(item.ward_id, "Unknown"),
+            ward_name=wards[item.ward_id].name if item.ward_id in wards else "Unknown",
+            ward_code=wards[item.ward_id].code if item.ward_id in wards else None,
             cluster_count=item.cluster.citizen_count if item.cluster else 1,
             department_suggestion=item.cluster.department_suggestion if item.cluster else None,
         )
         for item in complaints
     ]
     return ComplaintListResponse(total=len(items), complaints=items)
+
+
+@router.get("/explore", response_model=ComplaintListResponse)
+async def explore_complaints(
+    latitude: float = Query(..., ge=-90, le=90),
+    longitude: float = Query(..., ge=-180, le=180),
+    radius_km: float = Query(default=50, ge=1, le=100),
+    ward_id: int | None = Query(default=None),
+    date_from: datetime | None = Query(default=None),
+    date_to: datetime | None = Query(default=None),
+    q: str | None = Query(default=None, max_length=200),
+    limit: int = Query(default=60, ge=1, le=200),
+    current_user: User = Depends(require_roles("citizen", "staff", "leader")),
+    session: AsyncSession = Depends(get_db_session),
+) -> ComplaintListResponse:
+    all_wards = list((await session.scalars(select(Ward))).all())
+    nearby_wards, _detected_city = resolve_explore_wards(
+        all_wards, latitude, longitude, radius_km
+    )
+    nearby_ids = {ward.id for ward in nearby_wards}
+
+    if ward_id is not None:
+        if ward_id not in nearby_ids:
+            return ComplaintListResponse(total=0, complaints=[])
+        target_ward_ids = [ward_id]
+    else:
+        target_ward_ids = list(nearby_ids)
+
+    complaints = await query_explore_complaints(
+        session,
+        ward_ids=target_ward_ids,
+        date_from=date_from,
+        date_to=date_to,
+        search=q,
+        limit=limit,
+    )
+
+    ward_map = {ward.id: ward for ward in nearby_wards}
+    if ward_id is not None:
+        extra = await session.scalar(select(Ward).where(Ward.id == ward_id))
+        if extra is not None:
+            ward_map[extra.id] = extra
+
+    items = [complaint_to_response(item, ward_map, redact_contact=current_user.role == "citizen") for item in complaints]
+    return ComplaintListResponse(total=len(items), complaints=items)
+
+
+@router.get("/explore/{complaint_id}", response_model=ComplaintResponse)
+async def get_explore_complaint(
+    complaint_id: str,
+    latitude: float = Query(..., ge=-90, le=90),
+    longitude: float = Query(..., ge=-180, le=180),
+    radius_km: float = Query(default=50, ge=1, le=100),
+    current_user: User = Depends(require_roles("citizen", "staff", "leader")),
+    session: AsyncSession = Depends(get_db_session),
+) -> ComplaintResponse:
+    complaint = await session.scalar(
+        select(Complaint)
+        .where(Complaint.id == complaint_id)
+        .options(selectinload(Complaint.cluster))
+    )
+    if complaint is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Complaint not found")
+
+    ward = await session.scalar(select(Ward).where(Ward.id == complaint.ward_id))
+    if ward is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Complaint ward not found")
+
+    all_wards = list((await session.scalars(select(Ward))).all())
+    explore_wards, _ = resolve_explore_wards(all_wards, latitude, longitude, radius_km)
+    explore_ids = {item.id for item in explore_wards}
+    if complaint.ward_id not in explore_ids:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Complaint is outside your search area",
+        )
+
+    ward_map = await load_ward_map(session, {complaint.ward_id})
+    return complaint_to_response(
+        complaint,
+        ward_map,
+        redact_contact=current_user.role == "citizen" and complaint.citizen_contact != current_user.phone,
+    )
 
 
 @router.get("/{complaint_id}", response_model=ComplaintResponse)
@@ -277,6 +389,7 @@ async def get_complaint(
     return build_complaint_response(
         complaint=complaint,
         ward_name=ward.name if ward else "Unknown",
+        ward_code=ward.code if ward else None,
         cluster_count=complaint.cluster.citizen_count if complaint.cluster else 1,
         department_suggestion=complaint.cluster.department_suggestion if complaint.cluster else None,
     )

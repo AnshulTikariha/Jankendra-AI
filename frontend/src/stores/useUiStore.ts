@@ -8,8 +8,14 @@ export type CitizenView =
   | 'confirmation'
   | 'complaint-detail'
   | 'ward-updates'
-  | 'help'
   | 'profile'
+
+export type ComplaintDetailSource = 'my-complaints' | 'ward-updates'
+
+export type ExploreLocation = {
+  latitude: number
+  longitude: number
+}
 
 type UiState = {
   activePageId: string
@@ -17,12 +23,16 @@ type UiState = {
   lastComplaintRef: string | null
   lastComplaintId: string | null
   viewingComplaintId: string | null
+  complaintDetailSource: ComplaintDetailSource
+  exploreLocation: ExploreLocation | null
   locale: SupportedLocale
   setActivePageId: (pageId: string) => void
   setCitizenView: (view: CitizenView) => void
   setLastComplaintRef: (ref: string | null) => void
   setLastComplaintId: (id: string | null) => void
   setViewingComplaintId: (id: string | null) => void
+  setComplaintDetailSource: (source: ComplaintDetailSource) => void
+  setExploreLocation: (location: ExploreLocation | null) => void
   setLocale: (locale: SupportedLocale) => void
 }
 
@@ -32,11 +42,15 @@ export const useUiStore = create<UiState>((set) => ({
   lastComplaintRef: null,
   lastComplaintId: null,
   viewingComplaintId: null,
+  complaintDetailSource: 'my-complaints',
+  exploreLocation: null,
   locale: readStoredLocale(),
   setActivePageId: (pageId) => set({ activePageId: pageId }),
   setCitizenView: (view) => set({ citizenView: view }),
   setLastComplaintRef: (ref) => set({ lastComplaintRef: ref }),
   setLastComplaintId: (id) => set({ lastComplaintId: id }),
   setViewingComplaintId: (id) => set({ viewingComplaintId: id }),
+  setComplaintDetailSource: (source) => set({ complaintDetailSource: source }),
+  setExploreLocation: (location) => set({ exploreLocation: location }),
   setLocale: (locale) => set({ locale }),
 }))

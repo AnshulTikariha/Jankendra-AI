@@ -3,7 +3,6 @@ export type CitizenPageId =
   | 'raise'
   | 'my-complaints'
   | 'ward-updates'
-  | 'help'
   | 'profile'
 
 export type CitizenPage = {
@@ -35,14 +34,8 @@ export const citizenPages: CitizenPage[] = [
   {
     id: 'ward-updates',
     label: 'Ward updates',
-    description: 'Resolved issues and public updates in your ward.',
-    available: false,
-  },
-  {
-    id: 'help',
-    label: 'Help & rights',
-    description: 'How complaints work and your privacy.',
-    available: false,
+    description: 'Browse nearby ward complaints in read-only mode.',
+    available: true,
   },
   {
     id: 'profile',

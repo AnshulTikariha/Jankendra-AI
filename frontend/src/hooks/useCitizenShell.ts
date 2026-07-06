@@ -4,6 +4,7 @@ import { citizenPages, type CitizenPageId } from '../types/citizenNavigation'
 
 export function useCitizenShell() {
   const citizenView = useUiStore((s) => s.citizenView)
+  const complaintDetailSource = useUiStore((s) => s.complaintDetailSource)
   const setCitizenView = useUiStore((s) => s.setCitizenView)
 
   const pages = useMemo(
@@ -17,10 +18,12 @@ export function useCitizenShell() {
 
   const sidebarActiveId: CitizenPageId = useMemo(() => {
     if (citizenView === 'confirmation') return 'raise'
-    if (citizenView === 'complaint-detail') return 'my-complaints'
+    if (citizenView === 'complaint-detail') {
+      return complaintDetailSource === 'ward-updates' ? 'ward-updates' : 'my-complaints'
+    }
     if (citizenPages.some((p) => p.id === citizenView)) return citizenView as CitizenPageId
     return 'home'
-  }, [citizenView])
+  }, [citizenView, complaintDetailSource])
 
   const activePage = useMemo(
     () => pages.find((page) => page.id === sidebarActiveId) ?? pages[0],
