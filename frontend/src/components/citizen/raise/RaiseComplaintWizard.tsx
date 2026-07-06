@@ -299,9 +299,21 @@ export function RaiseComplaintWizard() {
   }
 
   const validateStep = (targetStep: RaiseComplaintStep): boolean => {
+    if (targetStep === 'what' || targetStep === 'details' || targetStep === 'review') {
+      if (form.description.trim().length < DESCRIPTION_MIN) {
+        setError(t('raise.errors.descriptionMin', { min: DESCRIPTION_MIN }))
+        return false
+      }
+      if (form.description.trim().length > DESCRIPTION_MAX) {
+        setError(t('raise.details.quality.long'))
+        return false
+      }
+    }
     if (form.categories.length === 0) {
-      setError(t('raise.errors.categoryRequired'))
-      return false
+      if (targetStep === 'what' || targetStep === 'details' || targetStep === 'review') {
+        setError(t('raise.errors.categoryRequired'))
+        return false
+      }
     }
     if (primaryCategory !== 'other' && !form.subCategory) {
       if (targetStep === 'details' || targetStep === 'review') {
@@ -312,16 +324,6 @@ export function RaiseComplaintWizard() {
     if (isOnlyOtherCategory(form.categories) && form.customCategory.trim().length < 2) {
       if (targetStep === 'details' || targetStep === 'review') {
         setError(t('raise.errors.customCategoryRequired'))
-        return false
-      }
-    }
-    if (targetStep === 'review') {
-      if (form.description.trim().length < DESCRIPTION_MIN) {
-        setError(t('raise.errors.descriptionMin', { min: DESCRIPTION_MIN }))
-        return false
-      }
-      if (form.description.trim().length > DESCRIPTION_MAX) {
-        setError(t('raise.details.quality.long'))
         return false
       }
     }
@@ -343,6 +345,7 @@ export function RaiseComplaintWizard() {
   const goNext = () => {
     const next = raiseComplaintSteps[stepIndex + 1]
     if (!next) return
+    if (step === 'where' && !validateStep('what')) return
     if (step === 'what' && !validateStep('details')) return
     if (step === 'details' && !validateStep('review')) return
     // Defer review transition so the Continue click cannot land on Submit (same slot).
@@ -377,7 +380,11 @@ export function RaiseComplaintWizard() {
     if (step !== 'review') return
 
     if (!validateStep('review')) {
-      setStep('details')
+      if (form.description.trim().length < DESCRIPTION_MIN) {
+        setStep('where')
+      } else {
+        setStep('details')
+      }
       return
     }
 
@@ -451,6 +458,53 @@ export function RaiseComplaintWizard() {
           <div className="space-y-5">
             {step === 'where' && (
               <div className="space-y-5">
+                <label className="block">
+                  <span className="text-sm font-bold">
+                    {t('raise.details.titleOptional')}{' '}
+                    <span className="font-normal text-muted">{t('raise.details.titleOptionalHint')}</span>
+                  </span>
+                  <input
+                    className="mt-2 w-full rounded-xl border border-line bg-white px-4 py-3 font-medium outline-none focus:ring-4 focus:ring-teal-200/40"
+                    maxLength={120}
+                    onChange={(e) => updateForm('title', e.target.value)}
+                    placeholder={t('raise.details.titlePlaceholder')}
+                    type="text"
+                    value={form.title}
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="text-sm font-bold">{t('raise.details.description')}</span>
+                  <p className="mt-0.5 text-xs text-muted">{t('raise.details.descriptionHint')}</p>
+                  <textarea
+                    className="mt-2 w-full rounded-xl border border-line bg-white px-4 py-3 font-medium outline-none focus:ring-4 focus:ring-teal-200/40"
+                    maxLength={DESCRIPTION_MAX}
+                    onChange={(e) => updateForm('description', e.target.value)}
+                    placeholder={t(`raise.what.examples.${primaryCategory}`)}
+                    rows={5}
+                    value={form.description}
+                  />
+                  <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-xs font-semibold text-muted">
+                      {t('raise.details.charCount', {
+                        count: form.description.trim().length,
+                        max: DESCRIPTION_MAX,
+                      })}
+                    </p>
+                    <p
+                      className={`text-xs font-bold ${
+                        descQuality === 'short'
+                          ? 'text-amber-700'
+                          : descQuality === 'good'
+                            ? 'text-teal-700'
+                            : 'text-muted'
+                      }`}
+                    >
+                      {t(`raise.details.quality.${descQuality}`, { min: DESCRIPTION_MIN })}
+                    </p>
+                  </div>
+                </label>
+
                 <label className="block">
                   <span className="text-sm font-bold">{t('raise.where.city')}</span>
                   <p className="mt-0.5 text-xs text-muted">{t('raise.where.cityHint')}</p>
@@ -626,53 +680,6 @@ export function RaiseComplaintWizard() {
                     count={similarCount}
                   />
                 )}
-
-                <label className="block">
-                  <span className="text-sm font-bold">
-                    {t('raise.details.titleOptional')}{' '}
-                    <span className="font-normal text-muted">{t('raise.details.titleOptionalHint')}</span>
-                  </span>
-                  <input
-                    className="mt-2 w-full rounded-xl border border-line px-4 py-3 font-medium outline-none focus:ring-4 focus:ring-teal-200/40"
-                    maxLength={120}
-                    onChange={(e) => updateForm('title', e.target.value)}
-                    placeholder={t('raise.details.titlePlaceholder')}
-                    type="text"
-                    value={form.title}
-                  />
-                </label>
-
-                <label className="block">
-                  <span className="text-sm font-bold">{t('raise.details.description')}</span>
-                  <p className="mt-0.5 text-xs text-muted">{t('raise.details.descriptionHint')}</p>
-                  <textarea
-                    className="mt-2 w-full rounded-xl border border-line px-4 py-3 font-medium outline-none focus:ring-4 focus:ring-teal-200/40"
-                    maxLength={DESCRIPTION_MAX}
-                    onChange={(e) => updateForm('description', e.target.value)}
-                    placeholder={t(`raise.what.examples.${primaryCategory}`)}
-                    rows={5}
-                    value={form.description}
-                  />
-                  <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-xs font-semibold text-muted">
-                      {t('raise.details.charCount', {
-                        count: form.description.trim().length,
-                        max: DESCRIPTION_MAX,
-                      })}
-                    </p>
-                    <p
-                      className={`text-xs font-bold ${
-                        descQuality === 'short'
-                          ? 'text-amber-700'
-                          : descQuality === 'good'
-                            ? 'text-teal-700'
-                            : 'text-muted'
-                      }`}
-                    >
-                      {t(`raise.details.quality.${descQuality}`, { min: DESCRIPTION_MIN })}
-                    </p>
-                  </div>
-                </label>
 
                 <fieldset>
                   <legend className="text-sm font-bold">{t('raise.details.duration')}</legend>
