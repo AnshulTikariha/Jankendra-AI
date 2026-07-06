@@ -19,7 +19,8 @@ jobs:
 
       - name: Package application
         run: |
-          tar -czf jankendra-deploy.tgz \
+          ARCHIVE="${RUNNER_TEMP}/jankendra-deploy.tgz"
+          tar -czf "$ARCHIVE" \
             --exclude=.git \
             --exclude=node_modules \
             --exclude=frontend/node_modules \
@@ -27,8 +28,9 @@ jobs:
             --exclude=.venv \
             --exclude=backend/data/*.db \
             --exclude=ai_modules/credentials \
-            --exclude=jankendra-deploy.tgz \
             .
+          cp "$ARCHIVE" jankendra-deploy.tgz
+          ls -lh jankendra-deploy.tgz
 
       - name: Upload archive to VM
         uses: appleboy/scp-action@v0.1.7
