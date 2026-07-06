@@ -23,14 +23,45 @@
       "discard": "Start fresh"
     },
     "previewBadge": "Local preview",
+    "voice": {
+      "start": "Voice setup",
+      "stop": "Stop recording",
+      "processing": "Transcribing…",
+      "processingTitle": "Converting speech to text",
+      "processingHint": "Almost done — your words will appear in the description box.",
+      "recordingTitle": "Listening…",
+      "recordingHint": "Describe the problem clearly — location, what is wrong, and since when.",
+      "recordingHintCloud": "Speak clearly — your voice is sent to Google Cloud Speech-to-Text for accurate transcription.",
+      "recordingHintAuto": "Speak in Hindi or English — we detect your language automatically.",
+      "processingHintCloud": "Google Cloud is converting your speech to text…",
+      "levelHint": "Bars move when your microphone picks up sound",
+      "livePreview": "Live transcript",
+      "livePreviewEmpty": "Your words will appear here as you speak…",
+      "noSpeech": "No speech was detected. Try speaking louder or move closer to the microphone.",
+      "cloudFallbackHint": "Cloud transcription is unavailable. Voice setup now uses your browser — tap Voice setup and try again.",
+      "errorTitle": "Voice input failed",
+      "dismiss": "Dismiss",
+      "error": "Could not transcribe. Try again or type your problem.",
+      "apiDisabled": "Speech-to-Text is not enabled on the server’s Google Cloud project. Ask your admin to enable the Cloud Speech-to-Text API.",
+      "permissionDenied": "Microphone access denied.",
+      "unsupported": "Voice input is not supported in this browser.",
+      "notSignedIn": "Sign in to use voice input."
+    },
+    "analysis": {
+      "analyzing": "Analyzing your description and suggesting details…",
+      "error": "Could not analyze description. You can still fill the form manually.",
+      "deviceLocationFailed": "Could not detect your location. Allow location access, or we will try network-based location when you pin on the map."
+    },
     "where": {
       "city": "City",
       "cityHint": "Select the city where the issue is located.",
       "cityLoading": "Loading cities…",
       "citySelect": "Select a city",
-      "cityApiHint": "Ward list could not be loaded from the server. Ensure the backend is running (port 8000) and demo wards are seeded.",
+      "cityApiHint": "Ward list could not be loaded from the server. Start the Jankendra backend (port 8000).",
       "ward": "Ward",
       "wardHint": "Choose the ward where the issue is located. Pinning on the map can auto-select the ward.",
+      "wardSelect": "Select a ward",
+      "wardSelectCityFirst": "Select a city first",
       "wardPrefilled": "Pre-filled from your profile — you can change it.",
       "wardLoading": "Loading wards…",
       "wardDetected": "Ward detected from map pin: {{ward}}",
@@ -60,7 +91,9 @@
         "clear": "Clear",
         "openMap": "Open in Google Maps",
         "unsupported": "Geolocation is not supported on this device.",
-        "denied": "Location access denied. Enter a landmark instead."
+        "denied": "Location access denied. Enter a landmark instead.",
+        "unavailable": "Could not detect your location right now. Try again or pin the issue on the map.",
+        "approximate": "Approximate network location used — drag the pin if you need to adjust it."
       }
     },
     "what": {
@@ -169,6 +202,8 @@
     },
     "errors": {
       "categoryRequired": "Please select at least one problem type.",
+      "cityRequired": "Please select a city.",
+      "wardRequired": "Please select a ward.",
       "descriptionMin": "Please provide at least {{min}} characters describing the issue.",
       "customCategoryRequired": "Please describe the issue category when choosing Other.",
       "subCategoryRequired": "Please select a sub-category for this issue type.",

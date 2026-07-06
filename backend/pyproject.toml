@@ -10,10 +10,14 @@ dependencies = [
     "bcrypt",
     "email-validator",
     "fastapi",
+    "python-multipart",
     "pydantic-settings",
     "PyJWT",
     "sqlalchemy",
     "shapely",
+    "google-cloud-dialogflow",
+    "google-cloud-speech",
+    "httpx",
     "uvicorn[standard]",
 ]
 

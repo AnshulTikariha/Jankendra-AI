@@ -10,13 +10,40 @@ from ai_modules.core.providers.vertex_gemini import VertexGeminiProvider
 
 SentimentLabel = Literal["positive", "neutral", "negative", "frustrated", "urgent"]
 SeverityLabel = Literal["low", "medium", "high", "critical"]
+CategoryLabel = Literal[
+    "water", "roads", "drainage", "electricity", "health", "sanitation", "other"
+]
 
 ALLOWED_SENTIMENTS: set[str] = {"positive", "neutral", "negative", "frustrated", "urgent"}
 ALLOWED_SEVERITIES: set[str] = {"low", "medium", "high", "critical"}
+ALLOWED_CATEGORIES: set[str] = {
+    "water",
+    "roads",
+    "drainage",
+    "electricity",
+    "health",
+    "sanitation",
+    "other",
+}
 
 ANALYSIS_RESPONSE_SCHEMA: dict[str, object] = {
     "type": "object",
     "properties": {
+        "categories": {
+            "type": "array",
+            "items": {
+                "type": "string",
+                "enum": [
+                    "water",
+                    "roads",
+                    "drainage",
+                    "electricity",
+                    "health",
+                    "sanitation",
+                    "other",
+                ],
+            },
+        },
         "sentiment": {
             "type": "string",
             "enum": ["positive", "neutral", "negative", "frustrated", "urgent"],
@@ -32,18 +59,31 @@ ANALYSIS_RESPONSE_SCHEMA: dict[str, object] = {
             "items": {"type": "string"},
         },
     },
-    "required": ["sentiment", "severity", "location", "summary", "keywords"],
+    "required": ["categories", "sentiment", "severity", "location", "summary", "keywords"],
 }
 
 SYSTEM_PROMPT = """You analyze citizen complaint paragraphs from Indian constituencies.
 Return only valid JSON with these exact keys:
+- categories: array of one or more values from water, roads, drainage, electricity, health, sanitation, other
 - sentiment: one of positive, neutral, negative, frustrated, urgent
 - severity: one of low, medium, high, critical
 - location: extracted place name, landmark, ward, colony, or street; null if not mentioned
 - summary: one short sentence describing the core problem
 - keywords: array of up to 5 short issue keywords
 
+Category definitions (include every type that clearly applies):
+- water: drinking water, supply, pressure, contamination, pipeline leaks
+- roads: potholes, footpaths, road surface damage, traffic signals
+- drainage: blocked drains, standing water, sewage overflow, manholes
+- electricity: power outages, street lights, unsafe wiring, transformers
+- health: mosquito breeding, clinic access, waste hazards, stray animals
+- sanitation: garbage collection, open dumping, public toilets, dead animals
+- other: issues that do not clearly fit the categories above
+
 Rules:
+- categories must list every distinct problem type mentioned, not just the main one
+- use a single-item array when only one category applies
+- put the most important category first
 - frustrated or urgent sentiment is for angry or time-sensitive complaints
 - severity reflects public-health/safety risk and scale of disruption, not writing style
 - location must come from the text; do not invent places
@@ -53,6 +93,7 @@ Rules:
 
 @dataclass(frozen=True, slots=True)
 class TextAnalysisResult:
+    categories: list[CategoryLabel]
     sentiment: SentimentLabel
     severity: SeverityLabel
     location: str | None
@@ -61,7 +102,7 @@ class TextAnalysisResult:
 
 
 class TextAnalyzer:
-    """Classifies sentiment, severity, and location from free-form complaint text."""
+    """Classifies category, sentiment, severity, and location from complaint text."""
 
     def __init__(self, *, llm_provider: VertexGeminiProvider) -> None:
         self.llm_provider = llm_provider
@@ -86,7 +127,31 @@ class TextAnalyzer:
         return _parse_payload(payload)
 
 
+def _parse_categories(raw: object) -> list[CategoryLabel]:
+    values: list[str] = []
+    if isinstance(raw, str):
+        values = [raw]
+    elif isinstance(raw, list):
+        values = [str(item) for item in raw]
+    else:
+        raise ValueError("categories must be a non-empty array")
+
+    categories: list[CategoryLabel] = []
+    for value in values:
+        label = value.strip().lower()
+        if not label or label in categories:
+            continue
+        if label not in ALLOWED_CATEGORIES:
+            raise ValueError(f"unsupported category label: {label}")
+        categories.append(label)  # type: ignore[arg-type]
+
+    if not categories:
+        raise ValueError("categories must include at least one valid label")
+    return categories
+
+
 def _parse_payload(payload: dict[str, object]) -> TextAnalysisResult:
+    categories = _parse_categories(payload.get("categories", payload.get("category")))
     sentiment = str(payload.get("sentiment", "")).strip().lower()
     severity = str(payload.get("severity", "")).strip().lower()
     if sentiment not in ALLOWED_SENTIMENTS:
@@ -109,6 +174,7 @@ def _parse_payload(payload: dict[str, object]) -> TextAnalysisResult:
         keywords = [str(item).strip() for item in keywords_raw if str(item).strip()][:5]
 
     return TextAnalysisResult(
+        categories=categories,
         sentiment=sentiment,  # type: ignore[arg-type]
         severity=severity,  # type: ignore[arg-type]
         location=location,

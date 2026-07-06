@@ -106,6 +106,10 @@ export function formToCreatePayload(
   form: RaiseComplaintForm,
   meta: ComplaintSubmitMeta,
 ): CreateComplaintPayload {
+  if (form.wardId === '') {
+    throw new Error('Ward is required to submit a complaint')
+  }
+
   return {
     ward_id: form.wardId,
     category: getPrimaryCategory(form.categories),

@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useCitizenProfile } from '../../../hooks/useCitizenProfile'
 import { useCities, useResolveWard, useWardBoundary, useWards } from '../../../hooks/useConstituency'
 import { useCreateComplaint } from '../../../hooks/useComplaints'
 import { useRaiseComplaintDraft } from '../../../hooks/useRaiseComplaintDraft'
+import { useComplaintTextAnalysis } from '../../../hooks/useComplaintTextAnalysis'
 import { useSimilarComplaints } from '../../../hooks/useSimilarComplaints'
 import {
   descriptionQuality,
@@ -36,6 +36,7 @@ import { RaiseComplaintStepper } from './RaiseComplaintStepper'
 import { SimilarComplaintsBanner } from './SimilarComplaintsBanner'
 import { SubCategoryPicker, getSubCategoryLabel } from './SubCategoryPicker'
 import { WhatHappensNext } from './WhatHappensNext'
+import { VoiceComplaintButton } from './VoiceComplaintButton'
 
 const DESCRIPTION_MIN = 20
 const DESCRIPTION_MAX = 500
@@ -66,14 +67,9 @@ function formatDraftTime(iso: string) {
   })
 }
 
-function preferredWardId(wardId: number | '' | undefined): number | null {
-  return wardId !== undefined && wardId !== '' ? wardId : null
-}
-
 export function RaiseComplaintWizard() {
   const { t } = useTranslation('complaints')
   const session = useAuthStore((s) => s.session)
-  const { profile } = useCitizenProfile()
   const createComplaint = useCreateComplaint()
   const setCitizenView = useUiStore((s) => s.setCitizenView)
   const setLastComplaintRef = useUiStore((s) => s.setLastComplaintRef)
@@ -85,13 +81,9 @@ export function RaiseComplaintWizard() {
   const { data: wardsData, isLoading: wardsLoading } = useWards(city || undefined)
   const resolveWardMutation = useResolveWard()
 
-  const profileWardId = preferredWardId(profile?.wardId)
   const wardOptions = wardsData?.wards ?? []
-  const defaultWardId = profileWardId ?? wardOptions[0]?.id ?? 1
 
-  const [form, setForm] = useState<RaiseComplaintForm>(() =>
-    defaultRaiseComplaintForm(defaultWardId),
-  )
+  const [form, setForm] = useState<RaiseComplaintForm>(() => defaultRaiseComplaintForm())
   const [photos, setPhotos] = useState<ComplaintPhoto[]>([])
   const [step, setStep] = useState<RaiseComplaintStep>('where')
   const [error, setError] = useState('')
@@ -102,6 +94,9 @@ export function RaiseComplaintWizard() {
     confidence: 'inside' | 'nearest'
   } | null>(null)
   const [initialized, setInitialized] = useState(false)
+  const [mapSearchSeed, setMapSearchSeed] = useState<string | null>(null)
+  const [deviceLocateRequest, setDeviceLocateRequest] = useState(0)
+  const [locationFallbackError, setLocationFallbackError] = useState<string | null>(null)
   const resolveTimerRef = useRef<number | null>(null)
   const skipResolveRef = useRef(false)
   const mapResolvedWardRef = useRef<{
@@ -111,13 +106,12 @@ export function RaiseComplaintWizard() {
     confidence: 'inside' | 'nearest'
   } | null>(null)
 
-  const { data: wardBoundaryData } = useWardBoundary(form.wardId)
+  const { data: wardBoundaryData } = useWardBoundary(
+    form.wardId === '' ? null : form.wardId,
+  )
 
   const selectedWard = wardOptions.find((ward) => ward.id === form.wardId)
-  const activeCity =
-    citiesData?.find((item) => item.city === city) ??
-    citiesData?.[0] ??
-    null
+  const activeCity = citiesData?.find((item) => item.city === city) ?? null
   const mapView = activeCity
     ? {
         center: [activeCity.defaultLat, activeCity.defaultLng] as [number, number],
@@ -132,18 +126,35 @@ export function RaiseComplaintWizard() {
       ? { lat: selectedWard.centroidLat, lng: selectedWard.centroidLng }
       : null
 
-  const { restoreDraft, clearDraft } = useRaiseComplaintDraft(form, step, defaultWardId)
+  const { restoreDraft, clearDraft } = useRaiseComplaintDraft(form, step)
 
-  useEffect(() => {
-    if (!citiesData?.length || city) return
-    setCity(citiesData[0].city)
-  }, [citiesData, city])
-
-  useEffect(() => {
-    if (!citiesData?.length || !city) return
-    if (citiesData.some((item) => item.city === city)) return
-    setCity(citiesData[0].city)
-  }, [citiesData, city])
+  const {
+    isAnalyzing,
+    analysisError,
+    markTouched,
+    analyzeNow,
+  } = useComplaintTextAnalysis({
+    description: form.description,
+    form,
+    token: session?.accessToken ?? null,
+    enabled: step === 'where',
+    geocodeBias: activeCity
+      ? {
+          lat: activeCity.defaultLat,
+          lng: activeCity.defaultLng,
+          cityName: activeCity.displayName,
+        }
+      : null,
+    onApplyPatches: (patch) => {
+      setForm((prev) => ({ ...prev, ...patch }))
+      setError('')
+    },
+    onMapSearchSeed: setMapSearchSeed,
+    onRequestDeviceLocation: () => setDeviceLocateRequest((count) => count + 1),
+    onDeviceLocationFailed: () => {
+      setLocationFallbackError(t('raise.analysis.deviceLocationFailed'))
+    },
+  })
 
   useEffect(() => {
     if (initialized) return
@@ -151,13 +162,10 @@ export function RaiseComplaintWizard() {
     const draft = restoreDraft()
     if (draft) {
       setDraftPrompt({ savedAt: formatDraftTime(draft.savedAt) })
-    } else if (profileWardId !== null) {
-      setForm((f) => ({ ...f, wardId: profileWardId }))
-      setWardPrefilled(true)
     }
 
     setInitialized(true)
-  }, [initialized, profileWardId, restoreDraft])
+  }, [initialized, restoreDraft])
 
   useEffect(() => {
     if (wardOptions.length === 0) return
@@ -177,12 +185,11 @@ export function RaiseComplaintWizard() {
       return
     }
 
-    setForm((current) => {
-      if (wardOptions.some((ward) => ward.id === current.wardId)) return current
+    if (form.wardId !== '' && !wardOptions.some((ward) => ward.id === form.wardId)) {
       skipResolveRef.current = true
-      return { ...current, wardId: wardOptions[0].id }
-    })
-  }, [city, wardOptions])
+      setForm((current) => ({ ...current, wardId: '' }))
+    }
+  }, [city, wardOptions, form.wardId])
 
   useEffect(() => {
     if (form.latitude == null || form.longitude == null) {
@@ -273,8 +280,12 @@ export function RaiseComplaintWizard() {
   const wardName = wardOptions.find((w) => w.id === form.wardId)?.name ?? ''
 
   const updateForm = <K extends keyof RaiseComplaintForm>(key: K, value: RaiseComplaintForm[K]) => {
+    markTouched(key)
     setForm((prev) => ({ ...prev, [key]: value }))
     setError('')
+    if (key === 'latitude' || key === 'longitude' || key === 'locationDetail') {
+      setLocationFallbackError(null)
+    }
   }
 
   const handleResumeDraft = () => {
@@ -289,19 +300,38 @@ export function RaiseComplaintWizard() {
   const handleDiscardDraft = () => {
     clearDraft()
     setDraftPrompt(null)
-    setForm(defaultRaiseComplaintForm(defaultWardId))
+    setForm(defaultRaiseComplaintForm())
     setPhotos([])
     setStep('where')
-    if (profileWardId !== null) {
-      setForm((f) => ({ ...f, wardId: profileWardId }))
-      setWardPrefilled(true)
-    }
+    setCity('')
+    setWardPrefilled(false)
+    setWardDetected(null)
   }
 
   const validateStep = (targetStep: RaiseComplaintStep): boolean => {
+    if (targetStep === 'what' || targetStep === 'details' || targetStep === 'review') {
+      if (!city) {
+        setError(t('raise.errors.cityRequired'))
+        return false
+      }
+      if (form.wardId === '') {
+        setError(t('raise.errors.wardRequired'))
+        return false
+      }
+      if (form.description.trim().length < DESCRIPTION_MIN) {
+        setError(t('raise.errors.descriptionMin', { min: DESCRIPTION_MIN }))
+        return false
+      }
+      if (form.description.trim().length > DESCRIPTION_MAX) {
+        setError(t('raise.details.quality.long'))
+        return false
+      }
+    }
     if (form.categories.length === 0) {
-      setError(t('raise.errors.categoryRequired'))
-      return false
+      if (targetStep === 'what' || targetStep === 'details' || targetStep === 'review') {
+        setError(t('raise.errors.categoryRequired'))
+        return false
+      }
     }
     if (primaryCategory !== 'other' && !form.subCategory) {
       if (targetStep === 'details' || targetStep === 'review') {
@@ -315,20 +345,11 @@ export function RaiseComplaintWizard() {
         return false
       }
     }
-    if (targetStep === 'review') {
-      if (form.description.trim().length < DESCRIPTION_MIN) {
-        setError(t('raise.errors.descriptionMin', { min: DESCRIPTION_MIN }))
-        return false
-      }
-      if (form.description.trim().length > DESCRIPTION_MAX) {
-        setError(t('raise.details.quality.long'))
-        return false
-      }
-    }
     return true
   }
 
   const handleCategoriesChange = (categories: typeof form.categories) => {
+    markTouched('categories')
     const prevPrimary = getPrimaryCategory(form.categories)
     const nextPrimary = getPrimaryCategory(categories)
     setForm((prev) => ({
@@ -343,6 +364,7 @@ export function RaiseComplaintWizard() {
   const goNext = () => {
     const next = raiseComplaintSteps[stepIndex + 1]
     if (!next) return
+    if (step === 'where' && !validateStep('what')) return
     if (step === 'what' && !validateStep('details')) return
     if (step === 'details' && !validateStep('review')) return
     // Defer review transition so the Continue click cannot land on Submit (same slot).
@@ -377,7 +399,11 @@ export function RaiseComplaintWizard() {
     if (step !== 'review') return
 
     if (!validateStep('review')) {
-      setStep('details')
+      if (form.description.trim().length < DESCRIPTION_MIN) {
+        setStep('where')
+      } else {
+        setStep('details')
+      }
       return
     }
 
@@ -412,11 +438,29 @@ export function RaiseComplaintWizard() {
     <section className="space-y-4">
       <div className="overflow-hidden rounded-3xl border border-line/80 bg-white shadow-md">
         <div className="border-b border-line/80 bg-gradient-to-r from-rose-50/50 to-white px-5 py-4 sm:px-6">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">
-            {t('raise.eyebrow')}
-          </p>
-          <h1 className="mt-1 text-2xl font-extrabold">{t('raise.title')}</h1>
-          <p className="mt-2 text-sm text-muted">{t('raise.subtitle')}</p>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">
+                {t('raise.eyebrow')}
+              </p>
+              <h1 className="mt-1 text-2xl font-extrabold">{t('raise.title')}</h1>
+              <p className="mt-2 text-sm text-muted">{t('raise.subtitle')}</p>
+            </div>
+            {step === 'where' && (
+              <VoiceComplaintButton
+                onTranscript={(text) => {
+                  const trimmed = text.trim()
+                  if (!trimmed) {
+                    return
+                  }
+                  const existing = form.description.trim()
+                  const nextDescription = existing ? `${existing}\n\n${trimmed}` : trimmed
+                  updateForm('description', nextDescription)
+                  analyzeNow(nextDescription)
+                }}
+              />
+            )}
+          </div>
           <div className="mt-4">
             <RaiseComplaintStepper current={step} />
           </div>
@@ -452,6 +496,64 @@ export function RaiseComplaintWizard() {
             {step === 'where' && (
               <div className="space-y-5">
                 <label className="block">
+                  <span className="text-sm font-bold">
+                    {t('raise.details.titleOptional')}{' '}
+                    <span className="font-normal text-muted">{t('raise.details.titleOptionalHint')}</span>
+                  </span>
+                  <input
+                    className="mt-2 w-full rounded-xl border border-line bg-white px-4 py-3 font-medium outline-none focus:ring-4 focus:ring-teal-200/40"
+                    maxLength={120}
+                    onChange={(e) => updateForm('title', e.target.value)}
+                    placeholder={t('raise.details.titlePlaceholder')}
+                    type="text"
+                    value={form.title}
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="text-sm font-bold">{t('raise.details.description')}</span>
+                  <p className="mt-0.5 text-xs text-muted">{t('raise.details.descriptionHint')}</p>
+                  {isAnalyzing && (
+                    <p className="mt-1 text-xs font-semibold text-teal-700">
+                      {t('raise.analysis.analyzing')}
+                    </p>
+                  )}
+                  {analysisError && (
+                    <p className="mt-1 text-xs font-semibold text-amber-700">{analysisError}</p>
+                  )}
+                  {locationFallbackError && (
+                    <p className="mt-1 text-xs font-semibold text-amber-700">{locationFallbackError}</p>
+                  )}
+                  <textarea
+                    className="mt-2 w-full rounded-xl border border-line bg-white px-4 py-3 font-medium outline-none focus:ring-4 focus:ring-teal-200/40"
+                    maxLength={DESCRIPTION_MAX}
+                    onChange={(e) => updateForm('description', e.target.value)}
+                    placeholder={t(`raise.what.examples.${primaryCategory}`)}
+                    rows={5}
+                    value={form.description}
+                  />
+                  <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-xs font-semibold text-muted">
+                      {t('raise.details.charCount', {
+                        count: form.description.trim().length,
+                        max: DESCRIPTION_MAX,
+                      })}
+                    </p>
+                    <p
+                      className={`text-xs font-bold ${
+                        descQuality === 'short'
+                          ? 'text-amber-700'
+                          : descQuality === 'good'
+                            ? 'text-teal-700'
+                            : 'text-muted'
+                      }`}
+                    >
+                      {t(`raise.details.quality.${descQuality}`, { min: DESCRIPTION_MIN })}
+                    </p>
+                  </div>
+                </label>
+
+                <label className="block">
                   <span className="text-sm font-bold">{t('raise.where.city')}</span>
                   <p className="mt-0.5 text-xs text-muted">{t('raise.where.cityHint')}</p>
                   <select
@@ -460,6 +562,7 @@ export function RaiseComplaintWizard() {
                     onChange={(event) => {
                       mapResolvedWardRef.current = null
                       setCity(event.target.value)
+                      setForm((current) => ({ ...current, wardId: '' }))
                       setWardPrefilled(false)
                       setWardDetected(null)
                       skipResolveRef.current = true
@@ -506,15 +609,23 @@ export function RaiseComplaintWizard() {
                   )}
                   <select
                     className="mt-2 w-full rounded-xl border border-line bg-white px-4 py-3 font-semibold outline-none focus:ring-4 focus:ring-teal-200/40 disabled:opacity-60"
-                    disabled={wardsLoading || wardOptions.length === 0}
+                    disabled={!city || wardsLoading || wardOptions.length === 0}
                     onChange={(e) => {
                       skipResolveRef.current = true
-                      updateForm('wardId', Number(e.target.value))
+                      const value = e.target.value
+                      updateForm('wardId', value === '' ? '' : Number(value))
                       setWardPrefilled(false)
                       setWardDetected(null)
                     }}
-                    value={form.wardId}
+                    value={form.wardId === '' ? '' : form.wardId}
                   >
+                    <option disabled value="">
+                      {!city
+                        ? t('raise.where.wardSelectCityFirst')
+                        : wardsLoading
+                          ? t('raise.where.wardLoading')
+                          : t('raise.where.wardSelect')}
+                    </option>
                     {wardOptions.map((ward) => (
                       <option key={ward.id} value={ward.id}>
                         {ward.wardAreaName ? `${ward.name} — ${ward.wardAreaName}` : ward.name}
@@ -529,7 +640,25 @@ export function RaiseComplaintWizard() {
                 <MapLocationPicker
                   mapView={mapView}
                   onChange={({ latitude, longitude, locationDetail }) => {
-                    setForm((prev) => ({ ...prev, latitude, longitude, locationDetail }))
+                    setForm((prev) => {
+                      if (
+                        latitude !== prev.latitude ||
+                        longitude !== prev.longitude
+                      ) {
+                        markTouched('map')
+                      }
+                      if (
+                        locationDetail !== prev.locationDetail &&
+                        latitude === prev.latitude &&
+                        longitude === prev.longitude
+                      ) {
+                        markTouched('locationDetail')
+                      }
+                      return { ...prev, latitude, longitude, locationDetail }
+                    })
+                    if (latitude != null && longitude != null) {
+                      setLocationFallbackError(null)
+                    }
                     setError('')
                   }}
                   searchBias={
@@ -541,6 +670,11 @@ export function RaiseComplaintWizard() {
                         }
                       : undefined
                   }
+                  searchSeed={mapSearchSeed}
+                  deviceLocateRequest={deviceLocateRequest}
+                  onDeviceLocateFailed={() => {
+                    setLocationFallbackError(t('raise.analysis.deviceLocationFailed'))
+                  }}
                   value={{
                     latitude: form.latitude,
                     longitude: form.longitude,
@@ -626,53 +760,6 @@ export function RaiseComplaintWizard() {
                     count={similarCount}
                   />
                 )}
-
-                <label className="block">
-                  <span className="text-sm font-bold">
-                    {t('raise.details.titleOptional')}{' '}
-                    <span className="font-normal text-muted">{t('raise.details.titleOptionalHint')}</span>
-                  </span>
-                  <input
-                    className="mt-2 w-full rounded-xl border border-line px-4 py-3 font-medium outline-none focus:ring-4 focus:ring-teal-200/40"
-                    maxLength={120}
-                    onChange={(e) => updateForm('title', e.target.value)}
-                    placeholder={t('raise.details.titlePlaceholder')}
-                    type="text"
-                    value={form.title}
-                  />
-                </label>
-
-                <label className="block">
-                  <span className="text-sm font-bold">{t('raise.details.description')}</span>
-                  <p className="mt-0.5 text-xs text-muted">{t('raise.details.descriptionHint')}</p>
-                  <textarea
-                    className="mt-2 w-full rounded-xl border border-line px-4 py-3 font-medium outline-none focus:ring-4 focus:ring-teal-200/40"
-                    maxLength={DESCRIPTION_MAX}
-                    onChange={(e) => updateForm('description', e.target.value)}
-                    placeholder={t(`raise.what.examples.${primaryCategory}`)}
-                    rows={5}
-                    value={form.description}
-                  />
-                  <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-xs font-semibold text-muted">
-                      {t('raise.details.charCount', {
-                        count: form.description.trim().length,
-                        max: DESCRIPTION_MAX,
-                      })}
-                    </p>
-                    <p
-                      className={`text-xs font-bold ${
-                        descQuality === 'short'
-                          ? 'text-amber-700'
-                          : descQuality === 'good'
-                            ? 'text-teal-700'
-                            : 'text-muted'
-                      }`}
-                    >
-                      {t(`raise.details.quality.${descQuality}`, { min: DESCRIPTION_MIN })}
-                    </p>
-                  </div>
-                </label>
 
                 <fieldset>
                   <legend className="text-sm font-bold">{t('raise.details.duration')}</legend>

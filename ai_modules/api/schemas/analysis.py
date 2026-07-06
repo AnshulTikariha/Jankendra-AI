@@ -11,6 +11,7 @@ class TextAnalysisRequest(BaseModel):
 
 
 class TextAnalysisResponse(BaseModel):
+    categories: list[str]
     sentiment: str
     severity: str
     location: str | None

@@ -68,7 +68,7 @@ export function LanguageSwitcher({ variant = 'light' }: Props) {
   }
 
   return (
-    <div className="relative inline-block" ref={containerRef}>
+    <div className="relative z-20 inline-block" ref={containerRef}>
       <button
         aria-expanded={isOpen}
         aria-haspopup="listbox"
@@ -86,7 +86,7 @@ export function LanguageSwitcher({ variant = 'light' }: Props) {
       {isOpen && (
         <ul
           aria-label={t('language')}
-          className={`absolute right-0 top-full z-50 mt-2 min-w-[11rem] overflow-hidden rounded-2xl border p-1 ${menuVariants[variant]}`}
+          className={`absolute right-0 top-full z-[100] mt-2 min-w-[11rem] overflow-hidden rounded-2xl border p-1 ${menuVariants[variant]}`}
           role="listbox"
         >
           {supportedLocales.map((supportedLocale) => {
