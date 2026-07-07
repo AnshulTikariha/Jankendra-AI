@@ -261,6 +261,21 @@
       "other": "Other"
     }
   },
+  "logIssue": {
+    "eyebrow": "Complaint intake",
+    "title": "Log a citizen complaint",
+    "subtitle": "Record a complaint on behalf of a resident. Voice and AI can fill the details for you.",
+    "citizenPhone": "Citizen phone",
+    "citizenPhoneOptional": "(optional)",
+    "citizenPhoneHint": "Add the resident's mobile number so they can track the complaint.",
+    "citizenPhonePlaceholder": "10-digit mobile",
+    "success": {
+      "title": "Complaint logged",
+      "subtitle": "The complaint has been recorded and grouped with similar issues in the ward.",
+      "reference": "Reference number",
+      "logAnother": "Log another complaint"
+    }
+  },
   "confirmation": {
     "title": "Complaint registered",
     "subtitle": "Your complaint has been recorded. Save this reference to track progress.",

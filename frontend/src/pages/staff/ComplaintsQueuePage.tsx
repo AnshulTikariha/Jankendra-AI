@@ -6,6 +6,7 @@ import {
   useStaffComplaintsQueue,
 } from '../../hooks/useStaffComplaintsQueue'
 import { useWards } from '../../hooks/useStaffApi'
+import { ComplaintAiInsights } from '../../components/staff/ComplaintAiInsights'
 import { useComplaintOverridesStore } from '../../stores/useComplaintOverridesStore'
 import {
   formatComplaintWardLabel,
@@ -263,6 +264,11 @@ export function ComplaintsQueuePage() {
                   {selected.clusterCount} similar reports in this ward cluster
                 </p>
               )}
+
+              <ComplaintAiInsights
+                complaint={selected}
+                onApplyDepartment={setDraftDepartment}
+              />
 
               <label className="block">
                 <span className="text-xs font-bold text-muted">Update status</span>
