@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     app_name: str = "Jankendra-AI Backend"
     app_version: str = "0.1.0"
     environment: str = "development"
+    expose_demo_otp: bool = True
     api_v1_prefix: str = "/api/v1"
 
     database_url: str = "sqlite+aiosqlite:///./data/jankendra.db"

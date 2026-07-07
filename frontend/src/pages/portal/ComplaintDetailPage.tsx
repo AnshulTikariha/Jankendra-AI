@@ -78,9 +78,10 @@ export function ComplaintDetailPage() {
     exploreLocation,
   )
   const complaintQuery = isExploreReadOnly ? exploreComplaintQuery : ownComplaintQuery
-  const { data: complaint, isLoading, isError, error } = complaintQuery
+  const { data: complaint, isPending, isFetching, isError, error } = complaintQuery
+  const isLoadingDetail = isPending || isFetching
   const attachments = useComplaintAttachmentsStore((s) =>
-    viewingComplaintId ? s.getAttachments(viewingComplaintId) : [],
+    viewingComplaintId ? s.attachments[viewingComplaintId] : undefined,
   )
   const [copied, setCopied] = useState(false)
 
@@ -117,7 +118,7 @@ export function ComplaintDetailPage() {
     )
   }
 
-  if (isLoading) {
+  if (isLoadingDetail) {
     return (
       <section className="flex min-h-[20rem] flex-col items-center justify-center rounded-3xl border border-dashed border-slate-300/80 bg-white/80 p-8 text-center shadow-sm">
         <div className="size-10 animate-spin rounded-full border-4 border-teal-200 border-t-teal-600" />
@@ -242,7 +243,7 @@ export function ComplaintDetailPage() {
         </dl>
       </div>
 
-      {attachments.length > 0 && <PhotoGallery photos={attachments} />}
+      {attachments && attachments.length > 0 && <PhotoGallery photos={attachments} />}
 
       <div className="overflow-hidden rounded-3xl border border-line/80 bg-white shadow-md">
         <div className="border-b border-line/60 bg-slate-50/80 px-5 py-3">

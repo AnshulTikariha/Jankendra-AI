@@ -16,6 +16,8 @@ import { useAuthStore } from '../stores/useAuthStore'
 import type { UserRole } from '../types/auth'
 
 const otpLength = 6
+const demoOtp = '246810'
+const exposeDemoOtp = import.meta.env.VITE_EXPOSE_DEMO_OTP !== 'false'
 const roles: UserRole[] = ['citizen', 'staff', 'leader']
 const philosophyKeys = ['localFirst', 'accountable', 'humanLed'] as const
 const highlightKeys = ['access', 'verified', 'mobileFirst'] as const
@@ -61,7 +63,7 @@ export function LoginPage() {
       const response = await requestOtp(digitsOnly)
       setHasRequestedOtp(true)
       setOtp(Array.from({ length: otpLength }, () => ''))
-      setDevOtpHint(response.dev_otp ?? null)
+      setDevOtpHint(response.dev_otp ?? (exposeDemoOtp ? demoOtp : null))
       setStatusKey('otpSent')
       window.setTimeout(() => otpRefs.current[0]?.focus(), 80)
     } catch (error) {

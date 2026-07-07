@@ -1,6 +1,8 @@
+import type { ReactNode } from 'react'
 import { AppShell } from './components/AppShell'
 import { AuthBootstrap } from './components/AuthBootstrap'
 import { CitizenShell } from './components/CitizenShell'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { useAuthStore } from './stores/useAuthStore'
 import { useUiStore } from './stores/useUiStore'
 import { LoginPage } from './pages/LoginPage'
@@ -15,17 +17,46 @@ import { WardUpdatesPage } from './pages/portal/WardUpdatesPage'
 function CitizenPortal() {
   const citizenView = useUiStore((s) => s.citizenView)
 
-  return (
-    <CitizenShell>
-      {citizenView === 'home' && <CitizenDashboardPage />}
-      {citizenView === 'raise' && <RaiseComplaintPage />}
-      {citizenView === 'my-complaints' && <MyComplaintsPage />}
-      {citizenView === 'ward-updates' && <WardUpdatesPage />}
-      {citizenView === 'confirmation' && <ComplaintConfirmationPage />}
-      {citizenView === 'profile' && <CitizenProfilePage />}
-      {citizenView === 'complaint-detail' && <ComplaintDetailPage />}
-    </CitizenShell>
-  )
+  let page: ReactNode
+  switch (citizenView) {
+    case 'home':
+      page = <CitizenDashboardPage />
+      break
+    case 'raise':
+      page = (
+        <ErrorBoundary label="Report issue">
+          <RaiseComplaintPage />
+        </ErrorBoundary>
+      )
+      break
+    case 'my-complaints':
+      page = <MyComplaintsPage />
+      break
+    case 'ward-updates':
+      page = <WardUpdatesPage />
+      break
+    case 'confirmation':
+      page = <ComplaintConfirmationPage />
+      break
+    case 'profile':
+      page = <CitizenProfilePage />
+      break
+    case 'complaint-detail':
+      page = (
+        <ErrorBoundary label="Complaint details">
+          <ComplaintDetailPage />
+        </ErrorBoundary>
+      )
+      break
+    default:
+      page = (
+        <section className="rounded-3xl border border-dashed border-slate-300 bg-white p-8 text-center">
+          <p className="text-sm font-semibold text-muted">Unknown page. Returning to home…</p>
+        </section>
+      )
+  }
+
+  return <CitizenShell>{page}</CitizenShell>
 }
 
 function AppRoutes() {

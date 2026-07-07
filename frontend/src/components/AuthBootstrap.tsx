@@ -22,6 +22,10 @@ export function AuthBootstrap({ children }: Props) {
     }
 
     let cancelled = false
+    const timeout = window.setTimeout(() => {
+      if (cancelled) return
+      setReady(true)
+    }, 12_000)
 
     fetchMe(session.accessToken)
       .then((user) => {
@@ -44,6 +48,7 @@ export function AuthBootstrap({ children }: Props) {
 
     return () => {
       cancelled = true
+      window.clearTimeout(timeout)
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps -- run once on mount
 
