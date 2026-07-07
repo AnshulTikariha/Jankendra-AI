@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import type { ComplaintPhoto } from '../types/raiseComplaint'
 
 const ATTACHMENTS_STORAGE_KEY = 'jankendra-complaint-attachments'
+const EMPTY_ATTACHMENTS: ComplaintPhoto[] = []
 
 type AttachmentsMap = Record<string, ComplaintPhoto[]>
 
@@ -36,5 +37,5 @@ export const useComplaintAttachmentsStore = create<ComplaintAttachmentsState>((s
     set({ attachments: next })
   },
 
-  getAttachments: (complaintId) => get().attachments[complaintId] ?? [],
+  getAttachments: (complaintId) => get().attachments[complaintId] ?? EMPTY_ATTACHMENTS,
 }))

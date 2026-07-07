@@ -129,6 +129,10 @@ export function parseComplaintMetadata(description: string): {
   priority?: string
   subCategory?: string
 } {
+  if (!description) {
+    return {}
+  }
+
   const priorityMatch = description.match(/- Priority: (.+)/)
   const subCategoryMatch = description.match(/- Sub-category: (.+)/)
   return {
