@@ -46,3 +46,7 @@ src/
 
 Set `VITE_API_BASE_URL` in `.env` when the backend API is not served from
 `/api/v1`.
+
+For Firebase Hosting (`https://jankendra-ai.web.app`), use an HTTPS API host:
+
+`VITE_API_BASE_URL=https://YOUR_API_DOMAIN/api/v1`
