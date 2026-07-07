@@ -1,0 +1,10 @@
+{
+  "name": "jankendra-ai",
+  "private": true,
+  "scripts": {
+    "firebase:deploy": "powershell -ExecutionPolicy Bypass -File deploy/firebase/deploy.ps1"
+  },
+  "devDependencies": {
+    "firebase-tools": "^14.5.0"
+  }
+}
