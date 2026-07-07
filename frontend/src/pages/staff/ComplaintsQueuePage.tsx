@@ -11,7 +11,6 @@ import { useComplaintOverridesStore } from '../../stores/useComplaintOverridesSt
 import {
   formatComplaintWardLabel,
   getComplaintDisplayTitle,
-  parseComplaintMetadata,
   parseComplaintSummary,
 } from '../../lib/raiseComplaintFormat'
 import {
@@ -25,7 +24,6 @@ import {
   severityBadgeStyles,
   severityCardStyles,
   severityLabels,
-  type ComplaintSeverity,
 } from '../../lib/complaintSeverity'
 
 const PAGE_SIZE = 10
