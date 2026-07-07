@@ -33,6 +33,10 @@ const navVisuals: Record<string, { gradient: string; icon: React.ReactNode }> = 
     gradient: 'from-amber-500 to-orange-500',
     icon: <PlanIcon />,
   },
+  'complaint-insights': {
+    gradient: 'from-fuchsia-500 to-pink-600',
+    icon: <InsightIcon />,
+  },
   'log-issue': {
     gradient: 'from-rose-500 to-pink-600',
     icon: <IssueIcon />,
@@ -212,6 +216,15 @@ function PlanIcon() {
   return (
     <svg aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
       <path d="M4 18v-6l4-2 4 3 8-5v10H4z" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function InsightIcon() {
+  return (
+    <svg aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+      <path d="M12 3l1.9 4.8L18.7 9l-4.8 1.9L12 15.7 10.1 10.9 5.3 9l4.8-1.2z" strokeLinejoin="round" />
+      <path d="M18 15l.9 2.3L21 18l-2.1.7L18 21l-.9-2.3L15 18l2.1-.7z" strokeLinejoin="round" />
     </svg>
   )
 }

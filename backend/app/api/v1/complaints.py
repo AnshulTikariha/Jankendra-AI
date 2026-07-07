@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
@@ -19,6 +19,7 @@ from app.schemas.complaint_analysis import (
     ComplaintTextAnalysisRequest,
     ComplaintTextAnalysisResponse,
 )
+from app.schemas.leader_ai import ComplaintTheme, ComplaintThemesResponse
 from app.services.complaint_explore import (
     query_explore_complaints,
     resolve_explore_wards,
@@ -27,6 +28,11 @@ from app.services.complaint_text_analysis import (
     ComplaintAnalysisError,
     analyze_complaint_text,
     complaint_analysis_configured,
+)
+from app.services.leader_ai import (
+    LeaderAIError,
+    generate_complaint_themes,
+    leader_ai_configured,
 )
 
 router = APIRouter(prefix="/complaints", tags=["complaints"])
@@ -242,6 +248,101 @@ async def analyze_complaint_text_route(
         location=result.location,
         summary=result.summary,
         keywords=result.keywords,
+    )
+
+
+def _complaint_body(description: str) -> str:
+    """Return the human-written complaint text without the metadata block."""
+    body = description.split("\n---\n")[0].strip()
+    return body[:500]
+
+
+@router.get("/themes", response_model=ComplaintThemesResponse)
+async def complaint_themes_route(
+    days: int = Query(default=14, ge=1, le=90),
+    limit: int = Query(default=120, ge=1, le=300),
+    current_user: User = Depends(require_roles("leader", "staff")),
+    session: AsyncSession = Depends(get_db_session),
+) -> ComplaintThemesResponse:
+    if not leader_ai_configured():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Leader AI is not configured on the server",
+        )
+
+    now = datetime.now(timezone.utc)
+    window_start = now - timedelta(days=days)
+    period_label = f"Last {days} days"
+
+    wards = list((await session.scalars(select(Ward))).all())
+    ward_names = {ward.id: ward.name for ward in wards}
+    constituency_name = wards[0].constituency_name if wards else "South Delhi"
+
+    complaints = list(
+        (
+            await session.scalars(select(Complaint).order_by(Complaint.created_at.desc()))
+        ).all()
+    )
+    recent: list[Complaint] = []
+    for complaint in complaints:
+        created = complaint.created_at
+        if created is not None and created.tzinfo is None:
+            created = created.replace(tzinfo=timezone.utc)
+        if created is not None and created < window_start:
+            continue
+        recent.append(complaint)
+        if len(recent) >= limit:
+            break
+
+    if not recent:
+        return ComplaintThemesResponse(
+            overview="No recent complaints in this period.",
+            period_label=period_label,
+            total_complaints=0,
+            themes=[],
+        )
+
+    payload = {
+        "constituency_name": constituency_name,
+        "period_label": period_label,
+        "complaints": [
+            {
+                "summary": _complaint_body(complaint.description),
+                "category": complaint.category,
+                "ward_name": ward_names.get(complaint.ward_id, "Unknown"),
+            }
+            for complaint in recent
+        ],
+    }
+
+    try:
+        result = await generate_complaint_themes(payload)
+    except LeaderAIError as exc:
+        raise HTTPException(
+            status_code=exc.status_code or status.HTTP_502_BAD_GATEWAY,
+            detail=str(exc),
+        ) from exc
+
+    themes: list[ComplaintTheme] = []
+    for theme in result.get("themes", []):
+        if not isinstance(theme, dict):
+            continue
+        themes.append(
+            ComplaintTheme(
+                theme=str(theme.get("theme", "")),
+                category=str(theme.get("category", "other")),
+                count=int(theme.get("count", 0) or 0),
+                summary=str(theme.get("summary", "")),
+                severity=str(theme.get("severity", "medium")),
+                wards=[str(w) for w in theme.get("wards", []) if str(w).strip()],
+            )
+        )
+
+    return ComplaintThemesResponse(
+        overview=str(result.get("overview", "")),
+        period_label=period_label,
+        total_complaints=len(recent),
+        themes=themes,
     )
 
 

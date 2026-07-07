@@ -11,14 +11,24 @@ import {
   type ScoreTier,
 } from '../../components/staff/PriorityGrid'
 import { usePriorities } from '../../hooks/useStaffApi'
+import { usePriorityInsights } from '../../hooks/useLeaderAi'
 
 const PAGE_SIZE = 6
 
 export function DevelopmentPlanPage() {
   const { data, isLoading, isError, error, refetch } = usePriorities()
+  const { data: insights, isLoading: insightsLoading } = usePriorityInsights()
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [tierFilter, setTierFilter] = useState<'all' | ScoreTier>('all')
+
+  const insightMap = useMemo(() => {
+    const map = new Map<string, { explanation: string; recommendedAction: string }>()
+    for (const item of insights?.items ?? []) {
+      map.set(item.id, { explanation: item.explanation, recommendedAction: item.recommended_action })
+    }
+    return map
+  }, [insights?.items])
 
   const priorities = useMemo(() => data?.priorities ?? [], [data?.priorities])
   const maxScore = useMemo(
@@ -82,6 +92,25 @@ export function DevelopmentPlanPage() {
         title="Prioritised actions"
       />
 
+      {(insightsLoading || insights?.overview) && (
+        <div className="rounded-2xl border border-violet-200/70 bg-gradient-to-r from-violet-50 to-indigo-50 px-4 py-3 shadow-sm">
+          <p className="flex items-center gap-1.5 text-[0.7rem] font-bold uppercase tracking-[0.14em] text-violet-700">
+            <svg aria-hidden="true" className="size-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path d="M12 3l1.9 4.8L18.7 9l-4.8 1.9L12 15.7 10.1 10.9 5.3 9l4.8-1.2z" strokeLinejoin="round" />
+            </svg>
+            AI overview
+          </p>
+          {insightsLoading ? (
+            <div className="mt-2 space-y-1.5">
+              <div className="h-3.5 w-full animate-pulse rounded bg-violet-100" />
+              <div className="h-3.5 w-2/3 animate-pulse rounded bg-violet-100" />
+            </div>
+          ) : (
+            <p className="mt-1 text-sm leading-6 text-ink">{insights?.overview}</p>
+          )}
+        </div>
+      )}
+
       <PriorityFilterBar
         onSearch={setSearch}
         onTierFilter={setTierFilter}
@@ -110,6 +139,7 @@ export function DevelopmentPlanPage() {
           {pagedPriorities.map((item) => {
             const tier = getScoreTier(item.score, maxScore)
             const style = tierStyles[tier]
+            const insight = insightMap.get(item.id)
             return (
               <article
                 className={`flex flex-col overflow-hidden rounded-2xl border shadow-sm transition hover:shadow-md ${style.card}`}
@@ -135,6 +165,31 @@ export function DevelopmentPlanPage() {
                       </li>
                     ))}
                   </ul>
+                  {insight && (insight.explanation || insight.recommendedAction) && (
+                    <div className="mt-3 rounded-xl border border-violet-200/70 bg-violet-50/60 p-3">
+                      <p className="flex items-center gap-1 text-[0.6rem] font-bold uppercase tracking-[0.12em] text-violet-700">
+                        <svg aria-hidden="true" className="size-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                          <path d="M12 3l1.9 4.8L18.7 9l-4.8 1.9L12 15.7 10.1 10.9 5.3 9l4.8-1.2z" strokeLinejoin="round" />
+                        </svg>
+                        AI insight
+                      </p>
+                      {insight.explanation && (
+                        <p className="mt-1.5 text-xs leading-5 text-ink">{insight.explanation}</p>
+                      )}
+                      {insight.recommendedAction && (
+                        <p className="mt-2 text-xs leading-5 text-ink">
+                          <span className="font-bold text-violet-700">Next: </span>
+                          {insight.recommendedAction}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  {!insight && insightsLoading && (
+                    <div className="mt-3 space-y-1.5 rounded-xl border border-violet-100 bg-violet-50/40 p-3">
+                      <div className="h-3 w-full animate-pulse rounded bg-violet-100" />
+                      <div className="h-3 w-4/5 animate-pulse rounded bg-violet-100" />
+                    </div>
+                  )}
                 </div>
               </article>
             )

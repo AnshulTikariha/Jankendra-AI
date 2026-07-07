@@ -7,6 +7,7 @@ import { DashboardPage } from '../pages/DashboardPage'
 import { TodoPage } from '../pages/staff/TodoPage'
 import { CommitmentsPage } from '../pages/staff/CommitmentsPage'
 import { DevelopmentPlanPage } from '../pages/staff/DevelopmentPlanPage'
+import { ComplaintInsightsPage } from '../pages/staff/ComplaintInsightsPage'
 import { LogIssuePage } from '../pages/staff/LogIssuePage'
 import { DigestPage } from '../pages/staff/DigestPage'
 import { ProfilePage } from '../pages/staff/ProfilePage'
@@ -39,6 +40,8 @@ function StaffMainContent({ pageId }: { pageId: string }) {
       return <CommitmentsPage />
     case 'development-plan':
       return <DevelopmentPlanPage />
+    case 'complaint-insights':
+      return <ComplaintInsightsPage />
     case 'log-issue':
       return <LogIssuePage />
     case 'digest':
