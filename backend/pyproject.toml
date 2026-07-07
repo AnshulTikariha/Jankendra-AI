@@ -15,8 +15,7 @@ dependencies = [
     "PyJWT",
     "sqlalchemy",
     "shapely",
-    "google-cloud-dialogflow",
-    "google-cloud-speech",
+    "google-cloud-aiplatform>=1.60.0",
     "httpx",
     "uvicorn[standard]",
 ]

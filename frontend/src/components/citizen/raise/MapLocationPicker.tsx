@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Map, useMap, useMapsLibrary } from '@vis.gl/react-google-maps'
 import { useTranslation } from 'react-i18next'
+import { GOOGLE_MAPS_API_KEY } from '../../../config/googleMaps'
 import { GOOGLE_MAP_ID } from '../../../config/googleMaps'
 import { useGooglePlaceAutocomplete } from '../../../hooks/useGooglePlaceAutocomplete'
 import { boundsFromGeoJsonGeometry } from '../../../lib/googleMapGeo'
@@ -136,6 +137,36 @@ export function MapLocationPicker({
   onDeviceLocateFailed,
 }: Props) {
   const { t } = useTranslation('complaints')
+  if (!GOOGLE_MAPS_API_KEY) {
+    return (
+      <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-4">
+        <p className="text-sm font-bold text-amber-900">{t('raise.where.map.title')}</p>
+        <p className="mt-1 text-xs text-amber-800">
+          Map is temporarily unavailable because Google Maps key is not configured.
+        </p>
+        <label className="mt-4 block">
+          <span className="text-sm font-bold text-amber-900">
+            {t('raise.where.location')}{' '}
+            <span className="font-normal text-amber-700">{t('raise.where.locationOptional')}</span>
+          </span>
+          <p className="mt-0.5 text-xs text-amber-800">{t('raise.where.map.addressHint')}</p>
+          <textarea
+            className="mt-2 w-full rounded-xl border border-amber-200 bg-white px-4 py-3 text-sm font-medium outline-none focus:ring-4 focus:ring-amber-200/40"
+            onChange={(event) =>
+              onChange({
+                ...value,
+                locationDetail: event.target.value,
+              })
+            }
+            placeholder={t('raise.where.locationPlaceholder')}
+            rows={2}
+            value={value.locationDetail}
+          />
+        </label>
+      </div>
+    )
+  }
+
   const placesLib = useMapsLibrary('places')
   const [searchQuery, setSearchQuery] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)
