@@ -73,11 +73,12 @@ def _friendly_transcription_error(exc: Exception) -> str:
     if (
         "service_disabled" in lower
         or "has not been used" in lower
+        or "aiplatform.googleapis.com" in lower
         or "speech.googleapis.com" in lower
     ):
         return (
-            "Speech-to-Text API is not enabled for this Google Cloud project. "
-            "Enable Cloud Speech-to-Text in Google Cloud Console, then try again."
+            "Vertex AI is not enabled for this Google Cloud project. "
+            "Enable the Vertex AI API in Google Cloud Console, then try again."
         )
 
     if "permission_denied" in lower or "403" in text:

@@ -103,22 +103,15 @@ export function looksLikeHindi(text: string): boolean {
 
 export function shouldUseBrowserBackup(
   backup: string,
-  strategy: 'hybrid' | 'cloud' | 'browser',
-  locale: string,
+  _strategy: 'hybrid' | 'cloud' | 'browser',
+  _locale: string,
 ): boolean {
   if (!backup.trim()) {
     return false
   }
-  if (strategy === 'browser') {
-    return true
-  }
-  if (looksLikeHindi(backup)) {
-    return true
-  }
-  if (locale.startsWith('hi')) {
-    return true
-  }
-  return false
+  // If browser speech captured text, prefer it over failing cloud responses.
+  // This keeps voice input usable when Speech-to-Text returns no transcript.
+  return true
 }
 
 export function collectTranscript(event: BrowserSpeechRecognitionEvent): {
