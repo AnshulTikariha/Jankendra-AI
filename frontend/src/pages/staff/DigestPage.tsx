@@ -1,9 +1,29 @@
+import { useMemo } from 'react'
 import { ApiError } from '../../api/errors'
 import { PageError, PageHeader, PageLoading } from '../../components/staff/PageStates'
+import { WardList, type WardListItem } from '../../components/dashboard/WardList'
 import { useDigest } from '../../hooks/useStaffApi'
 
 export function DigestPage() {
   const { data, isLoading, isError, error, refetch } = useDigest()
+
+  const wardItems = useMemo<WardListItem[]>(() => {
+    const rows = data?.wards ?? []
+    const maxComplaints = Math.max(1, ...rows.map((row) => row.complaintsOpened))
+    return rows.map((row) => ({
+      id: String(row.wardId),
+      name: row.wardName,
+      subtitle: row.criticalInfraAlerts > 0 ? `${row.criticalInfraAlerts} critical infra alerts` : undefined,
+      intensity: Math.round((row.complaintsOpened / maxComplaints) * 100),
+      badges: row.overdueCommitments > 0 ? ['Overdue'] : undefined,
+      metrics: [
+        { key: 'complaintsOpened', label: 'Complaints', value: row.complaintsOpened },
+        { key: 'activeCommitments', label: 'Active', value: row.activeCommitments },
+        { key: 'overdueCommitments', label: 'Overdue', value: row.overdueCommitments, alert: true },
+        { key: 'openClusters', label: 'Clusters', value: row.openClusters },
+      ],
+    }))
+  }, [data?.wards])
 
   if (isLoading) return <PageLoading message="Loading weekly digest…" />
 
@@ -38,37 +58,12 @@ export function DigestPage() {
         ))}
       </div>
 
-      <div className="overflow-hidden rounded-3xl border border-line/80 bg-white shadow-md">
-        <div className="border-b border-line/80 px-5 py-4">
-          <h2 className="text-lg font-extrabold">Ward breakdown</h2>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-left text-sm">
-            <thead className="bg-slate-50 text-xs font-bold uppercase tracking-wide text-muted">
-              <tr>
-                <th className="px-5 py-3">Ward</th>
-                <th className="px-5 py-3">Complaints</th>
-                <th className="px-5 py-3">Active</th>
-                <th className="px-5 py-3">Overdue</th>
-                <th className="px-5 py-3">Clusters</th>
-                <th className="px-5 py-3">Infra alerts</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.wards.map((row) => (
-                <tr className="border-t border-line/60" key={row.wardId}>
-                  <td className="px-5 py-3 font-bold">{row.wardName}</td>
-                  <td className="px-5 py-3">{row.complaintsOpened}</td>
-                  <td className="px-5 py-3">{row.activeCommitments}</td>
-                  <td className="px-5 py-3">{row.overdueCommitments}</td>
-                  <td className="px-5 py-3">{row.openClusters}</td>
-                  <td className="px-5 py-3">{row.criticalInfraAlerts}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <WardList
+        eyebrow="Ward breakdown"
+        intensityLabel="Complaints"
+        items={wardItems}
+        title="Ward activity this week"
+      />
     </section>
   )
 }

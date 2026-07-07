@@ -1,9 +1,28 @@
+import { useMemo } from 'react'
 import { ApiError } from '../../api/errors'
 import { PageError, PageHeader, PageLoading } from '../../components/staff/PageStates'
+import { WardList, type WardListItem } from '../../components/dashboard/WardList'
 import { usePriorities } from '../../hooks/useStaffApi'
 
 export function DevelopmentPlanPage() {
   const { data, isLoading, isError, error, refetch } = usePriorities()
+
+  const wardItems = useMemo<WardListItem[]>(() => {
+    const rows = data?.wardComparison ?? []
+    const maxScore = Math.max(1, ...rows.map((row) => row.totalScore))
+    return rows.map((row) => ({
+      id: String(row.wardId),
+      name: row.wardName,
+      subtitle: row.topAction ?? undefined,
+      intensity: Math.round((row.totalScore / maxScore) * 100),
+      metrics: [
+        { key: 'totalScore', label: 'Score', value: Math.round(row.totalScore * 10) / 10 },
+        { key: 'openClusters', label: 'Clusters', value: row.openClusters },
+        { key: 'openComplaints', label: 'Complaints', value: row.openComplaints },
+        { key: 'overdueCommitments', label: 'Overdue', value: row.overdueCommitments, alert: true },
+      ],
+    }))
+  }, [data?.wardComparison])
 
   if (isLoading) return <PageLoading message="Loading development priorities…" />
 
@@ -46,37 +65,12 @@ export function DevelopmentPlanPage() {
         ))}
       </div>
 
-      <div className="overflow-hidden rounded-3xl border border-line/80 bg-white shadow-md">
-        <div className="border-b border-line/80 px-5 py-4">
-          <h2 className="text-lg font-extrabold">Ward comparison</h2>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-left text-sm">
-            <thead className="bg-slate-50 text-xs font-bold uppercase tracking-wide text-muted">
-              <tr>
-                <th className="px-5 py-3">Ward</th>
-                <th className="px-5 py-3">Score</th>
-                <th className="px-5 py-3">Clusters</th>
-                <th className="px-5 py-3">Complaints</th>
-                <th className="px-5 py-3">Overdue</th>
-                <th className="px-5 py-3">Top action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.wardComparison.map((row) => (
-                <tr className="border-t border-line/60" key={row.wardId}>
-                  <td className="px-5 py-3 font-bold">{row.wardName}</td>
-                  <td className="px-5 py-3">{row.totalScore.toFixed(1)}</td>
-                  <td className="px-5 py-3">{row.openClusters}</td>
-                  <td className="px-5 py-3">{row.openComplaints}</td>
-                  <td className="px-5 py-3">{row.overdueCommitments}</td>
-                  <td className="px-5 py-3 text-muted">{row.topAction ?? '—'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <WardList
+        eyebrow="Ward comparison"
+        intensityLabel="Score"
+        items={wardItems}
+        title="Ward priority ranking"
+      />
     </section>
   )
 }
