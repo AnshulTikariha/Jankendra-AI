@@ -9,7 +9,13 @@ from app.api.deps import require_roles
 from app.core.commitment_weights import compute_commitment_weight
 from app.core.database import get_db_session
 from app.models import Commitment, Complaint, ComplaintCluster, User, Ward
+from app.schemas.leader_ai import PriorityInsightItem, PriorityInsightsResponse
 from app.schemas.priorities import PrioritiesResponse, PriorityItem, WardPrioritySummary
+from app.services.leader_ai import (
+    LeaderAIError,
+    generate_priority_insights,
+    leader_ai_configured,
+)
 
 router = APIRouter(tags=["priorities"])
 
@@ -22,6 +28,14 @@ async def list_priorities(
     limit: int = Query(default=20, ge=1, le=100),
     current_user: User = Depends(require_roles("leader", "staff")),
     session: AsyncSession = Depends(get_db_session),
+) -> PrioritiesResponse:
+    return await _build_priorities(session, ward_id, limit)
+
+
+async def _build_priorities(
+    session: AsyncSession,
+    ward_id: int | None,
+    limit: int,
 ) -> PrioritiesResponse:
     wards = list(
         (
@@ -207,3 +221,63 @@ async def list_priorities(
         priorities=priorities,
         ward_comparison=ward_comparison,
     )
+
+
+@router.get("/priorities/insights", response_model=PriorityInsightsResponse)
+async def get_priority_insights(
+    ward_id: int | None = Query(default=None),
+    limit: int = Query(default=20, ge=1, le=100),
+    current_user: User = Depends(require_roles("leader", "staff")),
+    session: AsyncSession = Depends(get_db_session),
+) -> PriorityInsightsResponse:
+    if not leader_ai_configured():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Leader AI is not configured on the server",
+        )
+
+    data = await _build_priorities(session, ward_id, limit)
+    if not data.priorities:
+        return PriorityInsightsResponse(overview="", items=[])
+
+    payload = {
+        "constituency_name": data.constituency_name,
+        "priorities": [
+            {
+                "id": item.id,
+                "rank": item.rank,
+                "title": item.title,
+                "ward_name": item.ward_name,
+                "category": item.category,
+                "source_type": item.source_type,
+                "score": item.score,
+                "reasons": item.reasons,
+            }
+            for item in data.priorities
+        ],
+    }
+
+    try:
+        result = await generate_priority_insights(payload)
+    except LeaderAIError as exc:
+        raise HTTPException(
+            status_code=exc.status_code or status.HTTP_502_BAD_GATEWAY,
+            detail=str(exc),
+        ) from exc
+
+    items: list[PriorityInsightItem] = []
+    for item in result.get("items", []):
+        if not isinstance(item, dict):
+            continue
+        item_id = str(item.get("id", "")).strip()
+        if not item_id:
+            continue
+        items.append(
+            PriorityInsightItem(
+                id=item_id,
+                explanation=str(item.get("explanation", "")),
+                recommended_action=str(item.get("recommended_action", "")),
+            )
+        )
+
+    return PriorityInsightsResponse(overview=str(result.get("overview", "")), items=items)

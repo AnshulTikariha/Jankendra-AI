@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useCities, useResolveWard, useWardBoundary, useWards } from '../../../hooks/useConstituency'
 import { useCreateComplaint } from '../../../hooks/useComplaints'
+import { useStaffCreateComplaint } from '../../../hooks/useStaffApi'
 import { useRaiseComplaintDraft } from '../../../hooks/useRaiseComplaintDraft'
 import { useComplaintTextAnalysis } from '../../../hooks/useComplaintTextAnalysis'
 import { useSimilarComplaints } from '../../../hooks/useSimilarComplaints'
@@ -66,13 +67,21 @@ function formatDraftTime(iso: string) {
   })
 }
 
-export function RaiseComplaintWizard() {
+type RaiseComplaintWizardProps = {
+  mode?: 'citizen' | 'staff'
+}
+
+export function RaiseComplaintWizard({ mode = 'citizen' }: RaiseComplaintWizardProps = {}) {
+  const isStaff = mode === 'staff'
   const { t } = useTranslation('complaints')
   const session = useAuthStore((s) => s.session)
   const createComplaint = useCreateComplaint()
+  const staffCreateComplaint = useStaffCreateComplaint()
   const setCitizenView = useUiStore((s) => s.setCitizenView)
   const setLastComplaintRef = useUiStore((s) => s.setLastComplaintRef)
   const setLastComplaintId = useUiStore((s) => s.setLastComplaintId)
+  const [citizenContact, setCitizenContact] = useState('')
+  const [staffSuccess, setStaffSuccess] = useState<{ reference: string } | null>(null)
 
   const saveAttachments = useComplaintAttachmentsStore((s) => s.saveAttachments)
   const { data: citiesData, isLoading: citiesLoading, isFetched: citiesFetched } = useCities()
@@ -276,6 +285,7 @@ export function RaiseComplaintWizard() {
   const stepIndex = raiseComplaintSteps.indexOf(step)
   const descQuality = descriptionQuality(form.description.trim().length)
   const wardName = wardOptions.find((w) => w.id === form.wardId)?.name ?? ''
+  const submitting = isStaff ? staffCreateComplaint.isPending : createComplaint.isPending
 
   const updateForm = <K extends keyof RaiseComplaintForm>(key: K, value: RaiseComplaintForm[K]) => {
     markTouched(key)
@@ -295,15 +305,27 @@ export function RaiseComplaintWizard() {
     setDraftPrompt(null)
   }
 
-  const handleDiscardDraft = () => {
-    clearDraft()
-    setDraftPrompt(null)
+  const resetWizard = () => {
     setForm(defaultRaiseComplaintForm())
     setPhotos([])
     setStep('where')
     setCity('')
     setWardPrefilled(false)
     setWardDetected(null)
+    setCitizenContact('')
+    setError('')
+  }
+
+  const handleDiscardDraft = () => {
+    clearDraft()
+    setDraftPrompt(null)
+    resetWizard()
+  }
+
+  const handleLogAnother = () => {
+    clearDraft()
+    setStaffSuccess(null)
+    resetWizard()
   }
 
   const validateStep = (targetStep: RaiseComplaintStep): boolean => {
@@ -399,9 +421,25 @@ export function RaiseComplaintWizard() {
     setError('')
 
     try {
-      const complaint = await createComplaint.mutateAsync(
-        formToCreatePayload(form, submitMeta),
-      )
+      const payload = formToCreatePayload(form, submitMeta)
+
+      if (isStaff) {
+        const complaint = await staffCreateComplaint.mutateAsync({
+          ...payload,
+          citizen_contact: citizenContact.trim() || undefined,
+        })
+
+        if (photos.length > 0) {
+          saveAttachments(complaint.id, photos)
+        }
+
+        clearDraft()
+        setPhotos([])
+        setStaffSuccess({ reference: complaint.public_reference })
+        return
+      }
+
+      const complaint = await createComplaint.mutateAsync(payload)
 
       if (photos.length > 0) {
         saveAttachments(complaint.id, photos)
@@ -423,6 +461,36 @@ export function RaiseComplaintWizard() {
     goNext()
   }
 
+  if (isStaff && staffSuccess) {
+    return (
+      <section className="relative overflow-hidden rounded-3xl border border-emerald-200/60 bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-8 text-center shadow-lg">
+        <div className="absolute -right-10 -top-10 size-32 rounded-full bg-emerald-200/30 blur-3xl" />
+        <div className="relative">
+          <div className="mx-auto grid size-16 place-items-center rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-600 text-2xl font-extrabold text-white shadow-lg">
+            ✓
+          </div>
+          <h1 className="mt-5 text-2xl font-extrabold">{t('logIssue.success.title')}</h1>
+          <p className="mt-2 text-sm text-muted">{t('logIssue.success.subtitle')}</p>
+          <p className="mt-5 text-xs font-bold uppercase tracking-wide text-muted">
+            {t('logIssue.success.reference')}
+          </p>
+          <p className="mt-1 font-mono text-2xl font-extrabold text-teal-700">
+            {staffSuccess.reference}
+          </p>
+          <div className="mt-8 flex justify-center">
+            <button
+              className="rounded-full bg-gradient-to-r from-teal-600 to-emerald-600 px-6 py-3 text-sm font-extrabold text-white shadow-lg"
+              onClick={handleLogAnother}
+              type="button"
+            >
+              {t('logIssue.success.logAnother')}
+            </button>
+          </div>
+        </div>
+      </section>
+    )
+  }
+
   return (
     <section className="space-y-4">
       <div className="overflow-hidden rounded-3xl border border-line/80 bg-white shadow-md">
@@ -430,10 +498,14 @@ export function RaiseComplaintWizard() {
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">
-                {t('raise.eyebrow')}
+                {isStaff ? t('logIssue.eyebrow') : t('raise.eyebrow')}
               </p>
-              <h1 className="mt-1 text-2xl font-extrabold">{t('raise.title')}</h1>
-              <p className="mt-2 text-sm text-muted">{t('raise.subtitle')}</p>
+              <h1 className="mt-1 text-2xl font-extrabold">
+                {isStaff ? t('logIssue.title') : t('raise.title')}
+              </h1>
+              <p className="mt-2 text-sm text-muted">
+                {isStaff ? t('logIssue.subtitle') : t('raise.subtitle')}
+              </p>
             </div>
             {step === 'where' && (
               <VoiceComplaintButton
@@ -673,12 +745,31 @@ export function RaiseComplaintWizard() {
                   wardFocus={wardFocus}
                 />
 
-                {session?.phone && (
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                    <p className="text-xs font-bold text-muted">{t('raise.where.contact')}</p>
-                    <p className="mt-1 font-extrabold text-ink">+91 {session.phone}</p>
-                    <p className="mt-1 text-xs text-muted">{t('raise.where.contactHint')}</p>
-                  </div>
+                {isStaff ? (
+                  <label className="block">
+                    <span className="text-sm font-bold">
+                      {t('logIssue.citizenPhone')}{' '}
+                      <span className="font-normal text-muted">{t('logIssue.citizenPhoneOptional')}</span>
+                    </span>
+                    <p className="mt-0.5 text-xs text-muted">{t('logIssue.citizenPhoneHint')}</p>
+                    <input
+                      className="mt-2 w-full rounded-xl border border-line bg-white px-4 py-3 font-medium outline-none focus:ring-4 focus:ring-teal-200/40"
+                      inputMode="numeric"
+                      maxLength={10}
+                      onChange={(e) => setCitizenContact(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                      placeholder={t('logIssue.citizenPhonePlaceholder')}
+                      type="tel"
+                      value={citizenContact}
+                    />
+                  </label>
+                ) : (
+                  session?.phone && (
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                      <p className="text-xs font-bold text-muted">{t('raise.where.contact')}</p>
+                      <p className="mt-1 font-extrabold text-ink">+91 {session.phone}</p>
+                      <p className="mt-1 text-xs text-muted">{t('raise.where.contactHint')}</p>
+                    </div>
+                  )
                 )}
               </div>
             )}
@@ -798,11 +889,11 @@ export function RaiseComplaintWizard() {
               ) : (
                 <button
                   className="rounded-full bg-gradient-to-r from-teal-600 to-emerald-600 px-6 py-3 text-sm font-extrabold text-white shadow-lg disabled:opacity-60"
-                  disabled={createComplaint.isPending}
+                  disabled={submitting}
                   onClick={() => void submitComplaint()}
                   type="button"
                 >
-                  {createComplaint.isPending ? t('raise.nav.submitting') : t('raise.nav.submit')}
+                  {submitting ? t('raise.nav.submitting') : t('raise.nav.submit')}
                 </button>
               )}
             </div>

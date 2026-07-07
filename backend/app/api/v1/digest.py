@@ -10,6 +10,12 @@ from app.core.commitment_weights import compute_commitment_weight
 from app.core.database import get_db_session
 from app.models import Commitment, Complaint, ComplaintCluster, User, Ward
 from app.schemas.digest import DigestResponse, DigestTotals, WardDigestMetrics
+from app.schemas.leader_ai import WeeklyBriefingResponse
+from app.services.leader_ai import (
+    LeaderAIError,
+    generate_weekly_briefing,
+    leader_ai_configured,
+)
 
 router = APIRouter(tags=["digest"])
 
@@ -49,6 +55,14 @@ async def get_digest(
             detail="period_start must be on or before period_end",
         )
 
+    return await _build_digest(session, start_day, end_day)
+
+
+async def _build_digest(
+    session: AsyncSession,
+    start_day: date,
+    end_day: date,
+) -> DigestResponse:
     start_dt = datetime.combine(start_day, datetime.min.time(), tzinfo=timezone.utc)
     end_dt = datetime.combine(end_day, datetime.max.time(), tzinfo=timezone.utc)
 
@@ -136,4 +150,73 @@ async def get_digest(
         period_end=end_day.isoformat(),
         totals=totals,
         wards=ward_metrics,
+    )
+
+
+@router.get("/digest/briefing", response_model=WeeklyBriefingResponse)
+async def get_digest_briefing(
+    period_start: str | None = Query(default=None),
+    period_end: str | None = Query(default=None),
+    current_user: User = Depends(require_roles("leader", "staff")),
+    session: AsyncSession = Depends(get_db_session),
+) -> WeeklyBriefingResponse:
+    if not leader_ai_configured():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Leader AI is not configured on the server",
+        )
+
+    end_day = parse_date(period_end, "period_end") or date.today()
+    start_day = parse_date(period_start, "period_start") or (end_day - timedelta(days=6))
+    if start_day > end_day:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="period_start must be on or before period_end",
+        )
+
+    digest = await _build_digest(session, start_day, end_day)
+
+    # Rank wards by activity so the model focuses on real hotspots.
+    ranked_wards = sorted(
+        digest.wards,
+        key=lambda w: (w.complaints_opened, w.overdue_commitments, w.critical_infra_alerts),
+        reverse=True,
+    )
+    payload = {
+        "constituency_name": digest.constituency_name,
+        "period_start": digest.period_start,
+        "period_end": digest.period_end,
+        "totals": digest.totals.model_dump(),
+        "wards": [
+            {
+                "ward_name": w.ward_name,
+                "complaints_opened": w.complaints_opened,
+                "complaints_by_category": w.complaints_by_category,
+                "active_commitments": w.active_commitments,
+                "overdue_commitments": w.overdue_commitments,
+                "completed_commitments": w.completed_commitments,
+                "open_clusters": w.open_clusters,
+                "critical_infra_alerts": w.critical_infra_alerts,
+            }
+            for w in ranked_wards[:8]
+        ],
+    }
+
+    try:
+        result = await generate_weekly_briefing(payload)
+    except LeaderAIError as exc:
+        raise HTTPException(
+            status_code=exc.status_code or status.HTTP_502_BAD_GATEWAY,
+            detail=str(exc),
+        ) from exc
+
+    return WeeklyBriefingResponse(
+        constituency_name=digest.constituency_name,
+        period_start=digest.period_start,
+        period_end=digest.period_end,
+        headline=str(result.get("headline", "")),
+        summary=str(result.get("summary", "")),
+        highlights=list(result.get("highlights", [])),
+        risks=list(result.get("risks", [])),
+        recommendations=list(result.get("recommendations", [])),
     )

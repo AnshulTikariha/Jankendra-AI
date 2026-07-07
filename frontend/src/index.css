@@ -77,6 +77,21 @@ button:disabled {
   transform-origin: center;
 }
 
+@keyframes modal-pop {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-modal-pop {
+  animation: modal-pop 0.2s ease-out;
+}
+
 .map-location-picker .gm-style > div,
 .map-location-picker [role="region"] {
   font-family: inherit;

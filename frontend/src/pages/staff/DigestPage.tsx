@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { ApiError } from '../../api/errors'
 import { PageError, PageHeader, PageLoading } from '../../components/staff/PageStates'
 import { WardList, type WardListItem } from '../../components/dashboard/WardList'
+import { WeeklyBriefingCard } from '../../components/staff/WeeklyBriefingCard'
 import { useDigest } from '../../hooks/useStaffApi'
 
 export function DigestPage() {
@@ -48,6 +49,8 @@ export function DigestPage() {
         eyebrow="Weekly digest"
         title="Governance numbers"
       />
+
+      <WeeklyBriefingCard />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {cards.map((card) => (

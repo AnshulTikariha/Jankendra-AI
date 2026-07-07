@@ -2,6 +2,7 @@ import {
   type ClipboardEvent,
   type FormEvent,
   type KeyboardEvent,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -19,6 +20,11 @@ const otpLength = 6
 const demoOtp = '246810'
 const exposeDemoOtp = import.meta.env.VITE_EXPOSE_DEMO_OTP !== 'false'
 const roles: UserRole[] = ['citizen', 'staff', 'leader']
+const demoPhones: Record<UserRole, string> = {
+  citizen: '9876543212',
+  staff: '9876543211',
+  leader: '9876543210',
+}
 const philosophyKeys = ['localFirst', 'accountable', 'humanLed'] as const
 const highlightKeys = ['access', 'verified', 'mobileFirst'] as const
 
@@ -30,12 +36,14 @@ export function LoginPage() {
   const login = useAuthStore((s) => s.login)
 
   const [selectedRole, setSelectedRole] = useState<UserRole>('citizen')
-  const [phone, setPhone] = useState('')
+  const [phone, setPhone] = useState(demoPhones.citizen)
   const [otp, setOtp] = useState<string[]>(Array.from({ length: otpLength }, () => ''))
   const [hasRequestedOtp, setHasRequestedOtp] = useState(false)
   const [statusKey, setStatusKey] = useState<StatusKey>('enterPhone')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [devOtpHint, setDevOtpHint] = useState<string | null>(null)
+  const [showOtpModal, setShowOtpModal] = useState(false)
+  const [otpCopied, setOtpCopied] = useState(false)
   const [isSendingOtp, setIsSendingOtp] = useState(false)
   const [isVerifying, setIsVerifying] = useState(false)
   const otpRefs = useRef<Array<HTMLInputElement | null>>([])
@@ -47,6 +55,14 @@ export function LoginPage() {
   const canVerify = enteredOtp.length === otpLength && !isVerifying
   const statusMessage = t(`auth:status.${statusKey}`)
   const selectedRoleLabel = t(`auth:roles.${selectedRole}`)
+
+  const handleRoleSelect = (role: UserRole) => {
+    setSelectedRole(role)
+    const isDemoNumber = Object.values(demoPhones).includes(digitsOnly)
+    if (!digitsOnly || isDemoNumber) {
+      setPhone(demoPhones[role])
+    }
+  }
 
   const requestOtpCode = async () => {
     if (!isPhoneValid) {
@@ -63,7 +79,9 @@ export function LoginPage() {
       const response = await requestOtp(digitsOnly)
       setHasRequestedOtp(true)
       setOtp(Array.from({ length: otpLength }, () => ''))
-      setDevOtpHint(response.dev_otp ?? (exposeDemoOtp ? demoOtp : null))
+      setDevOtpHint(response.dev_otp ?? null)
+      setOtpCopied(false)
+      setShowOtpModal(Boolean(response.dev_otp))
       setStatusKey('otpSent')
       window.setTimeout(() => otpRefs.current[0]?.focus(), 80)
     } catch (error) {
@@ -90,6 +108,10 @@ export function LoginPage() {
   const handleOtpKeyDown = (index: number, event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Backspace' && !otp[index] && index > 0) {
       otpRefs.current[index - 1]?.focus()
+    }
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      if (canVerify) void handleVerifyOtp()
     }
   }
 
@@ -123,9 +145,39 @@ export function LoginPage() {
     setHasRequestedOtp(false)
     setOtp(Array.from({ length: otpLength }, () => ''))
     setDevOtpHint(null)
+    setShowOtpModal(false)
+    setOtpCopied(false)
     setErrorMessage(null)
     setStatusKey('enterPhone')
   }
+
+  const handleAutofillOtp = () => {
+    if (!devOtpHint) return
+    const digits = devOtpHint.replace(/\D/g, '').slice(0, otpLength).split('')
+    setOtp(Array.from({ length: otpLength }, (_, i) => digits[i] ?? ''))
+    setShowOtpModal(false)
+    window.setTimeout(() => otpRefs.current[Math.min(digits.length, otpLength) - 1]?.focus(), 80)
+  }
+
+  const handleCopyOtp = async () => {
+    if (!devOtpHint) return
+    try {
+      await navigator.clipboard.writeText(devOtpHint)
+      setOtpCopied(true)
+      window.setTimeout(() => setOtpCopied(false), 2000)
+    } catch {
+      setOtpCopied(false)
+    }
+  }
+
+  useEffect(() => {
+    if (!showOtpModal) return
+    const handleKey = (event: globalThis.KeyboardEvent) => {
+      if (event.key === 'Escape') setShowOtpModal(false)
+    }
+    window.addEventListener('keydown', handleKey)
+    return () => window.removeEventListener('keydown', handleKey)
+  }, [showOtpModal])
 
   return (
     <main className="min-h-svh overflow-hidden px-2 py-3 text-ink sm:px-6 sm:py-6 lg:px-8">
@@ -218,7 +270,7 @@ export function LoginPage() {
                               : 'border border-line bg-slate-50 text-muted hover:border-primary-light hover:text-primary'
                           }`}
                           key={role}
-                          onClick={() => setSelectedRole(role)}
+                          onClick={() => handleRoleSelect(role)}
                           type="button"
                         >
                           {t(`auth:roles.${role}`)}
@@ -244,6 +296,12 @@ export function LoginPage() {
                         value={phone}
                       />
                     </div>
+                    <span className="mt-2 flex items-start gap-1.5 text-xs font-medium text-muted">
+                      <span className="mt-0.5 grid size-4 shrink-0 place-items-center rounded-full bg-accent/15 text-[0.6rem] font-bold text-accent">
+                        i
+                      </span>
+                      {t('auth:demoPhoneNote')}
+                    </span>
                   </label>
 
                   <button
@@ -322,9 +380,14 @@ export function LoginPage() {
                       {t('auth:resendOtp')}
                     </button>
                     {devOtpHint && (
-                      <span className="rounded-full bg-slate-100 px-3 py-1 font-bold text-muted">
-                        {t('auth:previewCode', { code: devOtpHint })}
-                      </span>
+                      <button
+                        className="inline-flex items-center gap-1.5 rounded-full border border-accent/30 bg-accent/10 px-3 py-1 font-bold text-accent transition hover:bg-accent/20"
+                        onClick={() => setShowOtpModal(true)}
+                        type="button"
+                      >
+                        <span className="size-1.5 animate-pulse rounded-full bg-accent" />
+                        {t('auth:demoOtp.reopen')}
+                      </button>
                     )}
                   </div>
                 </div>
@@ -355,6 +418,108 @@ export function LoginPage() {
           </div>
         </div>
       </section>
+
+      {showOtpModal && devOtpHint && (
+        <DemoOtpModal
+          code={devOtpHint}
+          copied={otpCopied}
+          onAutofill={handleAutofillOtp}
+          onClose={() => setShowOtpModal(false)}
+          onCopy={() => void handleCopyOtp()}
+        />
+      )}
     </main>
+  )
+}
+
+type DemoOtpModalProps = {
+  code: string
+  copied: boolean
+  onAutofill: () => void
+  onClose: () => void
+  onCopy: () => void
+}
+
+function DemoOtpModal({ code, copied, onAutofill, onClose, onCopy }: DemoOtpModalProps) {
+  const { t } = useTranslation(['auth', 'common'])
+  const digits = code.replace(/\D/g, '').split('')
+
+  return (
+    <div
+      aria-labelledby="demo-otp-title"
+      aria-modal="true"
+      className="fixed inset-0 z-[1000] flex items-center justify-center p-4"
+      role="dialog"
+    >
+      <button
+        aria-label={t('common:close')}
+        className="absolute inset-0 cursor-default bg-slate-950/55 backdrop-blur-sm"
+        onClick={onClose}
+        type="button"
+      />
+
+      <div className="animate-modal-pop relative w-full max-w-md overflow-hidden rounded-[1.75rem] border border-white/60 bg-white shadow-2xl shadow-primary/25">
+        <div className="relative overflow-hidden bg-[linear-gradient(135deg,rgba(30,64,175,0.98),rgba(5,150,105,0.95))] px-6 py-6 text-white">
+          <div className="absolute -right-10 -top-12 size-40 rounded-full bg-white/15 blur-2xl" />
+          <div className="absolute -bottom-16 left-8 size-40 rounded-full bg-accent/25 blur-2xl" />
+          <div className="relative flex items-center justify-between gap-3">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/15 px-3 py-1 text-[0.65rem] font-bold uppercase tracking-[0.16em]">
+              <span className="size-1.5 animate-pulse rounded-full bg-accent" />
+              {t('auth:demoOtp.badge')}
+            </span>
+            <button
+              aria-label={t('common:close')}
+              className="grid size-8 place-items-center rounded-full bg-white/15 text-lg font-bold leading-none text-white transition hover:bg-white/25"
+              onClick={onClose}
+              type="button"
+            >
+              ×
+            </button>
+          </div>
+          <h3 className="relative mt-4 text-xl font-extrabold tracking-tight" id="demo-otp-title">
+            {t('auth:demoOtp.title')}
+          </h3>
+          <p className="relative mt-1 text-sm text-white/80">{t('auth:demoOtp.subtitle')}</p>
+        </div>
+
+        <div className="px-6 py-6">
+          <div className="flex justify-center gap-2 sm:gap-2.5">
+            {digits.map((digit, index) => (
+              <span
+                className="grid size-11 place-items-center rounded-xl border border-primary/20 bg-soft-blue text-2xl font-extrabold text-primary shadow-sm sm:size-12"
+                key={`demo-otp-${index}`}
+              >
+                {digit}
+              </span>
+            ))}
+          </div>
+
+          <div className="mt-6 flex flex-col gap-2.5 sm:flex-row">
+            <button
+              className="flex flex-1 items-center justify-center rounded-full bg-primary px-5 py-3 text-sm font-extrabold text-white shadow-lg shadow-primary/20 transition hover:-translate-y-0.5 hover:bg-primary-dark"
+              onClick={onAutofill}
+              type="button"
+            >
+              {t('auth:demoOtp.autofill')}
+            </button>
+            <button
+              className="flex items-center justify-center gap-1.5 rounded-full border border-line bg-white px-5 py-3 text-sm font-extrabold text-primary transition hover:border-primary-light hover:bg-slate-50"
+              onClick={onCopy}
+              type="button"
+            >
+              {copied ? t('auth:demoOtp.copied') : t('auth:demoOtp.copy')}
+            </button>
+          </div>
+
+          <button
+            className="mt-3 w-full text-center text-xs font-bold text-muted transition hover:text-ink"
+            onClick={onClose}
+            type="button"
+          >
+            {t('auth:demoOtp.dismiss')}
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }

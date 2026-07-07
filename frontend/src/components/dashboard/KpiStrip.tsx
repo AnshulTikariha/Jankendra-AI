@@ -21,9 +21,9 @@ export function KpiStrip({ kpis, showCitizenMetric }: Props) {
       id: 'complaints',
       label: 'Open complaints',
       value: kpis.openComplaints,
-      sub: `+${kpis.openComplaintsTrend}% this week`,
+      sub: `${kpis.openComplaintsTrend >= 0 ? '+' : ''}${kpis.openComplaintsTrend}% vs last week`,
       gradient: 'from-blue-500 to-indigo-600',
-      trend: 'up',
+      trend: kpis.openComplaintsTrend > 0 ? 'up' : kpis.openComplaintsTrend < 0 ? 'down' : 'neutral',
       icon: <ComplaintIcon />,
     },
     {
@@ -41,7 +41,6 @@ export function KpiStrip({ kpis, showCitizenMetric }: Props) {
       value: kpis.resolvedThisWeek,
       sub: `${kpis.onTimeRatePct}% on-time rate`,
       gradient: 'from-emerald-500 to-teal-600',
-      trend: 'down',
       icon: <CheckIcon />,
     },
     {

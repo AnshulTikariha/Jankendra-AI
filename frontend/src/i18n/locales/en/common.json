@@ -4,6 +4,7 @@
   "productBadge": "Beta",
   "language": "Language",
   "change": "Change",
+  "close": "Close",
   "errors": {
     "generic": "Something went wrong. Please try again."
   }
