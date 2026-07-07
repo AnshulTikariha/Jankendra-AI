@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from 'react'
 import type { PriorityItem } from '../../types/dashboard'
 import type { UserRole } from '../../types/auth'
 import { getRoleTheme } from '../../theme/roleThemes'
@@ -9,6 +10,8 @@ type Props = {
   role: UserRole
 }
 
+const PAGE_SIZE = 5
+
 const typeStyles = {
   complaint: { label: 'Complaint', bg: 'bg-blue-100 text-blue-700', bar: 'bg-blue-500' },
   commitment: { label: 'Commitment', bg: 'bg-violet-100 text-violet-700', bar: 'bg-violet-500' },
@@ -18,9 +21,21 @@ const typeStyles = {
 export function PriorityList({ items, title, actionable, role }: Props) {
   const maxWeight = items.length > 0 ? Math.max(...items.map((i) => i.weight)) : 1
   const theme = getRoleTheme(role)
+  const [page, setPage] = useState(1)
+
+  const pageCount = Math.max(1, Math.ceil(items.length / PAGE_SIZE))
+  const currentPage = Math.min(page, pageCount)
+  const pagedItems = useMemo(
+    () => items.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [items, currentPage],
+  )
+
+  useEffect(() => {
+    setPage(1)
+  }, [items.length])
 
   return (
-    <section className="overflow-hidden rounded-3xl border border-line/80 bg-white shadow-md shadow-slate-200/50">
+    <section className="flex flex-col overflow-hidden rounded-3xl border border-line/80 bg-white shadow-md shadow-slate-200/50">
       <div className={`border-b border-line/80 bg-gradient-to-r ${theme.sectionHeaderBg} px-5 py-4 sm:px-6`}>
         <div className="flex items-center justify-between gap-3">
           <div>
@@ -37,7 +52,8 @@ export function PriorityList({ items, title, actionable, role }: Props) {
         <p className="p-6 text-sm font-semibold text-muted">No priority items right now.</p>
       ) : (
       <ul className="divide-y divide-line/60 p-3 sm:p-4">
-        {items.map((item, index) => {
+        {pagedItems.map((item, localIndex) => {
+          const index = (currentPage - 1) * PAGE_SIZE + localIndex
           const style = typeStyles[item.type]
           const weightPct = Math.round((item.weight / maxWeight) * 100)
 
@@ -86,6 +102,44 @@ export function PriorityList({ items, title, actionable, role }: Props) {
           )
         })}
       </ul>
+      )}
+
+      {pageCount > 1 && (
+        <nav aria-label="Priority queue pagination" className="mt-auto flex items-center justify-between gap-2 border-t border-line/60 px-4 py-3">
+          <button
+            className="rounded-lg border border-line/80 bg-white px-3 py-1.5 text-xs font-bold text-ink transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+            disabled={currentPage === 1}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            type="button"
+          >
+            Prev
+          </button>
+          <div className="flex items-center gap-1.5">
+            {Array.from({ length: pageCount }, (_, i) => i + 1).map((pageNum) => (
+              <button
+                aria-current={pageNum === currentPage ? 'page' : undefined}
+                className={`min-w-[2rem] rounded-lg border px-2.5 py-1.5 text-xs font-bold transition ${
+                  pageNum === currentPage
+                    ? 'border-violet-600 bg-violet-600 text-white shadow-sm'
+                    : 'border-line/80 bg-white text-ink hover:bg-slate-50'
+                }`}
+                key={pageNum}
+                onClick={() => setPage(pageNum)}
+                type="button"
+              >
+                {pageNum}
+              </button>
+            ))}
+          </div>
+          <button
+            className="rounded-lg border border-line/80 bg-white px-3 py-1.5 text-xs font-bold text-ink transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+            disabled={currentPage === pageCount}
+            onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+            type="button"
+          >
+            Next
+          </button>
+        </nav>
       )}
     </section>
   )
