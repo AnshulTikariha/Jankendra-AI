@@ -15,7 +15,6 @@ const navVisuals: Record<string, { gradient: string; icon: React.ReactNode }> = 
   raise: { gradient: 'from-rose-500 to-pink-600', icon: <ReportIcon /> },
   'my-complaints': { gradient: 'from-blue-500 to-indigo-600', icon: <ListIcon /> },
   'ward-updates': { gradient: 'from-amber-500 to-orange-500', icon: <UpdatesIcon /> },
-  help: { gradient: 'from-violet-500 to-purple-600', icon: <HelpIcon /> },
   profile: { gradient: 'from-slate-600 to-slate-800', icon: <ProfileIcon /> },
 }
 
@@ -168,15 +167,6 @@ function UpdatesIcon() {
   return (
     <svg aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
       <path d="M4 18v-6l4-2 4 3 8-5v10H4z" strokeLinejoin="round" />
-    </svg>
-  )
-}
-
-function HelpIcon() {
-  return (
-    <svg aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-      <circle cx="12" cy="12" r="9" />
-      <path d="M9.5 9.5a2.5 2.5 0 015 0c0 2-2.5 1.5-2.5 4M12 17h.01" strokeLinecap="round" />
     </svg>
   )
 }

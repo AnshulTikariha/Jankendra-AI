@@ -25,7 +25,6 @@ export type ComplaintPhoto = {
 export type RaiseComplaintForm = {
   wardId: number | ''
   categories: ComplaintCategory[]
-  subCategory: string
   customCategory: string
   locationDetail: string
   latitude: number | null
@@ -42,7 +41,6 @@ export const defaultRaiseComplaintForm = (
 ): RaiseComplaintForm => ({
   wardId,
   categories: ['water'],
-  subCategory: '',
   customCategory: '',
   locationDetail: '',
   latitude: null,

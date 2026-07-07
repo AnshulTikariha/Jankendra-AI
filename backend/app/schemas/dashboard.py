@@ -39,6 +39,7 @@ class WardComparisonRow(BaseModel):
     ward_id: str
     ward_name: str
     open_clusters: int
+    open_complaints: int
     overdue_commitments: int
     infra_alerts: list[str]
 

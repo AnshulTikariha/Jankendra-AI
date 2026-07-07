@@ -36,6 +36,7 @@ export type ApiWardComparisonRow = {
   ward_id: string
   ward_name: string
   open_clusters: number
+  open_complaints: number
   overdue_commitments: number
   infra_alerts: string[]
 }

@@ -2,9 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Map, useMap } from '@vis.gl/react-google-maps'
 import { GOOGLE_MAP_ID } from '../../config/googleMaps'
 import {
-  CONSTITUENCY_MAP_VIEW,
   INDIA_MAP_VIEW,
-  constituencyBoundary,
   getIntensityColor,
   getIntensityLabel,
   intensityLegend,
@@ -14,6 +12,7 @@ import {
 
 type Props = {
   wards?: WardMapPoint[]
+  mapLabel?: string
 }
 
 type MapLayer = 'combined' | 'complaints' | 'commitments'
@@ -28,14 +27,35 @@ function layerIntensity(ward: WardMapPoint, layer: MapLayer): number {
   return ward.intensity
 }
 
-function heatRadiusMeters(intensity: number): number {
-  return 350 + (intensity / 100) * 950
+function isGoogleMapsReady(): boolean {
+  return typeof google !== 'undefined' && Boolean(google.maps)
 }
 
-export function IssueHeatMap({ wards = wardMapPoints }: Props) {
+function wardMarkerIcon(
+  color: string,
+  isSelected: boolean,
+  scale = 8,
+): google.maps.Symbol {
+  return {
+    path: google.maps.SymbolPath.CIRCLE,
+    scale: isSelected ? scale + 3 : scale,
+    fillColor: color,
+    fillOpacity: scale > 10 ? 0.35 : 0.95,
+    strokeColor: scale > 10 ? color : isSelected ? '#ffffff' : '#0f172a',
+    strokeWeight: scale > 10 ? 0 : isSelected ? 3 : 2,
+  }
+}
+
+export function IssueHeatMap({ wards = wardMapPoints, mapLabel }: Props) {
   const [selectedId, setSelectedId] = useState<string>(wards[0]?.wardId ?? '')
   const [layer, setLayer] = useState<MapLayer>('combined')
   const [map, setMap] = useState<google.maps.Map | null>(null)
+
+  useEffect(() => {
+    if (!wards.some((ward) => ward.wardId === selectedId)) {
+      setSelectedId(wards[0]?.wardId ?? '')
+    }
+  }, [selectedId, wards])
 
   const selected = useMemo(
     () => wards.find((w) => w.wardId === selectedId) ?? wards[0],
@@ -43,6 +63,7 @@ export function IssueHeatMap({ wards = wardMapPoints }: Props) {
   )
 
   const layers: MapLayer[] = ['combined', 'complaints', 'commitments']
+  const hasWards = wards.length > 0
 
   return (
     <section className="overflow-hidden rounded-3xl border border-line/80 bg-white shadow-md shadow-slate-200/50">
@@ -76,18 +97,27 @@ export function IssueHeatMap({ wards = wardMapPoints }: Props) {
 
       <div className="grid gap-0 lg:grid-cols-[1fr_20rem]">
         <div className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4 sm:p-6">
-          <IndianHeatMap
-            layer={layer}
-            onMapReady={setMap}
-            onSelect={setSelectedId}
-            selectedId={selectedId}
-            wards={wards}
-          />
-          {map && <MapZoomToolbar map={map} wards={wards} />}
+          {hasWards ? (
+            <IndianHeatMap
+              layer={layer}
+              mapLabel={mapLabel}
+              onMapReady={setMap}
+              onSelect={setSelectedId}
+              selectedId={selectedId}
+              wards={wards}
+            />
+          ) : (
+            <div className="flex h-[26rem] items-center justify-center rounded-2xl border border-dashed border-white/20 bg-slate-900/40 p-6 text-center sm:h-[28rem]">
+              <p className="max-w-sm text-sm font-semibold text-slate-300">
+                No active ward signals yet. Complaints and commitments will appear here once filed.
+              </p>
+            </div>
+          )}
+          {map && hasWards && <MapZoomToolbar map={map} wards={wards} />}
           <IntensityLegend />
         </div>
 
-        {selected && <WardDetailPanel layer={layer} ward={selected} />}
+        {selected && hasWards && <WardDetailPanel layer={layer} ward={selected} />}
       </div>
     </section>
   )
@@ -99,34 +129,92 @@ function IndianHeatMap({
   selectedId,
   onSelect,
   onMapReady,
+  mapLabel,
 }: {
   wards: WardMapPoint[]
   layer: MapLayer
   selectedId: string
   onSelect: (id: string) => void
   onMapReady: (map: google.maps.Map) => void
+  mapLabel?: string
 }) {
+  const initialView = useMemo(() => getInitialMapView(wards), [wards])
+
   return (
     <div className="issue-heat-map relative z-0 h-[26rem] w-full overflow-hidden rounded-2xl border border-white/10 sm:h-[28rem]">
       <Map
         className="size-full"
-        defaultCenter={{ lat: CONSTITUENCY_MAP_VIEW.center[0], lng: CONSTITUENCY_MAP_VIEW.center[1] }}
-        defaultZoom={CONSTITUENCY_MAP_VIEW.zoom}
+        defaultCenter={{ lat: initialView.center[0], lng: initialView.center[1] }}
+        defaultZoom={initialView.zoom}
         disableDefaultUI
         gestureHandling="greedy"
         mapId={GOOGLE_MAP_ID}
         reuseMaps
       >
         <MapBridge onMapReady={onMapReady} />
+        <FitMapBounds wards={wards} />
         <HeatMapOverlays layer={layer} onSelect={onSelect} selectedId={selectedId} wards={wards} />
         <FlyToWard selectedId={selectedId} wards={wards} />
       </Map>
 
       <div className="pointer-events-none absolute left-3 top-3 z-[1000] rounded-lg bg-slate-900/80 px-2 py-1 text-[0.65rem] font-bold uppercase tracking-wide text-cyan-200 backdrop-blur-sm">
-        India · Bhopal constituency (demo)
+        {mapLabel ?? 'India · Active wards'}
       </div>
     </div>
   )
+}
+
+function getInitialMapView(wards: WardMapPoint[]): { center: [number, number]; zoom: number } {
+  if (wards.length === 0) {
+    return { center: INDIA_MAP_VIEW.center, zoom: INDIA_MAP_VIEW.zoom }
+  }
+
+  const lats = wards.map((ward) => ward.lat)
+  const lngs = wards.map((ward) => ward.lng)
+  const latSpan = Math.max(...lats) - Math.min(...lats)
+  const lngSpan = Math.max(...lngs) - Math.min(...lngs)
+
+  if (latSpan > 2 || lngSpan > 2) {
+    return { center: INDIA_MAP_VIEW.center, zoom: INDIA_MAP_VIEW.zoom }
+  }
+
+  const centerLat = lats.reduce((sum, value) => sum + value, 0) / lats.length
+  const centerLng = lngs.reduce((sum, value) => sum + value, 0) / lngs.length
+  return {
+    center: [centerLat, centerLng],
+    zoom: wards.length === 1 ? 13 : 11,
+  }
+}
+
+function FitMapBounds({ wards }: { wards: WardMapPoint[] }) {
+  const map = useMap()
+
+  useEffect(() => {
+    if (!map || wards.length === 0) return
+
+    if (wards.length === 1) {
+      map.panTo({ lat: wards[0].lat, lng: wards[0].lng })
+      map.setZoom(12)
+      return
+    }
+
+    const bounds = new google.maps.LatLngBounds()
+    wards.forEach((ward) => bounds.extend({ lat: ward.lat, lng: ward.lng }))
+    map.fitBounds(bounds, { top: 48, right: 48, bottom: 48, left: 48 })
+
+    const listener = google.maps.event.addListenerOnce(map, 'idle', () => {
+      const zoom = map.getZoom()
+      if (zoom != null && zoom > 11) {
+        map.setZoom(11)
+      }
+    })
+
+    return () => {
+      google.maps.event.removeListener(listener)
+    }
+  }, [map, wards])
+
+  return null
 }
 
 function MapBridge({ onMapReady }: { onMapReady: (map: google.maps.Map) => void }) {
@@ -149,63 +237,44 @@ function HeatMapOverlays({
   onSelect: (id: string) => void
 }) {
   const map = useMap()
-  const overlaysRef = useRef<Array<google.maps.MVCObject & { setMap: (map: google.maps.Map | null) => void }>>([])
+  const markersRef = useRef<google.maps.Marker[]>([])
   const onSelectRef = useRef(onSelect)
   onSelectRef.current = onSelect
 
   useEffect(() => {
-    if (!map) return
+    if (!map || !isGoogleMapsReady()) return
 
-    overlaysRef.current.forEach((overlay) => overlay.setMap(null))
-    overlaysRef.current = []
-
-    const boundary = new google.maps.Polygon({
-      paths: constituencyBoundary.map(([lat, lng]) => ({ lat, lng })),
-      strokeColor: '#22d3ee',
-      strokeOpacity: 1,
-      strokeWeight: 2,
-      fillColor: '#0ea5e9',
-      fillOpacity: 0.06,
-      clickable: false,
-    })
-    boundary.setMap(map)
-    overlaysRef.current.push(boundary)
+    markersRef.current.forEach((marker) => marker.setMap(null))
+    markersRef.current = []
 
     const listeners: google.maps.MapsEventListener[] = []
 
     wards.forEach((ward) => {
       const intensity = layerIntensity(ward, layer)
       const color = getIntensityColor(intensity)
-      const baseRadius = heatRadiusMeters(intensity)
       const isSelected = ward.wardId === selectedId
       const center = { lat: ward.lat, lng: ward.lng }
+      const haloScale = 14 + Math.round((intensity / 100) * 18)
 
-      ;[1.35, 1, 0.65].forEach((scale, index) => {
-        const circle = new google.maps.Circle({
-          center,
-          radius: baseRadius * scale,
-          strokeWeight: 0,
-          fillColor: color,
-          fillOpacity: index === 0 ? 0.14 : index === 1 ? 0.28 : 0.42,
+      if (intensity > 0) {
+        const halo = new google.maps.Marker({
+          position: center,
+          map,
           clickable: false,
           zIndex: 1,
+          icon: wardMarkerIcon(color, false, haloScale),
         })
-        circle.setMap(map)
-        overlaysRef.current.push(circle)
-      })
+        markersRef.current.push(halo)
+      }
 
-      const marker = new google.maps.Circle({
-        center,
-        radius: isSelected ? 220 : 180,
-        strokeColor: isSelected ? '#ffffff' : color,
-        strokeWeight: isSelected ? 3 : 2,
-        fillColor: isSelected ? color : '#0f172a',
-        fillOpacity: isSelected ? 0.95 : 0.85,
-        clickable: true,
-        zIndex: 2,
+      const marker = new google.maps.Marker({
+        position: center,
+        map,
+        title: ward.wardName,
+        zIndex: isSelected ? 20 : 10,
+        icon: wardMarkerIcon(color, isSelected),
       })
-      marker.setMap(map)
-      overlaysRef.current.push(marker)
+      markersRef.current.push(marker)
 
       const listener = marker.addListener('click', () => onSelectRef.current(ward.wardId))
       listeners.push(listener)
@@ -213,8 +282,8 @@ function HeatMapOverlays({
 
     return () => {
       listeners.forEach((listener) => listener.remove())
-      overlaysRef.current.forEach((overlay) => overlay.setMap(null))
-      overlaysRef.current = []
+      markersRef.current.forEach((marker) => marker.setMap(null))
+      markersRef.current = []
     }
   }, [map, wards, layer, selectedId])
 
@@ -229,12 +298,20 @@ function FlyToWard({
   wards: WardMapPoint[]
 }) {
   const map = useMap()
+  const initialFlySkipped = useRef(false)
 
   useEffect(() => {
     const ward = wards.find((w) => w.wardId === selectedId)
     if (!ward || !map) return
+
+    if (!initialFlySkipped.current) {
+      initialFlySkipped.current = true
+      return
+    }
+
     map.panTo({ lat: ward.lat, lng: ward.lng })
-    map.setZoom(Math.max(map.getZoom() ?? 12, 13))
+    const currentZoom = map.getZoom() ?? 5
+    map.setZoom(currentZoom < 10 ? 10 : Math.max(currentZoom, 12))
   }, [map, selectedId, wards])
 
   return null

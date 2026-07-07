@@ -77,10 +77,10 @@ export const demoCommitmentsAtRisk: CommitmentAtRisk[] = [
 ]
 
 export const demoWardComparison: WardRow[] = [
-  { wardId: '42', wardName: 'Ward 42', openClusters: 8, overdueCommitments: 4, infraAlerts: ['Drainage', 'Water'] },
-  { wardId: '15', wardName: 'Ward 15', openClusters: 3, overdueCommitments: 1, infraAlerts: ['Roads'] },
-  { wardId: '8', wardName: 'Ward 8', openClusters: 2, overdueCommitments: 0, infraAlerts: [] },
-  { wardId: '12', wardName: 'Ward 12', openClusters: 4, overdueCommitments: 1, infraAlerts: ['Electricity'] },
+  { wardId: '42', wardName: 'Ward 42', openClusters: 8, openComplaints: 19, overdueCommitments: 4, infraAlerts: ['Drainage', 'Water'] },
+  { wardId: '15', wardName: 'Ward 15', openClusters: 3, openComplaints: 8, overdueCommitments: 1, infraAlerts: ['Roads'] },
+  { wardId: '8', wardName: 'Ward 8', openClusters: 2, openComplaints: 5, overdueCommitments: 0, infraAlerts: [] },
+  { wardId: '12', wardName: 'Ward 12', openClusters: 4, openComplaints: 11, overdueCommitments: 1, infraAlerts: ['Electricity'] },
 ]
 
 export const demoRecentActivity: RecentActivity[] = [

@@ -1,4 +1,5 @@
 import type { ApiComplaint } from '../api/types/complaints'
+import { parseComplaintTitle } from './raiseComplaintFormat'
 import type {
   CitizenComplaintStatus,
   Complaint,
@@ -35,12 +36,15 @@ function mapStatus(status: string): CitizenComplaintStatus {
 }
 
 export function mapComplaint(item: ApiComplaint): Complaint {
+  const title = parseComplaintTitle(item.description)
   return {
     id: item.id,
     publicReference: item.public_reference,
     wardId: String(item.ward_id),
     wardName: item.ward_name,
+    wardCode: item.ward_code ?? undefined,
     category: mapCategory(item.category),
+    title,
     description: item.description,
     locationDetail: item.location_detail ?? undefined,
     status: mapStatus(item.status),

@@ -69,6 +69,9 @@ export function VoiceComplaintButton({ onTranscript }: VoiceComplaintButtonProps
   const browserTranscriptRef = useRef('')
   const liveTranscriptRef = useRef('')
   const strategyRef = useRef<RecordingStrategy>('hybrid')
+  const uploadEpochRef = useRef(0)
+  const startingRef = useRef(false)
+  const [acquiringMic, setAcquiringMic] = useState(false)
   const [browserSpeechLang, setBrowserSpeechLang] = useState(() => speechRecognitionLang(locale))
   const [analyserStream, setAnalyserStream] = useState<MediaStream | null>(null)
 
@@ -97,6 +100,8 @@ export function VoiceComplaintButton({ onTranscript }: VoiceComplaintButtonProps
     liveTranscriptRef.current = ''
     setLiveTranscript('')
   }, [])
+
+  const isUploadCurrent = useCallback((epoch: number) => epoch === uploadEpochRef.current, [])
 
   const getBrowserBackupTranscript = useCallback(
     () => browserTranscriptRef.current.trim() || liveTranscriptRef.current.trim(),
@@ -131,6 +136,27 @@ export function VoiceComplaintButton({ onTranscript }: VoiceComplaintButtonProps
     onError: handleSpeechError,
   })
 
+  const resetSession = useCallback(() => {
+    uploadEpochRef.current += 1
+    startingRef.current = false
+    setAcquiringMic(false)
+    const recorder = recorderRef.current
+    if (recorder && recorder.state !== 'inactive') {
+      try {
+        recorder.stop()
+      } catch {
+        // Recorder may already be stopping.
+      }
+    }
+    recorderRef.current = null
+    chunksRef.current = []
+    stopBrowserSpeech()
+    stopStream()
+    clearTranscriptRefs()
+    setErrorMessage(null)
+    setState('idle')
+  }, [clearTranscriptRefs, stopBrowserSpeech, stopStream])
+
   useEffect(() => () => stopStream(), [stopStream])
 
   useEffect(() => {
@@ -146,13 +172,6 @@ export function VoiceComplaintButton({ onTranscript }: VoiceComplaintButtonProps
 
     return () => window.clearInterval(timer)
   }, [isRecording])
-
-  const setFriendlyError = useCallback(
-    (raw: string) => {
-      setErrorMessage(friendlyVoiceError(raw, t('raise.voice.error')))
-    },
-    [t],
-  )
 
   const applyTranscript = useCallback(
     (transcript: string) => {
@@ -207,44 +226,87 @@ export function VoiceComplaintButton({ onTranscript }: VoiceComplaintButtonProps
   }, [applyTranscript, clearTranscriptRefs, getBrowserBackupTranscript, stopBrowserSpeech, stopStream, t])
 
   const uploadRecording = useCallback(
-    async (blob: Blob) => {
-      if (!token) {
-        const backup = getBrowserBackupTranscript()
-        if (shouldUseBrowserBackup(backup, strategyRef.current, locale)) {
-          applyTranscript(backup)
-          return
-        }
-        setErrorMessage(t('raise.voice.notSignedIn'))
-        setState('error')
-        return
+    async (blob: Blob, epoch: number) => {
+      let settled = false
+
+      const finish = () => {
+        settled = true
       }
 
-      setState('processing')
+      const failUpload = (message: string) => {
+        if (!isUploadCurrent(epoch)) {
+          finish()
+          return
+        }
+        setErrorMessage(message)
+        setState('error')
+        finish()
+      }
+
       try {
+        if (!token) {
+          const backup = getBrowserBackupTranscript()
+          if (shouldUseBrowserBackup(backup, strategyRef.current, locale)) {
+            applyTranscript(backup)
+            finish()
+            return
+          }
+          failUpload(t('raise.voice.notSignedIn'))
+          return
+        }
+
+        if (!isUploadCurrent(epoch)) {
+          finish()
+          return
+        }
+
         const result = await transcribeVoice(
           token,
           blob,
           speechRecognitionLang(locale) as 'en-IN' | 'hi-IN',
         )
+
+        if (!isUploadCurrent(epoch)) {
+          finish()
+          return
+        }
+
         const backup = getBrowserBackupTranscript()
         applyTranscript(pickTranscript(result.transcript, backup))
+        finish()
       } catch (err) {
+        if (!isUploadCurrent(epoch)) {
+          finish()
+          return
+        }
+
         const backup = getBrowserBackupTranscript()
         if (shouldUseBrowserBackup(backup, strategyRef.current, locale)) {
-          applyTranscript(backup)
+          try {
+            applyTranscript(backup)
+          } catch {
+            const raw = err instanceof ApiError ? err.message : t('raise.voice.error')
+            failUpload(friendlyVoiceError(raw, t('raise.voice.error')))
+            return
+          }
+          finish()
           return
         }
 
         const raw = err instanceof ApiError ? err.message : t('raise.voice.error')
         if (raw.includes('Speech-to-Text API') || raw.includes('SERVICE_DISABLED')) {
-          setErrorMessage(t('raise.voice.apiDisabled'))
+          failUpload(t('raise.voice.apiDisabled'))
         } else {
-          setFriendlyError(raw)
+          failUpload(friendlyVoiceError(raw, t('raise.voice.error')))
         }
-        setState('error')
+      } finally {
+        if (!settled && isUploadCurrent(epoch)) {
+          setErrorMessage((current) => current ?? t('raise.voice.error'))
+          setState('error')
+        }
       }
     },
-    [applyTranscript, getBrowserBackupTranscript, locale, pickTranscript, setFriendlyError, t, token],
+    [applyTranscript, getBrowserBackupTranscript, isUploadCurrent, locale, pickTranscript, t, token],
   )
 
   const startCloudRecorder = useCallback((stream: MediaStream, mimeType: string) => {
@@ -267,7 +329,9 @@ export function VoiceComplaintButton({ onTranscript }: VoiceComplaintButtonProps
       stopBrowserSpeech()
       stopStream()
       if (blob.size > 0) {
-        void uploadRecording(blob)
+        const epoch = uploadEpochRef.current
+        setState('processing')
+        void uploadRecording(blob, epoch)
       } else {
         const backup = getBrowserBackupTranscript()
         clearTranscriptRefs()
@@ -283,12 +347,22 @@ export function VoiceComplaintButton({ onTranscript }: VoiceComplaintButtonProps
   }, [applyTranscript, clearTranscriptRefs, getBrowserBackupTranscript, locale, stopBrowserSpeech, stopStream, uploadRecording])
 
   const startRecording = useCallback(async () => {
+    if (startingRef.current) {
+      return
+    }
+
+    startingRef.current = true
+    setAcquiringMic(true)
+    const captureEpoch = uploadEpochRef.current + 1
+    uploadEpochRef.current = captureEpoch
     setErrorMessage(null)
     clearTranscriptRefs()
 
     if (!navigator.mediaDevices?.getUserMedia) {
       setErrorMessage(t('raise.voice.unsupported'))
       setState('error')
+      startingRef.current = false
+      setAcquiringMic(false)
       return
     }
 
@@ -306,14 +380,22 @@ export function VoiceComplaintButton({ onTranscript }: VoiceComplaintButtonProps
     } else {
       setErrorMessage(t('raise.voice.unsupported'))
       setState('error')
+      startingRef.current = false
+      setAcquiringMic(false)
       return
     }
 
     setStrategy(nextStrategy)
     strategyRef.current = nextStrategy
+    setState('idle')
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      if (captureEpoch !== uploadEpochRef.current) {
+        stream.getTracks().forEach((track) => track.stop())
+        return
+      }
+
       streamRef.current = stream
       setAnalyserStream(stream)
 
@@ -326,6 +408,9 @@ export function VoiceComplaintButton({ onTranscript }: VoiceComplaintButtonProps
       stopStream()
       setErrorMessage(t('raise.voice.permissionDenied'))
       setState('error')
+    } finally {
+      startingRef.current = false
+      setAcquiringMic(false)
     }
   }, [clearTranscriptRefs, startCloudRecorder, stopStream, t, token])
 
@@ -350,6 +435,7 @@ export function VoiceComplaintButton({ onTranscript }: VoiceComplaintButtonProps
       return
     }
     if (state === 'processing') {
+      resetSession()
       return
     }
     void startRecording()
@@ -362,7 +448,7 @@ export function VoiceComplaintButton({ onTranscript }: VoiceComplaintButtonProps
         ? t('raise.voice.processing')
         : t('raise.voice.start')
 
-  const busy = state === 'processing'
+  const busy = state === 'processing' || acquiringMic
   const showLivePreview = isRecording && strategy !== 'cloud'
 
   return (
@@ -371,19 +457,31 @@ export function VoiceComplaintButton({ onTranscript }: VoiceComplaintButtonProps
         <button
           aria-label={label}
           aria-pressed={state === 'recording'}
-          className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-bold shadow-sm transition focus:outline-none focus:ring-4 focus:ring-teal-200/40 sm:px-4 sm:text-sm ${
+          className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-2.5 text-xs font-extrabold transition focus:outline-none focus:ring-4 focus:ring-teal-200/50 sm:px-4 sm:text-sm ${
             state === 'recording'
-              ? 'border-rose-300 bg-rose-50 text-rose-800 hover:bg-rose-100'
-              : 'border-line bg-white text-ink hover:bg-slate-50'
-          } ${busy ? 'cursor-wait opacity-80' : ''}`}
+              ? 'border-rose-300 bg-rose-50 text-rose-800 shadow-md shadow-rose-100/80 hover:bg-rose-100'
+              : busy
+                ? 'cursor-wait border-teal-200 bg-teal-50/80 text-teal-800 opacity-80'
+                : 'border-teal-300 bg-gradient-to-r from-teal-50 via-emerald-50 to-teal-50 text-teal-900 shadow-md shadow-teal-200/50 ring-1 ring-teal-200/70 hover:border-teal-400 hover:from-teal-100 hover:via-emerald-100 hover:to-teal-100 hover:shadow-lg hover:shadow-teal-200/60'
+          }`}
           disabled={busy}
           onClick={handleClick}
           type="button"
         >
-          <MicIcon
-            className={`size-4 ${state === 'recording' ? 'animate-pulse text-rose-600' : 'text-teal-700'}`}
-          />
-          <span className="hidden sm:inline">{label}</span>
+          <span
+            className={`inline-flex size-7 shrink-0 items-center justify-center rounded-full ${
+              state === 'recording'
+                ? 'bg-rose-100'
+                : 'bg-gradient-to-br from-teal-500 to-emerald-600 shadow-sm shadow-teal-300/40'
+            }`}
+          >
+            <MicIcon
+              className={`size-3.5 ${
+                state === 'recording' ? 'animate-pulse text-rose-600' : 'text-white'
+              }`}
+            />
+          </span>
+          <span>{label}</span>
         </button>
       </div>
 
@@ -471,9 +569,13 @@ export function VoiceComplaintButton({ onTranscript }: VoiceComplaintButtonProps
                   {t('raise.voice.stop')}
                 </button>
               ) : (
-                <p className="text-center text-sm font-medium text-muted">
-                  {t('raise.voice.processing')}
-                </p>
+                <button
+                  className="w-full rounded-full border border-line bg-white px-4 py-3 text-sm font-bold text-ink transition hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-teal-200"
+                  onClick={resetSession}
+                  type="button"
+                >
+                  {t('raise.voice.cancel')}
+                </button>
               )}
             </div>
           </div>
@@ -489,10 +591,7 @@ export function VoiceComplaintButton({ onTranscript }: VoiceComplaintButtonProps
           <p className="mt-1">{errorMessage}</p>
           <button
             className="mt-3 text-xs font-bold text-rose-700 underline"
-            onClick={() => {
-              setErrorMessage(null)
-              setState('idle')
-            }}
+            onClick={resetSession}
             type="button"
           >
             {t('raise.voice.dismiss')}

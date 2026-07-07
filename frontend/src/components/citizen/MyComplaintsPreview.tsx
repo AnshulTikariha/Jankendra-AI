@@ -1,5 +1,10 @@
 import type { Complaint, CitizenComplaintStatus } from '../../types/complaint'
 import { citizenStatusLabels, complaintCategoryLabels } from '../../types/complaint'
+import {
+  formatComplaintWardLabel,
+  getComplaintDisplayTitle,
+  parseComplaintSummary,
+} from '../../lib/raiseComplaintFormat'
 import { getRoleTheme } from '../../theme/roleThemes'
 
 const theme = getRoleTheme('citizen')
@@ -128,12 +133,14 @@ export function MyComplaintsPreview({ complaints, isLoading, onViewAll, onReport
                   </span>
                 </div>
                 <p className="mt-2 font-bold leading-snug text-ink">
-                  {complaintCategoryLabels[complaint.category]}
+                  {getComplaintDisplayTitle(complaint, complaintCategoryLabels[complaint.category])}
                 </p>
                 <p className="mt-1 text-xs font-semibold text-muted">
-                  {complaint.wardName} · {formatDate(complaint.submittedAt)}
+                  {formatComplaintWardLabel(complaint)} · {formatDate(complaint.submittedAt)}
                 </p>
-                <p className="mt-2 line-clamp-2 text-sm text-muted">{complaint.description}</p>
+                <p className="mt-2 line-clamp-2 text-sm text-muted">
+                  {parseComplaintSummary(complaint.description)}
+                </p>
                 <StatusStepper status={complaint.status} />
                 {complaint.clusterCount > 1 && (
                   <p className={`mt-3 rounded-xl px-3 py-2 text-xs font-semibold ${theme.highlightBg} ${theme.highlightText}`}>

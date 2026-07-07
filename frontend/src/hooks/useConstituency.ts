@@ -82,7 +82,7 @@ export function useWards(city?: string) {
         wards: response.wards.map(mapWardOption),
       }
     },
-    enabled: Boolean(token && city),
+    enabled: Boolean(token),
     staleTime: 5 * 60 * 1000,
   })
 }

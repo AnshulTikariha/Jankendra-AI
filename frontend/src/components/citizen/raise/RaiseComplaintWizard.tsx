@@ -34,7 +34,6 @@ import { PriorityPicker } from './PriorityPicker'
 import { RaiseComplaintReviewPanel } from './RaiseComplaintReviewPanel'
 import { RaiseComplaintStepper } from './RaiseComplaintStepper'
 import { SimilarComplaintsBanner } from './SimilarComplaintsBanner'
-import { SubCategoryPicker, getSubCategoryLabel } from './SubCategoryPicker'
 import { WhatHappensNext } from './WhatHappensNext'
 import { VoiceComplaintButton } from './VoiceComplaintButton'
 
@@ -260,14 +259,13 @@ export function RaiseComplaintWizard() {
       priority: Object.fromEntries(
         priorityOptions.map((p) => [p, t(`raise.details.priorityOptions.${p}`)]),
       ) as Record<ComplaintPriority, string>,
-      subCategoryLabel: getSubCategoryLabel(primaryCategory, form.subCategory, t),
       categoryLabels: form.categories.map((category) =>
         category === 'other' && form.customCategory.trim()
           ? form.customCategory.trim()
           : t(`raise.categories.${category}`),
       ),
     }),
-    [form.categories, form.customCategory, form.subCategory, primaryCategory, t],
+    [form.categories, form.customCategory, t],
   )
 
   const { count: similarCount, clusterCount, hasSimilar } = useSimilarComplaints(
@@ -333,12 +331,6 @@ export function RaiseComplaintWizard() {
         return false
       }
     }
-    if (primaryCategory !== 'other' && !form.subCategory) {
-      if (targetStep === 'details' || targetStep === 'review') {
-        setError(t('raise.errors.subCategoryRequired'))
-        return false
-      }
-    }
     if (isOnlyOtherCategory(form.categories) && form.customCategory.trim().length < 2) {
       if (targetStep === 'details' || targetStep === 'review') {
         setError(t('raise.errors.customCategoryRequired'))
@@ -350,12 +342,9 @@ export function RaiseComplaintWizard() {
 
   const handleCategoriesChange = (categories: typeof form.categories) => {
     markTouched('categories')
-    const prevPrimary = getPrimaryCategory(form.categories)
-    const nextPrimary = getPrimaryCategory(categories)
     setForm((prev) => ({
       ...prev,
       categories,
-      subCategory: nextPrimary !== prevPrimary ? '' : prev.subCategory,
       customCategory: includesOtherCategory(categories) ? prev.customCategory : '',
     }))
     setError('')
@@ -710,22 +699,6 @@ export function RaiseComplaintWizard() {
                     value={form.customCategory}
                   />
                 )}
-                {primaryCategory !== 'other' && (
-                  <>
-                    {form.categories.length > 1 && (
-                      <p className="text-xs font-semibold text-teal-800">
-                        {t('raise.what.subCategoryPrimaryHint', {
-                          category: t(`raise.categories.${primaryCategory}`),
-                        })}
-                      </p>
-                    )}
-                    <SubCategoryPicker
-                      category={primaryCategory}
-                      onChange={(subCategory) => updateForm('subCategory', subCategory)}
-                      value={form.subCategory}
-                    />
-                  </>
-                )}
               </div>
             )}
 
@@ -735,14 +708,6 @@ export function RaiseComplaintWizard() {
                   <CustomCategoryField
                     onChange={(value) => updateForm('customCategory', value)}
                     value={form.customCategory}
-                  />
-                )}
-
-                {!form.subCategory && primaryCategory !== 'other' && (
-                  <SubCategoryPicker
-                    category={primaryCategory}
-                    onChange={(subCategory) => updateForm('subCategory', subCategory)}
-                    value={form.subCategory}
                   />
                 )}
 
