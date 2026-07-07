@@ -1,8 +1,18 @@
-import { type FormEvent, useState } from 'react'
+import { type FormEvent, useEffect, useMemo, useState } from 'react'
 import { ApiError } from '../../api/errors'
 import { PageError, PageHeader, PageLoading } from '../../components/staff/PageStates'
+import {
+  GridPagination,
+  PriorityFilterBar,
+  PriorityLegend,
+  getScoreTier,
+  tierStyles,
+  type ScoreTier,
+} from '../../components/staff/PriorityGrid'
 import { useCommitments, useCreateCommitment, useWards } from '../../hooks/useStaffApi'
 import type { Commitment } from '../../types/staff'
+
+const PAGE_SIZE = 6
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-IN', {
@@ -12,23 +22,27 @@ function formatDate(iso: string) {
   })
 }
 
-function CommitmentCard({ item }: { item: Commitment }) {
+function CommitmentCard({ item, maxWeight }: { item: Commitment; maxWeight: number }) {
+  const tier = getScoreTier(item.weight, maxWeight)
+  const style = tierStyles[tier]
   return (
-    <article className="overflow-hidden rounded-2xl border border-line/80 bg-white shadow-sm">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line/60 bg-slate-50/50 px-5 py-3">
-        <span className={`rounded-full px-3 py-1 text-xs font-bold ${
-          item.status === 'completed' ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-700'
+    <article className={`flex flex-col overflow-hidden rounded-2xl border shadow-sm transition hover:shadow-md ${style.card}`}>
+      <div className={`flex flex-wrap items-center justify-between gap-2 border-b px-4 py-2.5 ${style.header}`}>
+        <span className={`rounded-full px-2.5 py-0.5 text-[0.7rem] font-extrabold ${
+          item.status === 'completed' ? 'bg-emerald-600 text-white' : style.badge
         }`}>
           {item.status}
         </span>
-        <span className="text-xs font-bold text-muted">{item.weightTier}</span>
+        <span className={`text-xs font-extrabold ${style.scoreText}`}>
+          {item.weightTier} · {Math.round(item.weight * 10) / 10}
+        </span>
       </div>
-      <div className="p-5">
-        <h2 className="text-lg font-extrabold">{item.title}</h2>
-        <p className="mt-1 text-sm text-muted">
+      <div className="flex flex-1 flex-col p-4">
+        <h2 className="text-base font-extrabold leading-snug text-ink">{item.title}</h2>
+        <p className="mt-1 text-xs font-semibold text-muted">
           {item.wardName ?? 'Constituency-wide'} · {formatDate(item.deadline)}
         </p>
-        <p className="mt-3 text-sm leading-6">{item.description}</p>
+        <p className="mt-3 line-clamp-4 text-sm leading-6 text-ink">{item.description}</p>
       </div>
     </article>
   )
@@ -45,6 +59,36 @@ export function CommitmentsPage() {
   const [description, setDescription] = useState('')
   const [deadline, setDeadline] = useState('')
   const [wardId, setWardId] = useState<number | ''>('')
+  const [page, setPage] = useState(1)
+  const [search, setSearch] = useState('')
+  const [tierFilter, setTierFilter] = useState<'all' | ScoreTier>('all')
+
+  const commitments = useMemo(() => data?.commitments ?? [], [data?.commitments])
+  const maxWeight = useMemo(
+    () => Math.max(1, ...commitments.map((item) => item.weight)),
+    [commitments],
+  )
+
+  const filteredCommitments = useMemo(() => {
+    const query = search.trim().toLowerCase()
+    return commitments.filter((item) => {
+      if (tierFilter !== 'all' && getScoreTier(item.weight, maxWeight) !== tierFilter) return false
+      if (!query) return true
+      const haystack = `${item.title} ${item.description} ${item.wardName ?? ''} ${item.weightTier} ${item.status}`.toLowerCase()
+      return haystack.includes(query)
+    })
+  }, [commitments, search, tierFilter, maxWeight])
+
+  const pageCount = Math.max(1, Math.ceil(filteredCommitments.length / PAGE_SIZE))
+  const currentPage = Math.min(page, pageCount)
+  const pagedCommitments = useMemo(
+    () => filteredCommitments.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [filteredCommitments, currentPage],
+  )
+
+  useEffect(() => {
+    setPage(1)
+  }, [search, tierFilter, tab, commitments.length])
 
   const handleCreate = async (event: FormEvent) => {
     event.preventDefault()
@@ -72,6 +116,9 @@ export function CommitmentsPage() {
     const message = error instanceof ApiError ? error.message : 'Something went wrong.'
     return <PageError message={message} onRetry={() => void refetch()} />
   }
+
+  const rangeStart = filteredCommitments.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1
+  const rangeEnd = Math.min(currentPage * PAGE_SIZE, filteredCommitments.length)
 
   return (
     <section className="space-y-4">
@@ -135,13 +182,38 @@ export function CommitmentsPage() {
         </form>
       )}
 
-      {data.commitments.length === 0 ? (
-        <p className="rounded-3xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm font-semibold text-muted">
-          No commitments in this view.
+      <PriorityFilterBar
+        onSearch={setSearch}
+        onTierFilter={setTierFilter}
+        placeholder="Search title, ward, or status…"
+        search={search}
+        tierFilter={tierFilter}
+      />
+
+      <PriorityLegend
+        noun="commitments"
+        onTierFilter={setTierFilter}
+        rangeEnd={rangeEnd}
+        rangeStart={rangeStart}
+        tierFilter={tierFilter}
+        total={filteredCommitments.length}
+      />
+
+      {pagedCommitments.length === 0 ? (
+        <p className="rounded-2xl border border-dashed border-line/80 bg-white/70 px-6 py-12 text-center text-sm font-semibold text-muted">
+          {search.trim() || tierFilter !== 'all'
+            ? 'No commitments match your search or filter.'
+            : 'No commitments in this view.'}
         </p>
       ) : (
-        data.commitments.map((item) => <CommitmentCard item={item} key={item.id} />)
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {pagedCommitments.map((item) => (
+            <CommitmentCard item={item} key={item.id} maxWeight={maxWeight} />
+          ))}
+        </div>
       )}
+
+      <GridPagination currentPage={currentPage} onPage={setPage} pageCount={pageCount} />
     </section>
   )
 }

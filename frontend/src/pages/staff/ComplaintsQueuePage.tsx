@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ApiError } from '../../api/errors'
 import { PageError, PageHeader, PageLoading } from '../../components/staff/PageStates'
 import {
@@ -11,6 +11,7 @@ import { useComplaintOverridesStore } from '../../stores/useComplaintOverridesSt
 import {
   formatComplaintWardLabel,
   getComplaintDisplayTitle,
+  parseComplaintMetadata,
   parseComplaintSummary,
 } from '../../lib/raiseComplaintFormat'
 import {
@@ -19,6 +20,15 @@ import {
   type CitizenComplaintStatus,
   type ComplaintCategory,
 } from '../../types/complaint'
+import {
+  getComplaintSeverity,
+  severityBadgeStyles,
+  severityCardStyles,
+  severityLabels,
+  type ComplaintSeverity,
+} from '../../lib/complaintSeverity'
+
+const PAGE_SIZE = 10
 
 const statusOptions: CitizenComplaintStatus[] = [
   'submitted',
@@ -56,13 +66,38 @@ export function ComplaintsQueuePage() {
   const [draftNote, setDraftNote] = useState('')
   const [draftDepartment, setDraftDepartment] = useState('')
   const [savedMessage, setSavedMessage] = useState<string | null>(null)
+  const [page, setPage] = useState(1)
 
   const { data: wardsData } = useWards()
   const { complaints, total, isLoading, isError, error, refetch } =
     useStaffComplaintsQueue(filters)
   const updateOverride = useComplaintOverridesStore((s) => s.updateOverride)
 
+  const pageCount = Math.max(1, Math.ceil(complaints.length / PAGE_SIZE))
+  const currentPage = Math.min(page, pageCount)
+  const pagedComplaints = useMemo(
+    () => complaints.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [complaints, currentPage],
+  )
+  const rangeStart = complaints.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1
+  const rangeEnd = Math.min(currentPage * PAGE_SIZE, complaints.length)
+
+  useEffect(() => {
+    setPage(1)
+  }, [filters.wardId, filters.category, filters.status, filters.source, filters.search])
+
   const selected = complaints.find((c) => c.id === selectedId) ?? null
+
+  useEffect(() => {
+    if (complaints.length === 0) return
+    if (selectedId && complaints.some((c) => c.id === selectedId)) return
+    const first = complaints[0]
+    setSelectedId(first.id)
+    setDraftStatus(first.status)
+    setDraftNote(first.staffNote ?? '')
+    setDraftDepartment(first.departmentSuggestion ?? '')
+    setSavedMessage(null)
+  }, [complaints, selectedId])
 
   const openDetail = (id: string) => {
     const item = complaints.find((c) => c.id === id)
@@ -190,7 +225,9 @@ export function ComplaintsQueuePage() {
       </div>
 
       <p className="text-sm font-semibold text-muted">
-        Showing {complaints.length} of {total} complaint{total === 1 ? '' : 's'}
+        {complaints.length === 0
+          ? `0 of ${total} complaint${total === 1 ? '' : 's'}`
+          : `Showing ${rangeStart}–${rangeEnd} of ${complaints.length} filtered · ${total} total`}
       </p>
 
       <div className="grid gap-4 xl:grid-cols-[1fr_22rem]">
@@ -200,20 +237,30 @@ export function ComplaintsQueuePage() {
               No complaints match your filters.
             </p>
           ) : (
-            complaints.map((complaint) => (
+            pagedComplaints.map((complaint) => {
+              const severity = getComplaintSeverity(complaint.description)
+              const isSelected = selectedId === complaint.id
+              return (
               <button
-                className={`w-full overflow-hidden rounded-2xl border bg-white text-left shadow-sm transition hover:shadow-md ${
-                  selectedId === complaint.id ? 'border-primary ring-2 ring-primary/20' : 'border-line/80'
+                className={`w-full overflow-hidden rounded-2xl border text-left shadow-sm transition hover:shadow-md ${
+                  severity ? severityCardStyles[severity] : 'bg-white'
+                } ${
+                  isSelected ? 'border-primary ring-2 ring-primary/20' : 'border-line/80'
                 }`}
                 key={complaint.id}
                 onClick={() => openDetail(complaint.id)}
                 type="button"
               >
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line/60 bg-slate-50/50 px-4 py-3">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line/60 bg-white/60 px-4 py-3">
                   <span className="font-mono text-sm font-bold text-primary">
                     {complaint.publicReference}
                   </span>
                   <div className="flex flex-wrap gap-2">
+                    {severity && (
+                      <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${severityBadgeStyles[severity]}`}>
+                        {severityLabels[severity]}
+                      </span>
+                    )}
                     {complaint.hasLocalOverride && (
                       <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[0.65rem] font-bold text-amber-800">
                         Local update
@@ -238,7 +285,49 @@ export function ComplaintsQueuePage() {
                   <p className="mt-2 text-xs font-semibold text-muted">{formatDate(complaint.submittedAt)}</p>
                 </div>
               </button>
-            ))
+              )
+            })
+          )}
+
+          {complaints.length > 0 && pageCount > 1 && (
+            <nav
+              aria-label="Complaint pagination"
+              className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line/80 bg-white px-4 py-3 shadow-sm"
+            >
+              <button
+                className="rounded-full border border-line px-4 py-2 text-xs font-bold text-muted transition hover:bg-slate-50 disabled:opacity-40"
+                disabled={currentPage <= 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                type="button"
+              >
+                ← Prev
+              </button>
+              <div className="flex flex-wrap items-center gap-1.5">
+                {Array.from({ length: pageCount }, (_, i) => i + 1).map((pageNum) => (
+                  <button
+                    aria-current={pageNum === currentPage ? 'page' : undefined}
+                    className={`grid size-8 place-items-center rounded-full text-xs font-extrabold transition ${
+                      pageNum === currentPage
+                        ? 'bg-primary text-white shadow-sm'
+                        : 'border border-line bg-white text-muted hover:bg-slate-50'
+                    }`}
+                    key={pageNum}
+                    onClick={() => setPage(pageNum)}
+                    type="button"
+                  >
+                    {pageNum}
+                  </button>
+                ))}
+              </div>
+              <button
+                className="rounded-full border border-line px-4 py-2 text-xs font-bold text-muted transition hover:bg-slate-50 disabled:opacity-40"
+                disabled={currentPage >= pageCount}
+                onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+                type="button"
+              >
+                Next →
+              </button>
+            </nav>
           )}
         </div>
 
@@ -246,7 +335,17 @@ export function ComplaintsQueuePage() {
           {selected ? (
             <div className="space-y-4 rounded-3xl border border-line/80 bg-white p-5 shadow-md">
               <div>
-                <p className="font-mono text-sm font-bold text-primary">{selected.publicReference}</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-mono text-sm font-bold text-primary">{selected.publicReference}</p>
+                  {(() => {
+                    const severity = getComplaintSeverity(selected.description)
+                    return severity ? (
+                      <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${severityBadgeStyles[severity]}`}>
+                        {severityLabels[severity]}
+                      </span>
+                    ) : null
+                  })()}
+                </div>
                 <h2 className="mt-1 text-lg font-extrabold">
                   {getComplaintDisplayTitle(selected, complaintCategoryLabels[selected.category])}
                 </h2>

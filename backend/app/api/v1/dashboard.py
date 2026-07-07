@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
@@ -22,6 +22,16 @@ router = APIRouter(tags=["dashboard"])
 
 ALERT_STATUSES = {"critical", "poor"}
 STATUS_WEIGHT = {"critical": 10, "poor": 6, "fair": 3, "good": 1}
+RESOLVED_COMPLAINT_STATUSES = {"resolved"}
+
+
+def _as_aware(value: datetime | None) -> datetime | None:
+    """Coerce a possibly-naive datetime to a timezone-aware UTC datetime."""
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value
 
 
 @router.get("/dashboard", response_model=DashboardResponse)
@@ -53,9 +63,16 @@ async def get_dashboard(
     constituency_name = wards[0].constituency_name if wards else "South Delhi"
     ward_by_id = {ward.id: ward for ward in wards}
 
-    open_complaints = len(complaints)
+    now = datetime.now(timezone.utc)
+    today = now.date()
+    week_ago = now - timedelta(days=7)
+    prev_week_start = now - timedelta(days=14)
+
+    open_complaint_list = [
+        item for item in complaints if item.status not in RESOLVED_COMPLAINT_STATUSES
+    ]
+    open_complaints = len(open_complaint_list)
     active_commitments = len([item for item in commitments if item.status == "active"])
-    today = datetime.now(timezone.utc).date()
     overdue_commitments = [
         item
         for item in commitments
@@ -69,7 +86,7 @@ async def get_dashboard(
                 alert_items.append((ward, item))
 
     complaint_counts: dict[int, int] = {}
-    for complaint in complaints:
+    for complaint in open_complaint_list:
         complaint_counts[complaint.ward_id] = complaint_counts.get(complaint.ward_id, 0) + 1
 
     hot_ward = HotWard(id="", name="")
@@ -88,8 +105,8 @@ async def get_dashboard(
         hot_ward = HotWard(id=str(wards[0].id), name=wards[0].name)
 
     priorities: list[PriorityItem] = []
-    if complaints:
-        for complaint in complaints:
+    if open_complaint_list:
+        for complaint in open_complaint_list:
             ward_name = ward_by_id[complaint.ward_id].name if complaint.ward_id in ward_by_id else "Unknown"
             weight = complaint.cluster.citizen_count if complaint.cluster else 1
             priorities.append(
@@ -197,18 +214,74 @@ async def get_dashboard(
                 )
             )
 
-    citizen_complaints_week = len([item for item in complaints if item.source == "citizen"])
+    citizen_complaints_week = len(
+        [
+            item
+            for item in complaints
+            if item.source == "citizen" and (_as_aware(item.created_at) or now) >= week_ago
+        ]
+    )
+
+    complaints_this_week = len(
+        [item for item in complaints if (_as_aware(item.created_at) or now) >= week_ago]
+    )
+    complaints_prev_week = len(
+        [
+            item
+            for item in complaints
+            if prev_week_start <= (_as_aware(item.created_at) or now) < week_ago
+        ]
+    )
+    if complaints_prev_week > 0:
+        open_complaints_trend = round(
+            (complaints_this_week - complaints_prev_week) / complaints_prev_week * 100
+        )
+    elif complaints_this_week > 0:
+        open_complaints_trend = 100
+    else:
+        open_complaints_trend = 0
+
+    completed_commitments = [item for item in commitments if item.status == "completed"]
+    resolved_commitments_week = len(
+        [
+            item
+            for item in completed_commitments
+            if (_as_aware(item.updated_at) or now) >= week_ago
+        ]
+    )
+    resolved_complaints_week = len(
+        [
+            item
+            for item in complaints
+            if item.status in RESOLVED_COMPLAINT_STATUSES
+            and (_as_aware(item.created_at) or now) >= week_ago
+        ]
+    )
+    resolved_this_week = resolved_commitments_week + resolved_complaints_week
+
+    if completed_commitments:
+        on_time_completed = len(
+            [
+                item
+                for item in completed_commitments
+                if (_as_aware(item.updated_at) or now).date() <= item.deadline
+            ]
+        )
+        on_time_rate_pct = round(on_time_completed / len(completed_commitments) * 100)
+    else:
+        on_time_rate_pct = 100
+
     proxy_open_issues = open_complaints if open_complaints > 0 else len(alert_items)
 
     return DashboardResponse(
         constituency_name=constituency_name,
         kpis=DashboardKpis(
             open_complaints=proxy_open_issues,
-            open_complaints_trend=0,
+            open_complaints_trend=open_complaints_trend,
             active_commitments=active_commitments,
             overdue_commitments=len(overdue_commitments),
-            resolved_this_week=0,
-            on_time_rate_pct=100 if not overdue_commitments else 0,
+            resolved_this_week=resolved_this_week,
+            on_time_rate_pct=on_time_rate_pct,
             citizen_complaints_week=citizen_complaints_week,
             hot_ward=hot_ward,
         ),

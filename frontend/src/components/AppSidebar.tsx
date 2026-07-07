@@ -37,25 +37,13 @@ const navVisuals: Record<string, { gradient: string; icon: React.ReactNode }> = 
     gradient: 'from-rose-500 to-pink-600',
     icon: <IssueIcon />,
   },
-  'upload-meeting': {
-    gradient: 'from-cyan-500 to-blue-500',
-    icon: <UploadIcon />,
-  },
   digest: {
     gradient: 'from-indigo-500 to-violet-600',
     icon: <DigestIcon />,
   },
-  chat: {
-    gradient: 'from-primary to-primary-light',
-    icon: <ChatIcon />,
-  },
   profile: {
     gradient: 'from-slate-600 to-slate-800',
     icon: <ProfileIcon />,
-  },
-  'context-injection': {
-    gradient: 'from-teal-500 to-emerald-600',
-    icon: <LibraryIcon />,
   },
 }
 
@@ -237,14 +225,6 @@ function IssueIcon() {
   )
 }
 
-function UploadIcon() {
-  return (
-    <svg aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-      <path d="M12 16V6m0 0l-4 4m4-4l4 4M5 18h14" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
-
 function DigestIcon() {
   return (
     <svg aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -254,27 +234,11 @@ function DigestIcon() {
   )
 }
 
-function ChatIcon() {
-  return (
-    <svg aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-      <path d="M6 8h12v8H9l-3 3V8z" strokeLinejoin="round" />
-    </svg>
-  )
-}
-
 function ProfileIcon() {
   return (
     <svg aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
       <circle cx="12" cy="8" r="3" />
       <path d="M6 20c0-3.3 2.7-6 6-6s6 2.7 6 6" strokeLinecap="round" />
-    </svg>
-  )
-}
-
-function LibraryIcon() {
-  return (
-    <svg aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-      <path d="M5 5h5v14H5a1 1 0 01-1-1V6a1 1 0 011-1zm8 0h5a1 1 0 011 1v12a1 1 0 01-1 1h-5V5z" />
     </svg>
   )
 }
