@@ -39,11 +39,18 @@ class Complaint(Base):
     citizen_contact: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
     status: Mapped[str] = mapped_column(String(50), default="submitted", index=True)
     source: Mapped[str] = mapped_column(String(20), default="citizen")
+    assigned_department: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    staff_note: Mapped[str | None] = mapped_column(Text, nullable=True)
     cluster_id: Mapped[str | None] = mapped_column(
         ForeignKey("db4_complaint_clusters.id"),
         nullable=True,
         index=True,
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
 
     cluster: Mapped[ComplaintCluster | None] = relationship(back_populates="complaints")

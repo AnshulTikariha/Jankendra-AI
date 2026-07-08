@@ -51,7 +51,10 @@ export function mapComplaint(item: ApiComplaint): Complaint {
     clusterCount: item.cluster_count,
     source: item.source === 'staff' ? 'staff' : 'citizen',
     submittedAt: item.submitted_at,
+    updatedAt: item.updated_at ?? undefined,
     reporterPhone: item.reporter_phone ?? '',
     departmentSuggestion: item.department_suggestion ?? undefined,
+    assignedDepartment: item.assigned_department ?? undefined,
+    staffNote: item.staff_note ?? undefined,
   }
 }

@@ -11,8 +11,11 @@ export type ApiComplaint = {
   cluster_count: number
   source: string
   submitted_at: string
+  updated_at: string | null
   reporter_phone: string | null
   department_suggestion: string | null
+  assigned_department: string | null
+  staff_note: string | null
 }
 
 export type ApiComplaintListResponse = {
@@ -25,4 +28,10 @@ export type CreateComplaintPayload = {
   category: string
   description: string
   location_detail?: string
+}
+
+export type UpdateComplaintPayload = {
+  status?: string
+  assigned_department?: string
+  staff_note?: string
 }

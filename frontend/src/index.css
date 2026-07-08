@@ -92,6 +92,52 @@ button:disabled {
   animation: modal-pop 0.2s ease-out;
 }
 
+@keyframes mic-ring-pulse {
+  0% {
+    transform: scale(0.92);
+    opacity: 0.55;
+  }
+  70% {
+    transform: scale(1.18);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.18);
+    opacity: 0;
+  }
+}
+
+@keyframes mic-wiggle {
+  0%,
+  100% {
+    transform: rotate(0deg) scale(1);
+  }
+  20% {
+    transform: rotate(-2.5deg) scale(1.03);
+  }
+  40% {
+    transform: rotate(2.5deg) scale(1.03);
+  }
+  60% {
+    transform: rotate(-1.5deg) scale(1.02);
+  }
+  80% {
+    transform: rotate(1.5deg) scale(1.02);
+  }
+}
+
+.animate-mic-ring {
+  animation: mic-ring-pulse 2s ease-out infinite;
+}
+
+.animate-mic-ring-delayed {
+  animation: mic-ring-pulse 2s ease-out 0.65s infinite;
+}
+
+.animate-mic-wiggle {
+  animation: mic-wiggle 2.4s ease-in-out infinite;
+}
+
 .map-location-picker .gm-style > div,
 .map-location-picker [role="region"] {
   font-family: inherit;

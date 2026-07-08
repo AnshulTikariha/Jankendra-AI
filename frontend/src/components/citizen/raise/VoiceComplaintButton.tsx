@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, forwardRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { transcribeVoice } from '../../../api/voice'
 import { ApiError } from '../../../api/errors'
@@ -53,7 +53,8 @@ function MicIcon({ className }: { className?: string }) {
   )
 }
 
-export function VoiceComplaintButton({ onTranscript }: VoiceComplaintButtonProps) {
+export const VoiceComplaintButton = forwardRef<HTMLButtonElement, VoiceComplaintButtonProps>(
+  function VoiceComplaintButton({ onTranscript }, ref) {
   const { t } = useTranslation('complaints')
   const { locale } = useLocale()
   const token = useAuthStore((state) => state.session?.accessToken)
@@ -455,6 +456,7 @@ export function VoiceComplaintButton({ onTranscript }: VoiceComplaintButtonProps
     <>
       <div className="flex shrink-0 flex-col items-end gap-1">
         <button
+          ref={ref}
           aria-label={label}
           aria-pressed={state === 'recording'}
           className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-2.5 text-xs font-extrabold transition focus:outline-none focus:ring-4 focus:ring-teal-200/50 sm:px-4 sm:text-sm ${
@@ -611,4 +613,4 @@ export function VoiceComplaintButton({ onTranscript }: VoiceComplaintButtonProps
       )}
     </>
   )
-}
+})

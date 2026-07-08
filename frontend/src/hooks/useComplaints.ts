@@ -1,6 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { createComplaint, fetchComplaintById, fetchComplaints } from '../api/complaints'
-import type { CreateComplaintPayload } from '../api/types/complaints'
+import {
+  createComplaint,
+  fetchComplaintById,
+  fetchComplaints,
+  updateComplaint,
+} from '../api/complaints'
+import type {
+  CreateComplaintPayload,
+  UpdateComplaintPayload,
+} from '../api/types/complaints'
 import { mapComplaint } from '../lib/complaintMappers'
 import { useAuthStore } from '../stores/useAuthStore'
 import type { Complaint } from '../types/complaint'
@@ -44,6 +52,28 @@ export function useCreateComplaint() {
     mutationFn: async (payload: CreateComplaintPayload): Promise<Complaint> => {
       if (!token) throw new Error('Not authenticated')
       const response = await createComplaint(token, payload)
+      return mapComplaint(response)
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['complaints'] })
+    },
+  })
+}
+
+export function useUpdateComplaint() {
+  const token = useAuthStore((s) => s.session?.accessToken)
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({
+      complaintId,
+      payload,
+    }: {
+      complaintId: string
+      payload: UpdateComplaintPayload
+    }): Promise<Complaint> => {
+      if (!token) throw new Error('Not authenticated')
+      const response = await updateComplaint(token, complaintId, payload)
       return mapComplaint(response)
     },
     onSuccess: () => {

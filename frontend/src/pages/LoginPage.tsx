@@ -14,6 +14,7 @@ import { LanguageSwitcher } from '../components/LanguageSwitcher'
 import { useLocale } from '../hooks/useLocale'
 import { mapTokenResponse } from '../lib/authMappers'
 import { useAuthStore } from '../stores/useAuthStore'
+import { useUiStore } from '../stores/useUiStore'
 import type { UserRole } from '../types/auth'
 
 const otpLength = 6
@@ -133,6 +134,10 @@ export function LoginPage() {
     try {
       const response = await verifyOtp(digitsOnly, enteredOtp, selectedRole)
       login(mapTokenResponse(response))
+      if (selectedRole === 'citizen') {
+        useUiStore.getState().setCitizenView('raise')
+        window.sessionStorage.removeItem('jankendra-voice-intro-shown')
+      }
     } catch (error) {
       setErrorMessage(error instanceof ApiError ? error.message : t('common:errors.generic'))
       setStatusKey('otpSent')
