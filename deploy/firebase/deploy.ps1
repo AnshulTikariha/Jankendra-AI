@@ -29,6 +29,10 @@ if (-not (Test-Path "node_modules")) {
 $env:VITE_API_BASE_URL = $ApiBaseUrl
 $env:VITE_GOOGLE_MAPS_API_KEY = $MapsKey
 npm run build
+if ($LASTEXITCODE -ne 0) {
+    Pop-Location
+    throw "Frontend build failed - fix TypeScript errors before deploying."
+}
 Pop-Location
 
 Write-Host "==> Deploying to Firebase project $ProjectId (hosting only)"

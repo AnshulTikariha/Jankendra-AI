@@ -80,9 +80,9 @@ export function LoginPage() {
       const response = await requestOtp(digitsOnly)
       setHasRequestedOtp(true)
       setOtp(Array.from({ length: otpLength }, () => ''))
-      setDevOtpHint(response.dev_otp ?? null)
+      setDevOtpHint(response.dev_otp ?? (exposeDemoOtp ? demoOtp : null))
       setOtpCopied(false)
-      setShowOtpModal(Boolean(response.dev_otp))
+      setShowOtpModal(Boolean(response.dev_otp ?? (exposeDemoOtp ? demoOtp : null)))
       setStatusKey('otpSent')
       window.setTimeout(() => otpRefs.current[0]?.focus(), 80)
     } catch (error) {
