@@ -11,9 +11,11 @@ from app.core.otp import normalize_phone
 from app.models import Complaint, ComplaintCluster, User, Ward
 from app.schemas.complaints import (
     ALLOWED_CATEGORIES,
+    ALLOWED_STATUSES,
     ComplaintCreateRequest,
     ComplaintListResponse,
     ComplaintResponse,
+    ComplaintUpdateRequest,
 )
 from app.schemas.complaint_analysis import (
     ComplaintTextAnalysisRequest,
@@ -61,6 +63,10 @@ def build_complaint_response(
     if submitted_at is not None and submitted_at.tzinfo is None:
         submitted_at = submitted_at.replace(tzinfo=timezone.utc)
 
+    updated_at = getattr(complaint, "updated_at", None)
+    if updated_at is not None and updated_at.tzinfo is None:
+        updated_at = updated_at.replace(tzinfo=timezone.utc)
+
     return ComplaintResponse(
         id=complaint.id,
         public_reference=complaint.public_reference,
@@ -74,8 +80,11 @@ def build_complaint_response(
         cluster_count=cluster_count,
         source=complaint.source,
         submitted_at=submitted_at.isoformat() if submitted_at else datetime.now(timezone.utc).isoformat(),
+        updated_at=updated_at.isoformat() if updated_at else None,
         reporter_phone=None if redact_contact else complaint.citizen_contact,
         department_suggestion=department_suggestion,
+        assigned_department=complaint.assigned_department,
+        staff_note=complaint.staff_note,
     )
 
 
@@ -485,6 +494,62 @@ async def get_complaint(
 
     if current_user.role == "citizen" and complaint.citizen_contact != current_user.phone:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions")
+
+    ward = await session.scalar(select(Ward).where(Ward.id == complaint.ward_id))
+    return build_complaint_response(
+        complaint=complaint,
+        ward_name=ward.name if ward else "Unknown",
+        ward_code=ward.code if ward else None,
+        cluster_count=complaint.cluster.citizen_count if complaint.cluster else 1,
+        department_suggestion=complaint.cluster.department_suggestion if complaint.cluster else None,
+    )
+
+
+@router.patch("/{complaint_id}", response_model=ComplaintResponse)
+async def update_complaint(
+    complaint_id: str,
+    payload: ComplaintUpdateRequest,
+    current_user: User = Depends(require_roles("staff", "leader")),
+    session: AsyncSession = Depends(get_db_session),
+) -> ComplaintResponse:
+    complaint = await session.scalar(
+        select(Complaint)
+        .where(Complaint.id == complaint_id)
+        .options(selectinload(Complaint.cluster))
+    )
+    if complaint is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Complaint not found")
+
+    changed = False
+
+    if payload.status is not None:
+        new_status = payload.status.strip().lower()
+        if new_status not in ALLOWED_STATUSES:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Invalid status",
+            )
+        complaint.status = new_status
+        changed = True
+
+    if payload.assigned_department is not None:
+        department = payload.assigned_department.strip()
+        complaint.assigned_department = department or None
+        changed = True
+
+    if payload.staff_note is not None:
+        note = payload.staff_note.strip()
+        complaint.staff_note = note or None
+        changed = True
+
+    if not changed:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="No fields provided to update",
+        )
+
+    await session.commit()
+    await session.refresh(complaint)
 
     ward = await session.scalar(select(Ward).where(Ward.id == complaint.ward_id))
     return build_complaint_response(

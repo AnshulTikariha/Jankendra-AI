@@ -7,11 +7,10 @@ import {
 } from '../../hooks/useStaffComplaintsQueue'
 import { useWards } from '../../hooks/useStaffApi'
 import { ComplaintAiInsights } from '../../components/staff/ComplaintAiInsights'
-import { useComplaintOverridesStore } from '../../stores/useComplaintOverridesStore'
+import { useUpdateComplaint } from '../../hooks/useComplaints'
 import {
   formatComplaintWardLabel,
   getComplaintDisplayTitle,
-  parseComplaintMetadata,
   parseComplaintSummary,
 } from '../../lib/raiseComplaintFormat'
 import {
@@ -25,7 +24,6 @@ import {
   severityBadgeStyles,
   severityCardStyles,
   severityLabels,
-  type ComplaintSeverity,
 } from '../../lib/complaintSeverity'
 
 const PAGE_SIZE = 10
@@ -71,7 +69,7 @@ export function ComplaintsQueuePage() {
   const { data: wardsData } = useWards()
   const { complaints, total, isLoading, isError, error, refetch } =
     useStaffComplaintsQueue(filters)
-  const updateOverride = useComplaintOverridesStore((s) => s.updateOverride)
+  const updateComplaintMutation = useUpdateComplaint()
 
   const pageCount = Math.max(1, Math.ceil(complaints.length / PAGE_SIZE))
   const currentPage = Math.min(page, pageCount)
@@ -95,7 +93,7 @@ export function ComplaintsQueuePage() {
     setSelectedId(first.id)
     setDraftStatus(first.status)
     setDraftNote(first.staffNote ?? '')
-    setDraftDepartment(first.departmentSuggestion ?? '')
+    setDraftDepartment(first.assignedDepartment ?? first.departmentSuggestion ?? '')
     setSavedMessage(null)
   }, [complaints, selectedId])
 
@@ -105,19 +103,27 @@ export function ComplaintsQueuePage() {
     if (item) {
       setDraftStatus(item.status)
       setDraftNote(item.staffNote ?? '')
-      setDraftDepartment(item.departmentSuggestion ?? '')
+      setDraftDepartment(item.assignedDepartment ?? item.departmentSuggestion ?? '')
     }
     setSavedMessage(null)
   }
 
   const handleSaveActions = () => {
     if (!selectedId) return
-    updateOverride(selectedId, {
-      status: draftStatus,
-      staffNote: draftNote.trim() || undefined,
-      assignedDepartment: draftDepartment.trim() || undefined,
-    })
-    setSavedMessage('Changes saved locally. Status sync to server pending backend API.')
+    setSavedMessage(null)
+    updateComplaintMutation.mutate(
+      {
+        complaintId: selectedId,
+        payload: {
+          status: draftStatus,
+          assigned_department: draftDepartment.trim(),
+          staff_note: draftNote.trim(),
+        },
+      },
+      {
+        onSuccess: () => setSavedMessage('Complaint updated successfully.'),
+      },
+    )
   }
 
   if (isLoading) return <PageLoading message="Loading complaint queue…" />
@@ -134,12 +140,6 @@ export function ComplaintsQueuePage() {
         eyebrow="Complaint queue"
         title="All complaints"
       />
-
-      <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-        <strong>Preview mode:</strong> Status updates, notes, and department assignment are saved
-        on this device only until <code className="rounded bg-amber-100 px-1">PATCH /complaints</code> is
-        available on the backend.
-      </div>
 
       <div className="grid gap-3 rounded-3xl border border-line/80 bg-white p-4 shadow-md sm:grid-cols-2 lg:grid-cols-5">
         <label className="block">
@@ -259,11 +259,6 @@ export function ComplaintsQueuePage() {
                     {severity && (
                       <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${severityBadgeStyles[severity]}`}>
                         {severityLabels[severity]}
-                      </span>
-                    )}
-                    {complaint.hasLocalOverride && (
-                      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[0.65rem] font-bold text-amber-800">
-                        Local update
                       </span>
                     )}
                     <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${statusColors[complaint.status]}`}>
@@ -397,23 +392,32 @@ export function ComplaintsQueuePage() {
                 <textarea
                   className="mt-1 w-full rounded-xl border border-line px-3 py-2 text-sm"
                   onChange={(e) => setDraftNote(e.target.value)}
-                  placeholder="Staff notes (local only for now)"
+                  placeholder="Staff notes (internal)"
                   rows={3}
                   value={draftNote}
                 />
               </label>
 
               <button
-                className="w-full rounded-full bg-primary py-3 text-sm font-extrabold text-white shadow-md"
+                className="w-full rounded-full bg-primary py-3 text-sm font-extrabold text-white shadow-md transition disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={updateComplaintMutation.isPending}
                 onClick={handleSaveActions}
                 type="button"
               >
-                Save actions
+                {updateComplaintMutation.isPending ? 'Saving…' : 'Save actions'}
               </button>
 
               {savedMessage && (
                 <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800">
                   {savedMessage}
+                </p>
+              )}
+
+              {updateComplaintMutation.isError && (
+                <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-800">
+                  {updateComplaintMutation.error instanceof ApiError
+                    ? updateComplaintMutation.error.message
+                    : 'Could not save changes. Please try again.'}
                 </p>
               )}
 

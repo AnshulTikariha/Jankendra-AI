@@ -27,8 +27,11 @@ export type Complaint = {
   clusterCount: number
   source: 'citizen' | 'staff'
   submittedAt: string
+  updatedAt?: string
   reporterPhone: string
   departmentSuggestion?: string
+  assignedDepartment?: string
+  staffNote?: string
 }
 
 export const complaintCategoryLabels: Record<ComplaintCategory, string> = {

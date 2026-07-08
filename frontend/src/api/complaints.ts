@@ -3,6 +3,7 @@ import type {
   ApiComplaint,
   ApiComplaintListResponse,
   CreateComplaintPayload,
+  UpdateComplaintPayload,
 } from './types/complaints'
 
 export function createComplaint(
@@ -11,6 +12,18 @@ export function createComplaint(
 ): Promise<ApiComplaint> {
   return apiFetch<ApiComplaint>('/complaints', {
     method: 'POST',
+    token,
+    body: JSON.stringify(payload),
+  })
+}
+
+export function updateComplaint(
+  token: string,
+  complaintId: string,
+  payload: UpdateComplaintPayload,
+): Promise<ApiComplaint> {
+  return apiFetch<ApiComplaint>(`/complaints/${complaintId}`, {
+    method: 'PATCH',
     token,
     body: JSON.stringify(payload),
   })

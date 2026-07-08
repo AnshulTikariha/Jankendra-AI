@@ -1,15 +1,8 @@
 import { useMemo } from 'react'
 import { useComplaints } from './useComplaints'
-import {
-  applyComplaintOverride,
-  useComplaintOverridesStore,
-} from '../stores/useComplaintOverridesStore'
 import type { Complaint, ComplaintCategory, CitizenComplaintStatus } from '../types/complaint'
 
-export type StaffComplaint = Complaint & {
-  hasLocalOverride: boolean
-  staffNote?: string
-}
+export type StaffComplaint = Complaint
 
 export type ComplaintQueueFilters = {
   wardId?: number
@@ -20,15 +13,12 @@ export type ComplaintQueueFilters = {
 }
 
 export function useStaffComplaintsQueue(filters: ComplaintQueueFilters) {
-  const overrides = useComplaintOverridesStore((s) => s.overrides)
   const { data, isLoading, isError, error, refetch } = useComplaints(filters.wardId)
 
   const complaints = useMemo((): StaffComplaint[] => {
     if (!data?.complaints) return []
 
-    let items = data.complaints.map((c) =>
-      applyComplaintOverride(c, overrides[c.id]),
-    )
+    let items = data.complaints
 
     if (filters.category !== 'all') {
       items = items.filter((c) => c.category === filters.category)
@@ -53,7 +43,7 @@ export function useStaffComplaintsQueue(filters: ComplaintQueueFilters) {
     return items.sort(
       (a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime(),
     )
-  }, [data?.complaints, overrides, filters])
+  }, [data?.complaints, filters])
 
   return {
     complaints,
