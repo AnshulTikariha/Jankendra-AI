@@ -7,6 +7,8 @@ type Props = {
   constituencyName?: string
   phone?: string
   onLogout: () => void
+  onMenuClick?: () => void
+  compactOnMobile?: boolean
 }
 
 const headerCopy: Record<UserRole, { eyebrow: string; title: string; Graphic: () => React.ReactNode }> = {
@@ -15,10 +17,18 @@ const headerCopy: Record<UserRole, { eyebrow: string; title: string; Graphic: ()
   leader: { eyebrow: 'Leader overview', title: 'Strategic constituency view', Graphic: LeaderHeaderGraphic },
 }
 
-export function PortalHeader({ role, constituencyName, phone, onLogout }: Props) {
+export function PortalHeader({
+  role,
+  constituencyName,
+  phone,
+  onLogout,
+  onMenuClick,
+  compactOnMobile = false,
+}: Props) {
   const theme = getRoleTheme(role)
   const copy = headerCopy[role]
   const Graphic = copy.Graphic
+  const isWorkspaceCompact = compactOnMobile && role !== 'citizen'
 
   return (
     <header className="relative z-30 border-b border-white/10 shadow-lg shadow-slate-900/10">
@@ -32,58 +42,113 @@ export function PortalHeader({ role, constituencyName, phone, onLogout }: Props)
         <Graphic />
       </div>
 
-      <div className="relative z-10 mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex min-w-0 items-start gap-4">
-            <div className={`grid size-14 shrink-0 place-items-center rounded-2xl bg-gradient-to-br ${theme.avatarGradient} text-sm font-extrabold text-white shadow-xl ring-2 ring-white/20 sm:size-16 sm:text-base`}>
+      <div
+        className={`relative z-10 mx-auto max-w-7xl sm:px-6 lg:px-8 ${
+          isWorkspaceCompact ? 'px-3 py-2.5 sm:py-3 lg:px-8 lg:py-4' : 'px-4 py-4'
+        }`}
+      >
+        <div
+          className={`flex flex-col lg:flex-row lg:items-center lg:justify-between ${
+            isWorkspaceCompact ? 'gap-2.5 lg:gap-4' : 'gap-4'
+          }`}
+        >
+          <div className="flex min-w-0 items-start gap-2.5 sm:gap-4">
+            {onMenuClick && (
+              <button
+                aria-label="Open menu"
+                className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-xl border border-white/25 bg-white/10 text-lg font-bold text-white transition hover:bg-white/20 lg:hidden"
+                onClick={onMenuClick}
+                type="button"
+              >
+                ☰
+              </button>
+            )}
+            <div
+              className={`grid shrink-0 place-items-center rounded-2xl bg-gradient-to-br font-extrabold text-white shadow-xl ring-2 ring-white/20 ${theme.avatarGradient} ${
+                isWorkspaceCompact
+                  ? 'size-11 text-xs sm:size-12 sm:text-sm lg:size-16 lg:text-base'
+                  : 'size-14 text-sm sm:size-16 sm:text-base'
+              }`}
+            >
               {theme.avatarLabel}
             </div>
 
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <p className={`text-[0.65rem] font-bold uppercase tracking-[0.22em] sm:text-xs ${theme.headerAccentText}`}>
+                <p
+                  className={`font-bold uppercase tracking-[0.22em] ${theme.headerAccentText} ${
+                    isWorkspaceCompact
+                      ? 'text-[0.6rem] sm:text-[0.65rem] lg:text-xs'
+                      : 'text-[0.65rem] sm:text-xs'
+                  }`}
+                >
                   {copy.eyebrow}
                 </p>
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-2 py-0.5 text-[0.6rem] font-bold uppercase tracking-wide text-white/90">
+                <span
+                  className={`inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 font-bold uppercase tracking-wide text-white/90 ${
+                    isWorkspaceCompact
+                      ? 'hidden px-2 py-0.5 text-[0.55rem] sm:inline-flex sm:text-[0.6rem]'
+                      : 'px-2 py-0.5 text-[0.6rem]'
+                  }`}
+                >
                   <span className={`size-1.5 animate-pulse rounded-full ${theme.heroPulse}`} />
                   Live
                 </span>
               </div>
 
-              <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
+              <h1
+                className={`mt-0.5 font-extrabold tracking-tight text-white ${
+                  isWorkspaceCompact
+                    ? 'text-lg sm:text-xl lg:mt-1 lg:text-3xl'
+                    : 'mt-1 text-2xl sm:text-3xl'
+                }`}
+              >
                 {copy.title}
               </h1>
 
-              <p className="mt-1 truncate text-sm text-white/75">
+              <p
+                className={`truncate text-white/75 ${
+                  isWorkspaceCompact ? 'text-xs sm:text-sm' : 'mt-1 text-sm'
+                }`}
+              >
                 {constituencyName ?? 'Constituency'} · {roleLabels[role]}
-                {phone ? ` · +91 ${phone}` : ''}
+                {phone && !isWorkspaceCompact ? ` · +91 ${phone}` : ''}
               </p>
             </div>
           </div>
 
           <div className="relative z-20 flex flex-wrap items-center gap-2 sm:gap-3">
             <LanguageSwitcher variant="light" />
-            <span className={`hidden rounded-full border px-3 py-2 text-xs font-bold sm:inline-flex ${theme.headerBadgeBorder} ${theme.headerBadgeBg} ${theme.headerBadgeText}`}>
+            <span
+              className={`hidden rounded-full border font-bold sm:inline-flex ${theme.headerBadgeBorder} ${theme.headerBadgeBg} ${theme.headerBadgeText} ${
+                isWorkspaceCompact ? 'px-2.5 py-1.5 text-[0.65rem]' : 'px-3 py-2 text-xs'
+              }`}
+            >
               Built for public service
             </span>
             <button
-              className={`inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-4 py-2 text-sm font-bold text-white shadow-sm backdrop-blur-sm transition ${theme.headerSignOutHover}`}
+              className={`inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 font-bold text-white shadow-sm backdrop-blur-sm transition ${theme.headerSignOutHover} ${
+                isWorkspaceCompact ? 'px-3 py-1.5 text-xs sm:px-4 sm:py-2 sm:text-sm' : 'px-4 py-2 text-sm'
+              }`}
               onClick={onLogout}
               type="button"
             >
               <SignOutIcon />
-              Sign out
+              <span className={isWorkspaceCompact ? 'hidden sm:inline' : undefined}>Sign out</span>
+              <span className={isWorkspaceCompact ? 'sm:hidden' : 'hidden'}>Out</span>
             </button>
           </div>
         </div>
 
-        <div className="mt-4 flex items-center gap-3 lg:hidden">
-          <div className="h-px flex-1 bg-white/15" />
-          <div className="grid size-12 place-items-center rounded-xl bg-white/10 opacity-40">
-            <MiniGraphic role={role} />
+        {!isWorkspaceCompact && (
+          <div className="mt-4 flex items-center gap-3 lg:hidden">
+            <div className="h-px flex-1 bg-white/15" />
+            <div className="grid size-12 place-items-center rounded-xl bg-white/10 opacity-40">
+              <MiniGraphic role={role} />
+            </div>
+            <div className="h-px flex-1 bg-white/15" />
           </div>
-          <div className="h-px flex-1 bg-white/15" />
-        </div>
+        )}
       </div>
     </header>
   )

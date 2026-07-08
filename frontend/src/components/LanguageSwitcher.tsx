@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   localeLabels,
@@ -39,8 +39,43 @@ export function LanguageSwitcher({ variant = 'light' }: Props) {
   const { t } = useTranslation('common')
   const { locale, setLocale } = useLocale()
   const [isOpen, setIsOpen] = useState(false)
+  const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({})
   const containerRef = useRef<HTMLDivElement | null>(null)
   const triggerRef = useRef<HTMLButtonElement | null>(null)
+  const menuRef = useRef<HTMLUListElement | null>(null)
+
+  const updateMenuPosition = () => {
+    const trigger = triggerRef.current
+    const menu = menuRef.current
+    if (!trigger || !menu) return
+
+    const triggerRect = trigger.getBoundingClientRect()
+    const menuWidth = menu.offsetWidth
+    const viewportPadding = 12
+    const maxLeft = window.innerWidth - menuWidth - viewportPadding
+    const preferredLeft = triggerRect.right - menuWidth
+    const left = Math.min(Math.max(viewportPadding, preferredLeft), Math.max(viewportPadding, maxLeft))
+
+    setMenuStyle({
+      left,
+      position: 'fixed',
+      top: triggerRect.bottom + 8,
+      visibility: 'visible',
+      width: menuWidth || undefined,
+      zIndex: 100,
+    })
+  }
+
+  useLayoutEffect(() => {
+    if (!isOpen) return
+    updateMenuPosition()
+    window.addEventListener('resize', updateMenuPosition)
+    window.addEventListener('scroll', updateMenuPosition, true)
+    return () => {
+      window.removeEventListener('resize', updateMenuPosition)
+      window.removeEventListener('scroll', updateMenuPosition, true)
+    }
+  }, [isOpen, locale])
 
   useEffect(() => {
     if (!isOpen) return
@@ -86,8 +121,10 @@ export function LanguageSwitcher({ variant = 'light' }: Props) {
       {isOpen && (
         <ul
           aria-label={t('language')}
-          className={`absolute right-0 top-full z-[100] mt-2 min-w-[11rem] overflow-hidden rounded-2xl border p-1 ${menuVariants[variant]}`}
+          className={`invisible min-w-[11rem] overflow-hidden rounded-2xl border p-1 ${menuVariants[variant]}`}
+          ref={menuRef}
           role="listbox"
+          style={menuStyle}
         >
           {supportedLocales.map((supportedLocale) => {
             const isSelected = supportedLocale === locale

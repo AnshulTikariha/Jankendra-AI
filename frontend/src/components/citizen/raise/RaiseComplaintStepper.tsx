@@ -14,7 +14,7 @@ export function RaiseComplaintStepper({ current }: Props) {
       <p className="text-xs font-bold uppercase tracking-[0.16em] text-muted">
         {t('raise.stepOf', { current: currentIndex + 1, total: raiseComplaintSteps.length })}
       </p>
-      <div className="flex gap-2">
+      <div className="flex gap-1.5 sm:gap-2">
         {raiseComplaintSteps.map((step, index) => {
           const done = index < currentIndex
           const active = index === currentIndex
@@ -26,7 +26,7 @@ export function RaiseComplaintStepper({ current }: Props) {
                 }`}
               />
               <span
-                className={`truncate text-[0.65rem] font-bold ${
+                className={`truncate text-[0.6rem] font-bold sm:text-[0.65rem] ${
                   active ? 'text-teal-700' : done ? 'text-teal-600' : 'text-muted'
                 }`}
               >

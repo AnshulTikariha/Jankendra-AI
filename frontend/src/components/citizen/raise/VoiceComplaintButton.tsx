@@ -454,12 +454,12 @@ export const VoiceComplaintButton = forwardRef<HTMLButtonElement, VoiceComplaint
 
   return (
     <>
-      <div className="flex shrink-0 flex-col items-end gap-1">
+      <div className="flex w-full flex-col items-stretch gap-1 sm:w-auto sm:items-end">
         <button
           ref={ref}
           aria-label={label}
           aria-pressed={state === 'recording'}
-          className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-2.5 text-xs font-extrabold transition focus:outline-none focus:ring-4 focus:ring-teal-200/50 sm:px-4 sm:text-sm ${
+          className={`inline-flex w-full items-center justify-center gap-2 rounded-full border px-3.5 py-2.5 text-xs font-extrabold transition focus:outline-none focus:ring-4 focus:ring-teal-200/50 sm:w-auto sm:justify-start sm:px-4 sm:text-sm ${
             state === 'recording'
               ? 'border-rose-300 bg-rose-50 text-rose-800 shadow-md shadow-rose-100/80 hover:bg-rose-100'
               : busy

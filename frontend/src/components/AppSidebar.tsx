@@ -10,6 +10,8 @@ type Props = {
   role: UserRole
   constituencyName?: string
   onSelect: (pageId: string) => void
+  onClose?: () => void
+  className?: string
 }
 
 const navVisuals: Record<string, { gradient: string; icon: React.ReactNode }> = {
@@ -51,19 +53,44 @@ const navVisuals: Record<string, { gradient: string; icon: React.ReactNode }> = 
   },
 }
 
-export function AppSidebar({ pages, activePageId, role, constituencyName, onSelect }: Props) {
+export function AppSidebar({
+  pages,
+  activePageId,
+  role,
+  constituencyName,
+  onSelect,
+  onClose,
+  className = '',
+}: Props) {
   const availableCount = pages.filter((p) => p.available).length
   const theme = getRoleTheme(role)
 
+  const handleSelect = (pageId: string) => {
+    onSelect(pageId)
+    onClose?.()
+  }
+
   return (
-    <aside className="relative flex flex-col overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-lg shadow-slate-200/60">
+    <aside className={`relative flex h-full max-h-[100dvh] flex-col overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-lg shadow-slate-200/60 lg:max-h-none ${className}`}>
       <div className={`absolute -left-10 top-20 size-32 rounded-full ${theme.sidebarBlurOrb} blur-3xl`} />
       <div className={`absolute -right-8 bottom-24 size-28 rounded-full ${theme.sidebarBlurOrb2} blur-3xl`} />
 
       {/* Header */}
       <div className={`relative border-b border-slate-100 bg-gradient-to-br ${theme.sidebarHeaderGradient} px-4 py-5 text-white`}>
-        <div className="absolute right-3 top-3 opacity-20">
-          <SidebarGraphic />
+        <div className="absolute right-3 top-3 flex items-center gap-2">
+          {onClose && (
+            <button
+              aria-label="Close menu"
+              className="grid size-8 place-items-center rounded-full bg-white/15 text-lg font-bold leading-none text-white transition hover:bg-white/25 lg:hidden"
+              onClick={onClose}
+              type="button"
+            >
+              ×
+            </button>
+          )}
+          <div className="hidden opacity-20 lg:block">
+            <SidebarGraphic />
+          </div>
         </div>
         <div className="relative flex items-center gap-3">
           <div className={`grid size-11 place-items-center rounded-2xl bg-white/95 text-sm font-extrabold tracking-tight ${theme.sidebarLogoText} shadow-lg`}>
@@ -112,7 +139,7 @@ export function AppSidebar({ pages, activePageId, role, constituencyName, onSele
                     : 'hover:bg-slate-50'
               }`}
               key={page.id}
-              onClick={() => onSelect(page.id)}
+              onClick={() => handleSelect(page.id)}
               type="button"
             >
               {isActive && (
