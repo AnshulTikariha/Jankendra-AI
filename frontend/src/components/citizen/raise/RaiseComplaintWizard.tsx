@@ -37,6 +37,11 @@ import { RaiseComplaintStepper } from './RaiseComplaintStepper'
 import { SimilarComplaintsBanner } from './SimilarComplaintsBanner'
 import { WhatHappensNext } from './WhatHappensNext'
 import { VoiceComplaintButton } from './VoiceComplaintButton'
+import {
+  markVoiceIntroShown,
+  VoiceComplaintIntroModal,
+  wasVoiceIntroShownThisSession,
+} from './VoiceComplaintIntroModal'
 
 const DESCRIPTION_MIN = 20
 const DESCRIPTION_MAX = 500
@@ -107,6 +112,8 @@ export function RaiseComplaintWizard({ mode = 'citizen' }: RaiseComplaintWizardP
   const [locationFallbackError, setLocationFallbackError] = useState<string | null>(null)
   const resolveTimerRef = useRef<number | null>(null)
   const skipResolveRef = useRef(false)
+  const voiceButtonRef = useRef<HTMLButtonElement>(null)
+  const [showVoiceIntro, setShowVoiceIntro] = useState(false)
   const mapResolvedWardRef = useRef<{
     city: string
     wardId: number
@@ -174,6 +181,21 @@ export function RaiseComplaintWizard({ mode = 'citizen' }: RaiseComplaintWizardP
 
     setInitialized(true)
   }, [initialized, restoreDraft])
+
+  useEffect(() => {
+    if (isStaff || wasVoiceIntroShownThisSession()) return
+    setShowVoiceIntro(true)
+  }, [isStaff])
+
+  const dismissVoiceIntro = () => {
+    markVoiceIntroShown()
+    setShowVoiceIntro(false)
+  }
+
+  const handleTryVoiceFromIntro = () => {
+    dismissVoiceIntro()
+    window.setTimeout(() => voiceButtonRef.current?.click(), 120)
+  }
 
   useEffect(() => {
     if (wardOptions.length === 0) return
@@ -509,6 +531,7 @@ export function RaiseComplaintWizard({ mode = 'citizen' }: RaiseComplaintWizardP
             </div>
             {step === 'where' && (
               <VoiceComplaintButton
+                ref={voiceButtonRef}
                 onTranscript={(text) => {
                   const trimmed = text.trim()
                   if (!trimmed) {
@@ -900,6 +923,13 @@ export function RaiseComplaintWizard({ mode = 'citizen' }: RaiseComplaintWizardP
           </div>
         </div>
       </div>
+
+      {!isStaff && showVoiceIntro && (
+        <VoiceComplaintIntroModal
+          onClose={dismissVoiceIntro}
+          onTryVoice={handleTryVoiceFromIntro}
+        />
+      )}
     </section>
   )
 }

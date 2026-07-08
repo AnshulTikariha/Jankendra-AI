@@ -38,7 +38,7 @@ type UiState = {
 
 export const useUiStore = create<UiState>((set) => ({
   activePageId: 'dashboard',
-  citizenView: 'home',
+  citizenView: 'raise',
   lastComplaintRef: null,
   lastComplaintId: null,
   viewingComplaintId: null,

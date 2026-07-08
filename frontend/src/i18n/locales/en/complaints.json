@@ -23,6 +23,21 @@
       "discard": "Start fresh"
     },
     "previewBadge": "Local preview",
+    "voiceIntro": {
+      "badge": "Quick tip",
+      "title": "Speak in Your Voice",
+      "subtitle": "Tap the microphone below and describe your issue — we'll fill the form for you.",
+      "tapToSpeak": "Tap to speak",
+      "tapHint": "Allow microphone access when prompted",
+      "tip1": "Speak clearly in Hindi or English — mention area, problem, and duration.",
+      "tip2": "Review auto-filled details, then submit.",
+      "demoLabel": "Demo:",
+      "demoNote": "For demo purposes, only Bangalore (Karnataka) and Kanpur (UP) wards are integrated — please report issues in those areas.",
+      "importantNote": "Works best in a quiet place. You can type instead anytime.",
+      "tryNow": "Try voice",
+      "gotIt": "I'll type instead",
+      "skip": "I'll type instead"
+    },
     "voice": {
       "start": "Speak in Your Voice",
       "stop": "Stop recording",
