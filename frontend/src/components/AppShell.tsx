@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react'
 import { PortalHeader } from './PortalHeader'
 import { AppSidebar } from './AppSidebar'
+import { WorkspaceMobileNav } from './WorkspaceMobileNav'
 import { useAuthStore } from '../stores/useAuthStore'
 import { useAppShell } from '../hooks/useAppShell'
 import { getRoleTheme } from '../theme/roleThemes'
@@ -58,25 +60,44 @@ export function AppShell() {
   const logout = useAuthStore((s) => s.logout)
   const { activePage, navigationPages, setActivePageId, role } = useAppShell()
   const theme = getRoleTheme(role)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  useEffect(() => {
+    setSidebarOpen(false)
+  }, [activePage.id])
+
+  useEffect(() => {
+    if (!sidebarOpen) return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setSidebarOpen(false)
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [sidebarOpen])
+
   const pageContent = StaffMainContent({ pageId: activePage.id })
 
   return (
-    <div className={`min-h-screen bg-gradient-to-br ${theme.pageBg} text-slate-950`}>
+    <div className={`min-h-screen bg-gradient-to-br ${theme.pageBg} pb-20 text-slate-950 lg:pb-0`}>
       <PortalHeader
+        compactOnMobile
         constituencyName={session?.constituencyName}
         onLogout={logout}
+        onMenuClick={() => setSidebarOpen(true)}
         phone={session?.phone}
         role={role}
       />
 
-      <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[17.5rem_1fr] lg:px-8 xl:grid-cols-[19rem_1fr]">
-        <AppSidebar
-          activePageId={activePage.id}
-          constituencyName={session?.constituencyName}
-          onSelect={setActivePageId}
-          pages={navigationPages}
-          role={role}
-        />
+      <div className="mx-auto grid max-w-7xl gap-4 px-4 py-4 sm:gap-6 sm:px-6 sm:py-6 lg:grid-cols-[17.5rem_1fr] lg:px-8 xl:grid-cols-[19rem_1fr]">
+        <div className="hidden lg:block">
+          <AppSidebar
+            activePageId={activePage.id}
+            constituencyName={session?.constituencyName}
+            onSelect={setActivePageId}
+            pages={navigationPages}
+            role={role}
+          />
+        </div>
 
         <main className={`min-w-0 rounded-3xl bg-gradient-to-br ${theme.mainBg} p-1 sm:p-2`}>
           {pageContent ?? (
@@ -84,6 +105,39 @@ export function AppShell() {
           )}
         </main>
       </div>
+
+      {sidebarOpen && (
+        <button
+          aria-label="Close menu"
+          className="fixed inset-0 z-40 bg-slate-950/40 backdrop-blur-[1px] lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+          type="button"
+        />
+      )}
+      <div
+        aria-hidden={!sidebarOpen}
+        className={`fixed inset-y-0 left-0 z-50 w-[min(88vw,19rem)] p-3 transition-transform duration-300 ease-out lg:hidden ${
+          sidebarOpen ? 'translate-x-0' : 'pointer-events-none -translate-x-full'
+        }`}
+      >
+        <AppSidebar
+          activePageId={activePage.id}
+          className="h-full shadow-2xl"
+          constituencyName={session?.constituencyName}
+          onClose={() => setSidebarOpen(false)}
+          onSelect={setActivePageId}
+          pages={navigationPages}
+          role={role}
+        />
+      </div>
+
+      <WorkspaceMobileNav
+        activePageId={activePage.id}
+        menuOpen={sidebarOpen}
+        onMenuOpen={() => setSidebarOpen((open) => !open)}
+        onSelect={setActivePageId}
+        role={role}
+      />
     </div>
   )
 }

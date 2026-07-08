@@ -65,6 +65,7 @@ export function ComplaintsQueuePage() {
   const [draftDepartment, setDraftDepartment] = useState('')
   const [savedMessage, setSavedMessage] = useState<string | null>(null)
   const [page, setPage] = useState(1)
+  const [mobileDetailOpen, setMobileDetailOpen] = useState(false)
 
   const { data: wardsData } = useWards()
   const { complaints, total, isLoading, isError, error, refetch } =
@@ -95,6 +96,7 @@ export function ComplaintsQueuePage() {
     setDraftNote(first.staffNote ?? '')
     setDraftDepartment(first.assignedDepartment ?? first.departmentSuggestion ?? '')
     setSavedMessage(null)
+    setMobileDetailOpen(false)
   }, [complaints, selectedId])
 
   const openDetail = (id: string) => {
@@ -106,6 +108,14 @@ export function ComplaintsQueuePage() {
       setDraftDepartment(item.assignedDepartment ?? item.departmentSuggestion ?? '')
     }
     setSavedMessage(null)
+    setMobileDetailOpen(true)
+    window.requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    })
+  }
+
+  const closeMobileDetail = () => {
+    setMobileDetailOpen(false)
   }
 
   const handleSaveActions = () => {
@@ -135,13 +145,14 @@ export function ComplaintsQueuePage() {
 
   return (
     <section className="space-y-4">
-      <PageHeader
-        description="All constituency complaints from citizens and staff. Filter by ward, category, or status."
-        eyebrow="Complaint queue"
-        title="All complaints"
-      />
+      <div className={mobileDetailOpen ? 'hidden xl:contents' : 'contents'}>
+        <PageHeader
+          description="All constituency complaints from citizens and staff. Filter by ward, category, or status."
+          eyebrow="Complaint queue"
+          title="All complaints"
+        />
 
-      <div className="grid gap-3 rounded-3xl border border-line/80 bg-white p-4 shadow-md sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-3 rounded-3xl border border-line/80 bg-white p-4 shadow-md sm:grid-cols-2 lg:grid-cols-5">
         <label className="block">
           <span className="text-xs font-bold text-muted">Ward</span>
           <select
@@ -222,16 +233,17 @@ export function ComplaintsQueuePage() {
             value={filters.search}
           />
         </label>
+        </div>
+
+        <p className="text-sm font-semibold text-muted">
+          {complaints.length === 0
+            ? `0 of ${total} complaint${total === 1 ? '' : 's'}`
+            : `Showing ${rangeStart}–${rangeEnd} of ${complaints.length} filtered · ${total} total`}
+        </p>
       </div>
 
-      <p className="text-sm font-semibold text-muted">
-        {complaints.length === 0
-          ? `0 of ${total} complaint${total === 1 ? '' : 's'}`
-          : `Showing ${rangeStart}–${rangeEnd} of ${complaints.length} filtered · ${total} total`}
-      </p>
-
       <div className="grid gap-4 xl:grid-cols-[1fr_22rem]">
-        <div className="space-y-3">
+        <div className={`space-y-3 ${mobileDetailOpen ? 'hidden xl:block' : ''}`}>
           {complaints.length === 0 ? (
             <p className="rounded-3xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm font-semibold text-muted">
               No complaints match your filters.
@@ -326,9 +338,18 @@ export function ComplaintsQueuePage() {
           )}
         </div>
 
-        <aside className="xl:sticky xl:top-4 xl:self-start">
+        <aside
+          className={`xl:sticky xl:top-4 xl:self-start ${mobileDetailOpen ? 'block' : 'hidden xl:block'}`}
+        >
           {selected ? (
             <div className="space-y-4 rounded-3xl border border-line/80 bg-white p-5 shadow-md">
+              <button
+                className="inline-flex items-center gap-1.5 rounded-full border border-line bg-slate-50 px-3 py-1.5 text-xs font-bold text-primary transition hover:bg-slate-100 xl:hidden"
+                onClick={closeMobileDetail}
+                type="button"
+              >
+                ← Back to queue
+              </button>
               <div>
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="font-mono text-sm font-bold text-primary">{selected.publicReference}</p>
