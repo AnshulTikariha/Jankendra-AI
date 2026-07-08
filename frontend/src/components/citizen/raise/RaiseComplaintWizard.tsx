@@ -516,13 +516,13 @@ export function RaiseComplaintWizard({ mode = 'citizen' }: RaiseComplaintWizardP
   return (
     <section className="space-y-4">
       <div className="overflow-hidden rounded-3xl border border-line/80 bg-white shadow-md">
-        <div className="border-b border-line/80 bg-gradient-to-r from-rose-50/50 to-white px-5 py-4 sm:px-6">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="min-w-0 flex-1">
+        <div className="border-b border-line/80 bg-gradient-to-r from-rose-50/50 to-white px-4 py-4 sm:px-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+            <div className="min-w-0">
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-accent">
                 {isStaff ? t('logIssue.eyebrow') : t('raise.eyebrow')}
               </p>
-              <h1 className="mt-1 text-2xl font-extrabold">
+              <h1 className="mt-1 text-xl font-extrabold leading-tight sm:text-2xl">
                 {isStaff ? t('logIssue.title') : t('raise.title')}
               </h1>
               <p className="mt-2 text-sm text-muted">
@@ -530,19 +530,21 @@ export function RaiseComplaintWizard({ mode = 'citizen' }: RaiseComplaintWizardP
               </p>
             </div>
             {step === 'where' && (
-              <VoiceComplaintButton
-                ref={voiceButtonRef}
-                onTranscript={(text) => {
-                  const trimmed = text.trim()
-                  if (!trimmed) {
-                    return
-                  }
-                  const existing = form.description.trim()
-                  const nextDescription = existing ? `${existing}\n\n${trimmed}` : trimmed
-                  updateForm('description', nextDescription)
-                  analyzeNow(nextDescription)
-                }}
-              />
+              <div className="w-full sm:w-auto sm:shrink-0">
+                <VoiceComplaintButton
+                  ref={voiceButtonRef}
+                  onTranscript={(text) => {
+                    const trimmed = text.trim()
+                    if (!trimmed) {
+                      return
+                    }
+                    const existing = form.description.trim()
+                    const nextDescription = existing ? `${existing}\n\n${trimmed}` : trimmed
+                    updateForm('description', nextDescription)
+                    analyzeNow(nextDescription)
+                  }}
+                />
+              </div>
             )}
           </div>
           <div className="mt-4">
