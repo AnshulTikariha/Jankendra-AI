@@ -489,36 +489,47 @@ export function VoiceComplaintButton({ onTranscript }: VoiceComplaintButtonProps
         <div
           aria-labelledby="voice-recording-title"
           aria-modal="true"
-          className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/45 p-4 backdrop-blur-[2px] sm:items-center"
+          className="fixed inset-0 z-[100] flex items-end justify-center bg-slate-900/45 p-0 backdrop-blur-[2px] pb-[calc(4.75rem+env(safe-area-inset-bottom,0px))] sm:items-center sm:p-4 sm:pb-4"
           role="dialog"
         >
-          <div className="w-full max-w-md overflow-hidden rounded-3xl border border-line/80 bg-white shadow-2xl">
+          <div className="flex max-h-[min(88dvh,calc(100dvh-5.5rem-env(safe-area-inset-bottom,0px)))] w-full max-w-md flex-col overflow-hidden rounded-t-3xl border border-line/80 bg-white shadow-2xl sm:max-h-[min(90dvh,40rem)] sm:rounded-3xl">
             <div
-              className={`px-6 py-5 ${
+              className={`min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4 sm:px-6 sm:py-5 ${
                 isRecording
                   ? 'bg-gradient-to-br from-rose-50 via-white to-teal-50'
                   : 'bg-gradient-to-br from-teal-50 via-white to-white'
               }`}
             >
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-2">
                   {isRecording ? (
-                    <span className="relative flex size-3">
+                    <span className="relative flex size-3 shrink-0">
                       <span className="absolute inline-flex size-full animate-ping rounded-full bg-rose-400 opacity-70" />
                       <span className="relative inline-flex size-3 rounded-full bg-rose-500" />
                     </span>
                   ) : (
-                    <span className="inline-flex size-3 animate-pulse rounded-full bg-teal-500" />
+                    <span className="inline-flex size-3 shrink-0 animate-pulse rounded-full bg-teal-500" />
                   )}
                   <p className="text-sm font-extrabold text-ink" id="voice-recording-title">
                     {isRecording ? t('raise.voice.recordingTitle') : t('raise.voice.processingTitle')}
                   </p>
                 </div>
-                {isRecording && (
-                  <span className="rounded-full bg-white/80 px-2.5 py-1 font-mono text-xs font-bold text-rose-700 shadow-sm">
-                    {formatElapsed(elapsedSeconds)}
-                  </span>
-                )}
+                <div className="flex shrink-0 items-center gap-2">
+                  {isRecording && (
+                    <span className="rounded-full bg-white/80 px-2.5 py-1 font-mono text-xs font-bold text-rose-700 shadow-sm">
+                      {formatElapsed(elapsedSeconds)}
+                    </span>
+                  )}
+                  {isRecording && (
+                    <button
+                      className="rounded-full bg-rose-600 px-3 py-1.5 text-xs font-extrabold text-white shadow-sm transition hover:bg-rose-700 focus:outline-none focus:ring-4 focus:ring-rose-200 lg:hidden"
+                      onClick={stopRecording}
+                      type="button"
+                    >
+                      {t('raise.voice.stop')}
+                    </button>
+                  )}
+                </div>
               </div>
 
               <p className="mt-2 text-sm text-muted">
@@ -529,11 +540,11 @@ export function VoiceComplaintButton({ onTranscript }: VoiceComplaintButtonProps
                   : t('raise.voice.processingHintCloud')}
               </p>
 
-              <div className="mt-4 rounded-2xl border border-line/70 bg-white/90 px-3 py-4 shadow-inner">
+              <div className="mt-4 rounded-2xl border border-line/70 bg-white/90 px-3 py-3 shadow-inner sm:py-4">
                 {isRecording ? (
                   <VoiceLevelBars active levels={levels} />
                 ) : (
-                  <div className="flex h-16 items-center justify-center gap-2">
+                  <div className="flex h-14 items-center justify-center gap-2 sm:h-16">
                     <span className="size-2 animate-bounce rounded-full bg-teal-500 [animation-delay:-0.2s]" />
                     <span className="size-2 animate-bounce rounded-full bg-teal-500 [animation-delay:-0.1s]" />
                     <span className="size-2 animate-bounce rounded-full bg-teal-500" />
@@ -542,13 +553,13 @@ export function VoiceComplaintButton({ onTranscript }: VoiceComplaintButtonProps
               </div>
 
               {isRecording && (
-                <p className="mt-3 text-center text-xs font-semibold text-teal-800">
+                <p className="mt-2 text-center text-xs font-semibold text-teal-800 sm:mt-3">
                   {t('raise.voice.levelHint')}
                 </p>
               )}
 
               {showLivePreview && (
-                <div className="mt-3 min-h-[4.5rem] rounded-2xl border border-teal-100 bg-teal-50/60 px-3 py-2 text-sm text-ink">
+                <div className="mt-3 max-h-28 overflow-y-auto rounded-2xl border border-teal-100 bg-teal-50/60 px-3 py-2 text-sm text-ink sm:max-h-36">
                   <p className="text-[0.65rem] font-bold uppercase tracking-wide text-teal-800">
                     {t('raise.voice.livePreview')}
                   </p>
@@ -559,10 +570,10 @@ export function VoiceComplaintButton({ onTranscript }: VoiceComplaintButtonProps
               )}
             </div>
 
-            <div className="border-t border-line/80 bg-slate-50 px-6 py-4">
+            <div className="shrink-0 border-t border-line/80 bg-slate-50 px-5 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] sm:px-6 sm:py-4">
               {isRecording ? (
                 <button
-                  className="w-full rounded-full bg-rose-600 px-4 py-3 text-sm font-extrabold text-white shadow-md transition hover:bg-rose-700 focus:outline-none focus:ring-4 focus:ring-rose-200"
+                  className="w-full rounded-full bg-rose-600 px-4 py-3.5 text-sm font-extrabold text-white shadow-md transition hover:bg-rose-700 focus:outline-none focus:ring-4 focus:ring-rose-200"
                   onClick={stopRecording}
                   type="button"
                 >
@@ -570,7 +581,7 @@ export function VoiceComplaintButton({ onTranscript }: VoiceComplaintButtonProps
                 </button>
               ) : (
                 <button
-                  className="w-full rounded-full border border-line bg-white px-4 py-3 text-sm font-bold text-ink transition hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-teal-200"
+                  className="w-full rounded-full border border-line bg-white px-4 py-3.5 text-sm font-bold text-ink transition hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-teal-200"
                   onClick={resetSession}
                   type="button"
                 >
@@ -584,7 +595,7 @@ export function VoiceComplaintButton({ onTranscript }: VoiceComplaintButtonProps
 
       {errorMessage && state === 'error' && (
         <div
-          className="fixed inset-x-4 bottom-4 z-50 mx-auto max-w-md rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 shadow-lg sm:inset-x-auto sm:right-6 sm:bottom-6"
+          className="fixed inset-x-4 bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] z-[100] mx-auto max-w-md rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 shadow-lg sm:inset-x-auto sm:right-6 sm:bottom-6"
           role="alert"
         >
           <p className="font-bold">{t('raise.voice.errorTitle')}</p>

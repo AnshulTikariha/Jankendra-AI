@@ -33,6 +33,7 @@ export function PhotoGallery({ photos, compact = false }: Props) {
             <img
               alt={photo.name}
               className="aspect-square w-full object-cover"
+              loading="lazy"
               src={photo.dataUrl}
             />
           </a>

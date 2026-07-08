@@ -62,7 +62,7 @@ async def request_otp(
         phone=phone,
         expires_in_seconds=OTP_EXPIRE_MINUTES * 60,
     )
-    if settings.environment == "development":
+    if settings.environment == "development" or settings.expose_demo_otp:
         response.dev_otp = dev_otp
     return response
 

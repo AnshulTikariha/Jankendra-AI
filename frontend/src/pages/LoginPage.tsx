@@ -17,6 +17,8 @@ import { useAuthStore } from '../stores/useAuthStore'
 import type { UserRole } from '../types/auth'
 
 const otpLength = 6
+const demoOtp = '246810'
+const exposeDemoOtp = import.meta.env.VITE_EXPOSE_DEMO_OTP !== 'false'
 const roles: UserRole[] = ['citizen', 'staff', 'leader']
 const demoPhones: Record<UserRole, string> = {
   citizen: '9876543212',
